@@ -182,7 +182,7 @@ export default function ReviewCard({ review, myReaction, onReactionUpdate, onEdi
 
                 {!showSpoiler && (
                     <button className="spoiler-reveal-btn" onClick={() => setShowSpoiler(true)}>
-                        👁️ Ver Spoiler
+                        <img src="/icons/lupa.png" alt="👁️" style={{ width: '16px', height: '16px', verticalAlign: 'middle', marginRight: '6px' }} /> Ver Spoiler
                     </button>
                 )}
             </div>

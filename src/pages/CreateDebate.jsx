@@ -213,7 +213,7 @@ export default function CreateDebate() {
                             className="btn btn-primary"
                             disabled={submitting}
                         >
-                            {submitting ? 'Creando...' : '🚀 Crear debate'}
+                            {submitting ? 'Creando...' : <><img src="/icons/luckyblock.png" alt="🚀" style={{ width: '18px', height: '18px', verticalAlign: 'middle', marginRight: '8px' }} /> Crear debate</>}
                         </button>
                     </div>
                 </form>

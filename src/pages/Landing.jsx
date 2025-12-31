@@ -112,10 +112,10 @@ export default function Landing() {
                             </p>
                             <div className="hero-cta">
                                 <button className="btn btn-outline btn-lg" onClick={() => document.getElementById('explore').scrollIntoView({ behavior: 'smooth' })}>
-                                    👁️ Explorar como invitado
+                                    <img src="/icons/lupa.png" alt="👁️" style={{ width: '20px', height: '20px', verticalAlign: 'middle', marginRight: '8px' }} /> Explorar como invitado
                                 </button>
                                 <Link to="/register" className="btn btn-primary btn-lg">
-                                    🚀 Crear cuenta
+                                    <img src="/icons/luckyblock.png" alt="🚀" style={{ width: '20px', height: '20px', verticalAlign: 'middle', marginRight: '8px' }} /> Crear cuenta
                                 </Link>
                             </div>
                         </div>
@@ -248,7 +248,7 @@ export default function Landing() {
 
             <footer className="landing-footer">
                 <div className="container">
-                    <p>GeekSphere © 2025 - Hecho con <img src="/icons/mushroom.png" alt="💚" style={{ width: '18px', height: '18px', verticalAlign: 'middle', margin: '0 4px' }} /> para frikis</p>
+                    <p>GeekSphere © 2026. Hecho por desarrolladores indie.</p>
                 </div>
             </footer>
         </div>

@@ -153,7 +153,7 @@ export default function DebatePost({
                     className="debate-post-spoiler"
                     onClick={() => setSpoilerRevealed(true)}
                 >
-                    <div className="debate-post-spoiler-icon">👁️</div>
+                    <div className="debate-post-spoiler-icon"><img src="/icons/lupa.png" alt="👁️" style={{ width: '24px', height: '24px' }} /></div>
                     <div className="debate-post-spoiler-text">
                         ⚠️ Este mensaje contiene spoilers
                     </div>
