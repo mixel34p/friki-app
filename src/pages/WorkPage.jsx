@@ -293,7 +293,7 @@ export default function WorkPage({ mediaType }) {
                                         className="btn btn-primary"
                                         onClick={() => setShowReviewModal(true)}
                                     >
-                                        ⭐ Escribir Review
+                                        <img src="/icons/star.png" alt="⭐" style={{ width: '16px', height: '16px', verticalAlign: 'middle', marginRight: '6px' }} /> Escribir Review
                                     </button>
                                 )}
                                 <Link to="/create-tierlist" className="btn btn-secondary">

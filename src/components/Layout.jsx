@@ -255,7 +255,7 @@ export default function Layout() {
                                     className={`mobile-nav-link ${isActive('/connections') ? 'active' : ''}`}
                                     onClick={() => setMobileNavOpen(false)}
                                 >
-                                    🤝 Conexiones
+                                    <img src="/icons/wishlist.png" alt="🤝" style={{ width: '18px', height: '18px', verticalAlign: 'middle', marginRight: '8px' }} /> Conexiones
                                 </Link>
                             </nav>
                         )}

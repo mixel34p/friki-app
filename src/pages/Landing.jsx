@@ -133,17 +133,17 @@ export default function Landing() {
                                 <p>Ordena videojuegos y anime a tu manera. Tu identidad son tus gustos.</p>
                             </div>
                             <div className="feature-card">
-                                <div className="feature-icon">⭐</div>
+                                <div className="feature-icon"><img src="/icons/star.png" alt="⭐" style={{ width: '32px', height: '32px' }} /></div>
                                 <h3>Reseñas Reales</h3>
                                 <p>Opiniones sinceras de 1 a 5 estrellas. Sin algoritmos ocultos.</p>
                             </div>
                             <div className="feature-card">
-                                <div className="feature-icon">🤝</div>
+                                <div className="feature-icon"><img src="/icons/wishlist.png" alt="🤝" style={{ width: '32px', height: '32px' }} /></div>
                                 <h3>Matching</h3>
                                 <p>Encuentra personas con una afinidad alta contigo basada en lo que jugáis.</p>
                             </div>
                             <div className="feature-card">
-                                <div className="feature-icon">🧠</div>
+                                <div className="feature-icon"><img src="/icons/scale.png" alt="🧠" style={{ width: '32px', height: '32px' }} /></div>
                                 <h3>Debates Sanos</h3>
                                 <p>Conversaciones centradas en obras concretas. Sin toxicidad.</p>
                             </div>
@@ -182,7 +182,7 @@ export default function Landing() {
                     <section className="content-section dual-col-section">
                         <div className="container dual-col-container">
                             <div className="col-left">
-                                <h2 className="section-title">📝 Opiniones Recientes</h2>
+                                <h2 className="section-title"><img src="/icons/checklist.png" alt="📝" style={{ width: '24px', height: '24px', verticalAlign: 'middle', marginRight: '8px' }} /> Opiniones Recientes</h2>
                                 <div className="reviews-list">
                                     {recentReviews.map(review => (
                                         <ReviewCard key={review.id} review={review} />
@@ -234,8 +234,8 @@ export default function Landing() {
                             <h2>Aquí tú importas</h2>
                             <div className="values-list">
                                 <span><img src="/icons/star.png" alt="✨" style={{ width: '18px', height: '18px', verticalAlign: 'middle', marginRight: '6px' }} /> Sin contadores de popularidad</span>
-                                <span>🛡️ Sin presión social</span>
-                                <span>💚 Comunidad apasionada</span>
+                                <span><img src="/icons/cross.png" alt="🛡️" style={{ width: '18px', height: '18px', verticalAlign: 'middle', marginRight: '6px' }} /> Sin presión social</span>
+                                <span><img src="/icons/mushroom.png" alt="💚" style={{ width: '18px', height: '18px', verticalAlign: 'middle', marginRight: '6px' }} /> Comunidad apasionada</span>
                             </div>
                             <p className="cta-text">¿Te apetece crear tu propio perfil de gustos?</p>
                             <Link to="/register" className="btn btn-primary btn-xl">
@@ -248,7 +248,7 @@ export default function Landing() {
 
             <footer className="landing-footer">
                 <div className="container">
-                    <p>GeekSphere © 2025 - Hecho con 💚 para frikis</p>
+                    <p>GeekSphere © 2025 - Hecho con <img src="/icons/mushroom.png" alt="💚" style={{ width: '18px', height: '18px', verticalAlign: 'middle', margin: '0 4px' }} /> para frikis</p>
                 </div>
             </footer>
         </div>

@@ -75,6 +75,10 @@ export default function RecommendationCard({ recommendation, onAddToLibrary }) {
                                             <img src="/icons/fire.gif" alt="🔥" style={{ width: '14px', height: '14px', verticalAlign: 'middle' }} />
                                         ) : reason.icon === '💯' ? (
                                             <img src="/icons/crown.png" alt="💯" style={{ width: '14px', height: '14px', verticalAlign: 'middle' }} />
+                                        ) : reason.icon === '⭐' ? (
+                                            <img src="/icons/star.png" alt="⭐" style={{ width: '14px', height: '14px', verticalAlign: 'middle' }} />
+                                        ) : reason.icon === '🤝' ? (
+                                            <img src="/icons/wishlist.png" alt="🤝" style={{ width: '14px', height: '14px', verticalAlign: 'middle' }} />
                                         ) : reason.icon}
                                     </span>
                                     <span className="reason-text">{reason.text}</span>

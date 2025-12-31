@@ -164,7 +164,7 @@ export default function CompareProfiles() {
                     )}
                     {connectionStatus === 'can_request' && (
                         <button className="btn btn-primary" onClick={() => setShowRequestModal(true)}>
-                            🤝 Conectar por gustos
+                            <img src="/icons/wishlist.png" alt="🤝" style={{ width: '16px', height: '16px', verticalAlign: 'middle', marginRight: '6px' }} /> Conectar por gustos
                         </button>
                     )}
                     {connectionStatus === 'request_sent' && (
@@ -317,7 +317,7 @@ export default function CompareProfiles() {
                 {showRequestModal && (
                     <div className="modal-overlay" onClick={() => setShowRequestModal(false)}>
                         <div className="modal-content request-modal" onClick={e => e.stopPropagation()}>
-                            <h2>🤝 Conectar con {profile2?.display_name}</h2>
+                            <h2><img src="/icons/wishlist.png" alt="🤝" style={{ width: '20px', height: '20px', verticalAlign: 'middle', marginRight: '8px' }} /> Conectar con {profile2?.display_name}</h2>
 
                             {commonWorks.length > 0 && (
                                 <div className="modal-common-works">
