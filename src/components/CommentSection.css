@@ -1,0 +1,188 @@
+/* Global Section Refinement */
+.comments-section {
+    margin-top: var(--space-2xl);
+    padding-top: var(--space-xl);
+    border-top: 1px solid var(--border-subtle);
+    max-width: 800px;
+    /* Limit width for readability */
+    margin-inline: auto;
+}
+
+.comments-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    margin-bottom: var(--space-xl);
+}
+
+/* Individual Comment Card */
+.comment {
+    display: flex;
+    gap: var(--space-md);
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+    /* Remove background/border for a cleaner look, or use very subtle ones */
+    border-bottom: 1px solid var(--border-subtle);
+    position: relative;
+    transition: background var(--transition-fast);
+}
+
+.comment:last-child {
+    border-bottom: none;
+}
+
+.comment:hover {
+    background: rgba(255, 255, 255, 0.02);
+    /* Extremely subtle hover */
+}
+
+/* Avatar Polish */
+.comment-avatar img,
+.comment-avatar .avatar-placeholder {
+    width: 42px;
+    height: 42px;
+    border-radius: var(--radius-full);
+    object-fit: cover;
+    box-shadow: 0 0 0 2px var(--bg-main);
+    /* fake border for separation */
+}
+
+.comment-avatar .avatar-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+    color: white;
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+/* Content Layout */
+.comment-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.comment-header {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-sm);
+}
+
+.comment-author {
+    font-weight: 700;
+    font-size: var(--text-sm);
+    color: var(--text-primary);
+    text-decoration: none;
+}
+
+.comment-author:hover {
+    text-decoration: underline;
+    color: var(--brand-primary);
+}
+
+.comment-date {
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+}
+
+.comment-text {
+    font-size: var(--text-sm);
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--text-secondary);
+    /* Slightly softer than pure white */
+}
+
+/* Delete Button */
+.delete-comment-btn {
+    position: absolute;
+    top: var(--space-sm);
+    right: var(--space-sm);
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 1rem;
+    opacity: 0;
+    transition: all var(--transition-fast);
+    padding: 4px;
+    border-radius: var(--radius-sm);
+}
+
+.comment:hover .delete-comment-btn {
+    opacity: 1;
+}
+
+.delete-comment-btn:hover {
+    color: var(--color-danger);
+    background: rgba(239, 68, 68, 0.1);
+}
+
+/* Modern Input Form */
+.comment-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    background: var(--bg-card);
+    /* Distinct background for the input area */
+    padding: var(--space-lg);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-subtle);
+    box-shadow: var(--shadow-sm);
+}
+
+.comment-form textarea {
+    background: var(--bg-main);
+    border: 1px solid var(--border-default);
+    color: var(--text-primary);
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+    resize: vertical;
+    min-height: 100px;
+    font-family: inherit;
+    font-size: var(--text-sm);
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.comment-form textarea:focus {
+    border-color: var(--brand-primary);
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+    /* Brand glow */
+    outline: none;
+}
+
+.comment-form textarea::placeholder {
+    color: var(--text-muted);
+}
+
+.comment-form .btn {
+    align-self: flex-end;
+    padding-left: var(--space-xl);
+    padding-right: var(--space-xl);
+}
+
+/* Logic Prompt */
+.login-prompt {
+    text-align: center;
+    padding: var(--space-xl);
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    border: 1px dashed var(--border-default);
+    color: var(--text-secondary);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-md);
+}
+
+.no-comments {
+    text-align: center;
+    color: var(--text-muted);
+    font-style: italic;
+    padding: var(--space-lg) 0;
+    opacity: 0.7;
+}
