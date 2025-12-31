@@ -165,7 +165,7 @@ export default function Layout() {
             <header className="header">
                 <div className="container header-content">
                     <Link to="/home" className="logo">
-                        <img src="/logo.png" alt="GeekSphere" className="logo-img" />
+                        <img src="/icons/logo.png" alt="GeekSphere" className="logo-img" />
                     </Link>
 
                     {/* Desktop Navigation */}

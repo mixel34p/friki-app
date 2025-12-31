@@ -86,7 +86,7 @@ export default function Landing() {
             <header className="landing-header">
                 <div className="container header-content">
                     <div className="logo-container">
-                        <img src="/logo.png" alt="GeekSphere" className="landing-logo" />
+                        <img src="/icons/logo.png" alt="GeekSphere" className="landing-logo" />
                         <span className="landing-brand">GeekSphere</span>
                     </div>
                     <div className="auth-buttons">
