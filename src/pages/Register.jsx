@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import SEO from '../components/SEO'
 import './Auth.css'
 
 export default function Register() {
@@ -46,6 +47,10 @@ export default function Register() {
 
     return (
         <div className="auth-page">
+            <SEO
+                title="Crear cuenta"
+                description="Únete a GeekSphere y empieza a organizar tus gustos en anime y videojuegos."
+            />
             <div className="auth-container">
                 <div className="auth-header">
                     <h1 className="auth-title">Crea tu perfil de gustos.</h1>

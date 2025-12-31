@@ -1,0 +1,18 @@
+User-agent: *
+Allow: /
+Allow: /login
+Allow: /register
+
+# Disallow protected routes from being crawled to avoid auth walls
+Disallow: /home
+Disallow: /profile
+Disallow: /edit-profile
+Disallow: /create-tierlist
+Disallow: /edit-tierlist
+Disallow: /library
+Disallow: /chat
+Disallow: /connections
+Disallow: /compare
+Disallow: /debates/create
+
+Sitemap: https://geeksphere.vercel.app/sitemap.xml

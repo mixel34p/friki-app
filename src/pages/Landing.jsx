@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { getRecentReviews } from '../lib/reviewService'
 import { getTrendingWorks } from '../lib/workPageService'
 import { getDebates } from '../lib/debateService'
+import SEO from '../components/SEO'
 import './Landing.css'
 
 export default function Landing() {
@@ -82,6 +83,11 @@ export default function Landing() {
 
     return (
         <div className="landing">
+            <SEO
+                title="Inicio"
+                description="Bienvenido a GeekSphere, la red social para fans del anime y videojuegos. Crea tierlists, participa en debates y encuentra gente con tus mismos gustos."
+                keywords="geek, anime, videojuegos, tierlists, comunidad"
+            />
             {/* Header / Nav */}
             <header className="landing-header">
                 <div className="container header-content">

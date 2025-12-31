@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import SEO from '../components/SEO'
 import './Auth.css'
 
 export default function Login() {
@@ -28,6 +29,10 @@ export default function Login() {
 
     return (
         <div className="auth-page">
+            <SEO
+                title="Iniciar sesión"
+                description="Entra en GeekSphere para acceder a tu biblioteca y conectar con otros fans."
+            />
             <div className="auth-container">
                 <div className="auth-header">
                     <h1 className="auth-title">Bienvenido de vuelta.</h1>
