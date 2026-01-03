@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>GBA Emulator</title>
+	<link rel="stylesheet" href="resources/main.css">
+	<!-- Load GBA.js Scripts -->
+	<script src="js/util.js"></script>
+	<script src="js/core.js"></script>
+	<script src="js/arm.js"></script>
+	<script src="js/thumb.js"></script>
+	<script src="js/mmu.js"></script>
+	<script src="js/io.js"></script>
+	<script src="js/audio.js"></script>
+	<script src="js/video.js"></script>
+	<script src="js/video/proxy.js"></script>
+	<script src="js/video/software.js"></script>
+	<script src="js/irq.js"></script>
+	<script src="js/keypad.js"></script>
+	<script src="js/sio.js"></script>
+	<script src="js/savedata.js"></script>
+	<script src="js/gpio.js"></script>
+	<script src="js/gba.js"></script>
+	<script src="resources/xhr.js"></script>
+
+	<style>
+		body {
+			margin: 0;
+			padding: 0;
+			overflow: hidden;
+			background-color: #000;
+			color: white;
+			font-family: monospace;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			height: 100vh;
+		}
+
+		canvas {
+			image-rendering: pixelated;
+			background-color: #000;
+			max-width: 100%;
+			max-height: 100vh;
+			object-fit: contain;
+			/* Ensure Aspect Ratio */
+		}
+
+		#status {
+			position: absolute;
+			top: 10px;
+			left: 10px;
+			background: rgba(0, 0, 0, 0.7);
+			padding: 5px;
+			border-radius: 4px;
+			pointer-events: none;
+		}
+	</style>
+</head>
+
+<body>
+
+	<div id="status">Iniciando emulador...</div>
+	<canvas id="screen" width="480" height="320"></canvas>
+
+	<script>
+		// --- Initialization Logic ---
+		var gba;
+		var runCommands = [];
+
+		// Initialize GBA
+		try {
+			gba = new GameBoyAdvance();
+			gba.keypad.eatInput = true;
+			gba.setLogger(function (level, error) {
+				console.log(error);
+				// gba.pause();
+				var screen = document.getElementById('screen');
+				if (screen.getAttribute('class') == 'dead') {
+					console.log('We appear to have crashed multiple times without reseting.');
+					return;
+				}
+				// var crash = document.createElement('img');
+				// crash.setAttribute('id', 'crash');
+				// crash.setAttribute('src', 'resources/crash.png');
+				// screen.parentElement.insertBefore(crash, screen);
+				// screen.setAttribute('class', 'dead');
+			});
+		} catch (exception) {
+			gba = null;
+			document.getElementById('status').textContent = "Error initializing GBA: " + exception;
+		}
+
+		window.onload = function () {
+			if (gba) {
+				var canvas = document.getElementById('screen');
+				gba.setCanvas(canvas);
+				gba.logLevel = gba.LOG_ERROR;
+
+				// Try to load BIOS if available, otherwise GBA.js might fallback or fail gracefully?
+				// Actually, GBA.js really likes having a BIOS. If not provided, it might use HLE or empty.
+				// HLE is supported in default GBA.js? Maybe.
+
+				// Auto-load ROM from query param
+				const urlParams = new URLSearchParams(window.location.search);
+				const romUrl = urlParams.get('rom');
+
+				if (romUrl) {
+					document.getElementById('status').textContent = "Cargando ROM: " + romUrl;
+					loadRom(romUrl, function (result) {
+						if (result) {
+							// Result is ArrayBuffer
+							document.getElementById('status').textContent = "ROM cargada. Iniciando...";
+							gba.setRom(result);
+							gba.runStable();
+							setTimeout(() => {
+								document.getElementById('status').style.display = 'none';
+							}, 2000);
+						} else {
+							document.getElementById('status').textContent = "Error al cargar ROM.";
+						}
+					});
+				} else {
+					document.getElementById('status').textContent = "No se especificó ROM (?rom=URL).";
+				}
+
+			} else {
+				document.getElementById('status').textContent = "GBA no pudo iniciarse.";
+			}
+		}
+	</script>
+
+</body>
+
+</html>
