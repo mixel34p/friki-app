@@ -2,7 +2,7 @@ import { supabase } from './supabase'
 
 /**
  * Servicio para gestionar reacciones temáticas
- * Tipos: epic (🔥 Épico), interesting (🧠 Interesante), meh (😴 Meh), destroyed (💀 Me destruyó)
+ * Tipos: epic (🔥), interesting (🧠), meh (😴), destroyed (💀)
  */
 
 export const REACTION_TYPES = {
@@ -19,12 +19,94 @@ export const REACTION_LABELS = {
     destroyed: { icon: '/icons/cross.png', label: 'Me destruyó', emoji: '💀' }
 }
 
-// ... (funciones addReaction, removeReaction, getReactions, getUserReaction siguen igual)
+/**
+ * Añade o actualiza la reacción del usuario a un contenido
+ */
+export async function addReaction(userId, targetType, targetId, reactionType) {
+    try {
+        const { data, error } = await supabase
+            .from('thematic_reactions')
+            .upsert({
+                user_id: userId,
+                target_type: targetType,
+                target_id: targetId,
+                reaction_type: reactionType
+            }, {
+                onConflict: 'user_id,target_type,target_id'
+            })
+            .select()
+            .single()
+
+        if (error) throw error
+        return { success: true, data }
+    } catch (error) {
+        console.error('Error adding reaction:', error)
+        return { success: false, error: error.message }
+    }
+}
+
+/**
+ * Elimina la reacción del usuario a un contenido
+ */
+export async function removeReaction(userId, targetType, targetId) {
+    try {
+        const { error } = await supabase
+            .from('thematic_reactions')
+            .delete()
+            .eq('user_id', userId)
+            .eq('target_type', targetType)
+            .eq('target_id', targetId)
+
+        if (error) throw error
+        return { success: true }
+    } catch (error) {
+        console.error('Error removing reaction:', error)
+        return { success: false, error: error.message }
+    }
+}
+
+/**
+ * Obtiene todas las reacciones de un contenido (agregadas)
+ */
+export async function getReactions(targetType, targetId) {
+    try {
+        const { data, error } = await supabase
+            .rpc('get_reaction_counts', {
+                p_target_type: targetType,
+                p_target_id: targetId
+            })
+
+        if (error) throw error
+        return data || {}
+    } catch (error) {
+        console.error('Error fetching reactions:', error)
+        return {}
+    }
+}
+
+/**
+ * Obtiene la reacción del usuario actual a un contenido
+ */
+export async function getUserReaction(userId, targetType, targetId) {
+    try {
+        const { data, error } = await supabase
+            .from('thematic_reactions')
+            .select('reaction_type')
+            .eq('user_id', userId)
+            .eq('target_type', targetType)
+            .eq('target_id', targetId)
+            .maybeSingle()
+
+        if (error) throw error
+        return data?.reaction_type || null
+    } catch (error) {
+        console.error('Error fetching user reaction:', error)
+        return null
+    }
+}
 
 /**
  * Genera un texto descriptivo para mostrar las reacciones
- * @param {Object} reactions - Conteo de reacciones
- * @returns {string} Texto descriptivo
  */
 export function formatReactionsText(reactions) {
     if (!reactions || Object.keys(reactions).length === 0) {
@@ -45,17 +127,11 @@ export function formatReactionsText(reactions) {
     if (!maxType) return null
 
     const reaction = REACTION_LABELS[maxType]
-    // Usamos el emoji unicode para el texto descriptivo, no la imagen
     return `A la gente le pareció ${reaction.emoji || ''} ${reaction.label}`
 }
 
 /**
- * Toggle de reacción: añade si no existe, elimina si ya existe la misma, cambia si existe otra
- * @param {string} userId - ID del usuario
- * @param {string} targetType - Tipo de contenido
- * @param {string} targetId - ID del contenido
- * @param {string} reactionType - Tipo de reacción
- * @returns {Promise<Object>} Resultado de la operación
+ * Toggle de reacción
  */
 export async function toggleReaction(userId, targetType, targetId, reactionType) {
     try {
