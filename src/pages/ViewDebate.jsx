@@ -12,7 +12,9 @@ import {
 } from '../lib/debateService'
 import DebatePost from '../components/debates/DebatePost'
 import MediaSelector from '../components/debates/MediaSelector'
+import ThematicReactions from '../components/ThematicReactions'
 import './Debates.css'
+
 
 export default function ViewDebate() {
     const { id } = useParams()
@@ -327,6 +329,9 @@ export default function ViewDebate() {
                         debateOwnerId={debate.user_id}
                     />
                 </div>
+
+                {/* Thematic Reactions */}
+                <ThematicReactions targetType="debate" targetId={id} />
 
                 {/* Posts Section */}
                 <div className="debate-posts-section">

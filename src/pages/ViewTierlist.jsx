@@ -3,9 +3,11 @@ import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import CommentSection from '../components/CommentSection'
+import ThematicReactions from '../components/ThematicReactions'
 import { toggleLike, getTierlistLikes, checkUserLike } from '../lib/supabase'
 import LoadingSpinner from '../components/LoadingSpinner'
 import './ViewTierlist.css'
+
 
 const TEMPLATES = {
     tierlist: {
@@ -331,6 +333,9 @@ export default function ViewTierlist() {
                         <span className="owner-arrow">→</span>
                     </Link>
                 )}
+
+                {/* Thematic Reactions */}
+                <ThematicReactions targetType="tierlist" targetId={id} />
 
                 {/* Tierlist Display */}
                 <div className="tierlist-display">

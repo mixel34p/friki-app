@@ -5,7 +5,9 @@ import { supabase } from '../lib/supabase'
 import { getDebates } from '../lib/debateService'
 import DebateCard from '../components/debates/DebateCard'
 import LoadingSpinner from '../components/LoadingSpinner'
+import DailyPrompt from '../components/DailyPrompt'
 import './Home.css'
+
 
 export default function Home() {
     const { user, profile } = useAuth()
@@ -196,6 +198,9 @@ export default function Home() {
             </section>
 
             <div className="container home-grid">
+
+                {/* Daily Prompt - Micro-interacción diaria */}
+                <DailyPrompt />
 
                 {/* Active Debates (Randomized) */}
                 <section className="section-debates">

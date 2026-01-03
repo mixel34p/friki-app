@@ -1,0 +1,130 @@
+.thematic-reactions {
+    margin: 16px 0;
+    padding: 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+}
+
+.reactions-title {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    font-weight: 600;
+    margin-bottom: 12px;
+    letter-spacing: 0.05em;
+}
+
+.reactions-buttons {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+
+.reaction-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 6px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-height: 80px;
+}
+
+.reaction-btn:hover:not(:disabled) {
+    background: var(--bg-tertiary);
+    border-color: var(--border-color-hover);
+    transform: translateY(-2px);
+}
+
+.reaction-btn:active:not(:disabled) {
+    transform: scale(0.98);
+}
+
+.reaction-btn.active {
+    background: rgba(var(--primary-rgb), 0.1);
+    border-color: var(--primary);
+}
+
+.reaction-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Iconos de imagen */
+.reaction-btn img {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+    transition: transform 0.2s;
+    filter: grayscale(0.2);
+}
+
+.reaction-btn:hover img {
+    transform: scale(1.1);
+    filter: grayscale(0);
+}
+
+.reaction-btn.active img {
+    filter: grayscale(0);
+}
+
+.reaction-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+.reaction-btn.active .reaction-label {
+    color: var(--primary);
+}
+
+.reaction-count {
+    background: var(--bg-card);
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-tertiary);
+}
+
+.reaction-btn.active .reaction-count {
+    background: var(--primary);
+    color: white;
+}
+
+.reactions-summary {
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-color);
+    text-align: center;
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+}
+
+/* RESPONSIVE */
+@media (max-width: 600px) {
+    .reactions-buttons {
+        gap: 8px;
+    }
+
+    .reaction-btn {
+        padding: 8px 4px;
+        min-height: 70px;
+    }
+
+    .reaction-btn img {
+        width: 24px;
+        height: 24px;
+    }
+
+    .reaction-label {
+        font-size: 0.7rem;
+    }
+}
