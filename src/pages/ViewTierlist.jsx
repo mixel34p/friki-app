@@ -6,6 +6,7 @@ import CommentSection from '../components/CommentSection'
 import ThematicReactions from '../components/ThematicReactions'
 import { toggleLike, getTierlistLikes, checkUserLike } from '../lib/supabase'
 import LoadingSpinner from '../components/LoadingSpinner'
+import SEO from '../components/SEO'
 import './ViewTierlist.css'
 
 
@@ -170,7 +171,9 @@ export default function ViewTierlist() {
                 .from('tierlists')
                 .select(`
           *,
-          tierlist_items (*)
+          *,
+          tierlist_items (*),
+          parent:parent_id ( title, id )
         `)
                 .eq('id', id)
                 .single()
@@ -270,6 +273,11 @@ export default function ViewTierlist() {
 
     return (
         <div className="view-tierlist">
+            <SEO
+                title={tierlist.title}
+                description={tierlist.description || `Mira esta tierlist de ${tierlist.media_type === 'anime' ? 'Animes' : 'Juegos'} creada por @${owner?.username}`}
+                image={Object.values(legacyImages)[0] || null}
+            />
             <div className="container">
                 {/* Header */}
                 <div className="tierlist-header">
@@ -287,6 +295,14 @@ export default function ViewTierlist() {
                     </div>
 
                     <div className="tierlist-actions">
+                        <Link
+                            to={`/create-tierlist?fork=${id}`}
+                            className="btn btn-primary remix-btn"
+                            title="Crear tu propia versión de esta lista"
+                        >
+                            🔀 Remix
+                        </Link>
+
                         <button
                             className={`like-btn ${isLiked ? 'liked' : ''}`}
                             onClick={handleLike}
@@ -311,6 +327,16 @@ export default function ViewTierlist() {
                     </div>
                 </div>
 
+                {/* Based On Info */}
+                {tierlist.parent && (
+                    <div className="tierlist-parent-info">
+                        <span className="text-muted">Basada en </span>
+                        <Link to={`/tierlist/${tierlist.parent.id}`} className="parent-link">
+                            {tierlist.parent.title}
+                        </Link>
+                    </div>
+                )}
+
                 {/* Owner Card */}
                 {owner && (
                     <Link to={`/profile/${owner.username}`} className="owner-card">
@@ -334,9 +360,6 @@ export default function ViewTierlist() {
                     </Link>
                 )}
 
-                {/* Thematic Reactions */}
-                <ThematicReactions targetType="tierlist" targetId={id} />
-
                 {/* Tierlist Display */}
                 <div className="tierlist-display">
                     {activeTemplate.rows.map(tier => (
@@ -347,7 +370,7 @@ export default function ViewTierlist() {
                                     backgroundColor: activeTemplate.colors[tier],
                                     color: 'white',
                                     fontSize: templateId === 'ranking' ? '1.2rem' : undefined,
-                                    width: '80px', // Fixed width for labels
+                                    width: '80px', // We'll override this in CSS
                                 }}
                             >
                                 {tier}
@@ -362,6 +385,7 @@ export default function ViewTierlist() {
                                                 to={`/${tierlist.media_type || 'game'}/${item.media_id}`}
                                                 className="tier-item"
                                                 style={{ textDecoration: 'none' }}
+                                                title={item.title}
                                             >
                                                 {item.image_url ? (
                                                     <img
@@ -383,20 +407,11 @@ export default function ViewTierlist() {
                                                     🎮
                                                 </div>
 
-                                                <div className="item-info">
-                                                    <span className="item-title">{item.title || `Juego #${item.position + 1}`}</span>
-                                                    {item.tags && item.tags.length > 0 && (
-                                                        <div className="item-tags">
-                                                            {item.tags.slice(0, 2).map((tag, i) => (
-                                                                <span key={i} className="tag">{tag}</span>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                </div>
+                                                {/* Tooltip-like title on hover only, handled by CSS */}
                                             </Link>
                                         ))
                                 ) : (
-                                    <div className="tier-empty">Vacío</div>
+                                    <div className="tier-empty"></div>
                                 )}
                             </div>
                         </div>
@@ -415,6 +430,11 @@ export default function ViewTierlist() {
                     <span className="meta-item">
                         {tierlist.visibility === 'public' ? '🌍 Pública' : '🔒 Privada'}
                     </span>
+                </div>
+
+                {/* Reactions (Moved & Compact) */}
+                <div className="tierlist-reactions-compact">
+                    <ThematicReactions targetType="tierlist" targetId={id} />
                 </div>
             </div>
 
@@ -445,6 +465,22 @@ export default function ViewTierlist() {
 
             {/* Comments Section */}
             <CommentSection tierlistId={id} ownerId={tierlist.user_id} />
+
+            {/* Join CTA for non-logged users */}
+            {!user && (
+                <div className="join-cta-banner">
+                    <div className="join-cta-content">
+                        <div className="join-cta-info">
+                            <h3>¿Quieres crear tu propia versión?</h3>
+                            <p>Únete a GeekSphere para remixear tierlists, opinar sobre juegos/animes y conectar con la comunidad.</p>
+                        </div>
+                        <div className="join-cta-actions">
+                            <Link to="/register" className="btn btn-primary">Crear Cuenta</Link>
+                            <Link to="/login" className="btn btn-text">Login</Link>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

@@ -262,116 +262,125 @@ export default function Layout() {
                     </div>
 
                     <div className="header-actions">
-                        {/* Notifications */}
-                        <div className="notif-wrapper" ref={notifRef}>
-                            <button
-                                className="notif-btn"
-                                onClick={() => setNotifOpen(!notifOpen)}
-                                title="Notificaciones"
-                            >
-                                <img src="/icons/bell.png" alt="Notificaciones" style={{ width: '30px', height: '30px' }} />
-                                {unreadCount > 0 && <span className="notif-badge">{unreadCount}</span>}
-                            </button>
-
-                            {notifOpen && (
-                                <div className="notif-dropdown">
-                                    <div className="notif-header">Notificaciones</div>
-                                    <div className="notif-list">
-                                        {notifications.length === 0 ? (
-                                            <div className="notif-empty">Sin notificaciones nuevas</div>
-                                        ) : (
-                                            notifications.map(notif => {
-                                                let linkTo = `/profile/${notif.actor?.username}`
-                                                let text = 'interactuó contigo'
-
-                                                if (notif.type === 'follow') {
-                                                    text = 'comenzó a seguirte'
-                                                } else if (notif.type === 'like') {
-                                                    text = 'le dio ❤️ a tu tierlist'
-                                                    if (notif.resource_id) linkTo = `/tierlist/${notif.resource_id}`
-                                                } else if (notif.type === 'comment') {
-                                                    if (notif.resource_id) linkTo = `/tierlist/${notif.resource_id}`
-                                                } else if (notif.type === 'connection_request') {
-                                                    text = 'te envió una solicitud de conexión'
-                                                    linkTo = '/connections?tab=requests'
-                                                } else if (notif.type === 'connection_accepted') {
-                                                    text = 'aceptó tu solicitud de conexión'
-                                                    linkTo = `/chat/${notif.resource_id}`
-                                                }
-
-                                                return (
-                                                    <Link
-                                                        key={notif.id}
-                                                        to={linkTo}
-                                                        className={`notif-item ${!notif.read ? 'unread' : ''}`}
-                                                        onClick={() => setNotifOpen(false)}
-                                                    >
-                                                        <div className="notif-avatar">
-                                                            {notif.actor?.avatar_url ? (
-                                                                <img src={notif.actor.avatar_url} alt="" />
-                                                            ) : (
-                                                                <div className="notif-avatar-placeholder">
-                                                                    {notif.actor?.display_name?.charAt(0) || '?'}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                        <div className="notif-content">
-                                                            <span className="notif-text">
-                                                                <strong>{notif.actor?.display_name}</strong> {text}
-                                                            </span>
-                                                            <span className="notif-date">
-                                                                {new Date(notif.created_at).toLocaleDateString()}
-                                                            </span>
-                                                        </div>
-                                                    </Link>
-                                                )
-                                            })
-
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* User Menu */}
-                        <div className="user-menu" ref={menuRef}>
-                            <button
-                                className="user-menu-btn"
-                                onClick={() => setMenuOpen(!menuOpen)}
-                            >
-                                {profile?.avatar_url ? (
-                                    <img src={profile.avatar_url} alt="" className="user-avatar-sm" />
-                                ) : (
-                                    <div className="user-avatar-sm user-avatar-placeholder">
-                                        {profile?.display_name?.charAt(0) || '?'}
-                                    </div>
-                                )}
-                                <span className="user-menu-arrow">{menuOpen ? '▲' : '▼'}</span>
-                            </button>
-
-                            {menuOpen && (
-                                <div className="dropdown-menu">
-                                    <div className="dropdown-header">
-                                        <span className="dropdown-name">{profile?.display_name}</span>
-                                        <span className="dropdown-username">@{profile?.username}</span>
-                                    </div>
-                                    <div className="dropdown-divider"></div>
-                                    <Link to="/library" className="dropdown-item">
-                                        <img src="/icons/book.png" alt="📚" style={{ width: '16px', height: '16px', verticalAlign: 'middle', marginRight: '6px' }} /> Mi Biblioteca
-                                    </Link>
-                                    <Link to="/profile" className="dropdown-item">
-                                        <img src="/icons/mushroom.png" alt="👤" style={{ width: '16px', height: '16px', verticalAlign: 'middle', marginRight: '6px' }} /> Mi perfil
-                                    </Link>
-                                    <Link to="/edit-profile" className="dropdown-item">
-                                        <img src="/icons/gear.gif" alt="⚙️" style={{ width: '16px', height: '16px', verticalAlign: 'middle', marginRight: '6px' }} /> Editar perfil
-                                    </Link>
-                                    <div className="dropdown-divider"></div>
-                                    <button className="dropdown-item dropdown-logout" onClick={handleSignOut}>
-                                        🚪 Cerrar sesión
+                        {!user ? (
+                            <div className="auth-buttons" style={{ display: 'flex', gap: '8px' }}>
+                                <Link to="/login" className="btn btn-ghost" style={{ padding: '8px 16px' }}>Login</Link>
+                                <Link to="/register" className="btn btn-primary" style={{ padding: '8px 16px' }}>Registro</Link>
+                            </div>
+                        ) : (
+                            <>
+                                {/* Notifications */}
+                                <div className="notif-wrapper" ref={notifRef}>
+                                    <button
+                                        className="notif-btn"
+                                        onClick={() => setNotifOpen(!notifOpen)}
+                                        title="Notificaciones"
+                                    >
+                                        <img src="/icons/bell.png" alt="Notificaciones" style={{ width: '30px', height: '30px' }} />
+                                        {unreadCount > 0 && <span className="notif-badge">{unreadCount}</span>}
                                     </button>
+
+                                    {notifOpen && (
+                                        <div className="notif-dropdown">
+                                            <div className="notif-header">Notificaciones</div>
+                                            <div className="notif-list">
+                                                {notifications.length === 0 ? (
+                                                    <div className="notif-empty">Sin notificaciones nuevas</div>
+                                                ) : (
+                                                    notifications.map(notif => {
+                                                        let linkTo = `/profile/${notif.actor?.username}`
+                                                        let text = 'interactuó contigo'
+
+                                                        if (notif.type === 'follow') {
+                                                            text = 'comenzó a seguirte'
+                                                        } else if (notif.type === 'like') {
+                                                            text = 'le dio ❤️ a tu tierlist'
+                                                            if (notif.resource_id) linkTo = `/tierlist/${notif.resource_id}`
+                                                        } else if (notif.type === 'comment') {
+                                                            if (notif.resource_id) linkTo = `/tierlist/${notif.resource_id}`
+                                                        } else if (notif.type === 'connection_request') {
+                                                            text = 'te envió una solicitud de conexión'
+                                                            linkTo = '/connections?tab=requests'
+                                                        } else if (notif.type === 'connection_accepted') {
+                                                            text = 'aceptó tu solicitud de conexión'
+                                                            linkTo = `/chat/${notif.resource_id}`
+                                                        }
+
+                                                        return (
+                                                            <Link
+                                                                key={notif.id}
+                                                                to={linkTo}
+                                                                className={`notif-item ${!notif.read ? 'unread' : ''}`}
+                                                                onClick={() => setNotifOpen(false)}
+                                                            >
+                                                                <div className="notif-avatar">
+                                                                    {notif.actor?.avatar_url ? (
+                                                                        <img src={notif.actor.avatar_url} alt="" />
+                                                                    ) : (
+                                                                        <div className="notif-avatar-placeholder">
+                                                                            {notif.actor?.display_name?.charAt(0) || '?'}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                                <div className="notif-content">
+                                                                    <span className="notif-text">
+                                                                        <strong>{notif.actor?.display_name}</strong> {text}
+                                                                    </span>
+                                                                    <span className="notif-date">
+                                                                        {new Date(notif.created_at).toLocaleDateString()}
+                                                                    </span>
+                                                                </div>
+                                                            </Link>
+                                                        )
+                                                    })
+
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
-                            )}
-                        </div>
+
+                                {/* User Menu */}
+                                <div className="user-menu" ref={menuRef}>
+                                    <button
+                                        className="user-menu-btn"
+                                        onClick={() => setMenuOpen(!menuOpen)}
+                                    >
+                                        {profile?.avatar_url ? (
+                                            <img src={profile.avatar_url} alt="" className="user-avatar-sm" />
+                                        ) : (
+                                            <div className="user-avatar-sm user-avatar-placeholder">
+                                                {profile?.display_name?.charAt(0) || '?'}
+                                            </div>
+                                        )}
+                                        <span className="user-menu-arrow">{menuOpen ? '▲' : '▼'}</span>
+                                    </button>
+
+                                    {menuOpen && (
+                                        <div className="dropdown-menu">
+                                            <div className="dropdown-header">
+                                                <span className="dropdown-name">{profile?.display_name}</span>
+                                                <span className="dropdown-username">@{profile?.username}</span>
+                                            </div>
+                                            <div className="dropdown-divider"></div>
+                                            <Link to="/library" className="dropdown-item">
+                                                <img src="/icons/book.png" alt="📚" style={{ width: '16px', height: '16px', verticalAlign: 'middle', marginRight: '6px' }} /> Mi Biblioteca
+                                            </Link>
+                                            <Link to="/profile" className="dropdown-item">
+                                                <img src="/icons/mushroom.png" alt="👤" style={{ width: '16px', height: '16px', verticalAlign: 'middle', marginRight: '6px' }} /> Mi perfil
+                                            </Link>
+                                            <Link to="/edit-profile" className="dropdown-item">
+                                                <img src="/icons/gear.gif" alt="⚙️" style={{ width: '16px', height: '16px', verticalAlign: 'middle', marginRight: '6px' }} /> Editar perfil
+                                            </Link>
+                                            <div className="dropdown-divider"></div>
+                                            <button className="dropdown-item dropdown-logout" onClick={handleSignOut}>
+                                                🚪 Cerrar sesión
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
             </header>

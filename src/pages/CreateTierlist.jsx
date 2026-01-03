@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, useDroppable } from '@dnd-kit/core'
+import { DndContext, pointerWithin, PointerSensor, useSensor, useSensors, useDroppable, DragOverlay } from '@dnd-kit/core'
 import { SortableContext, rectSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useAuth } from '../context/AuthContext'
@@ -39,7 +39,9 @@ function SortableItem({ game, onRemove }) {
     const style = {
         transform: CSS.Transform.toString(transform),
         transition,
-        opacity: isDragging ? 0.5 : 1,
+        opacity: isDragging ? 0.3 : 1, // Make original item very transparent when dragging
+        touchAction: 'none',
+        userSelect: 'none',
     }
 
     return (
@@ -52,9 +54,14 @@ function SortableItem({ game, onRemove }) {
             title={game.name}
         >
             {(game.image_url || game.cover_url) ? (
-                <img src={game.image_url || game.cover_url} alt={game.name} className="tier-item-img" />
+                <img
+                    src={game.image_url || game.cover_url}
+                    alt={game.name}
+                    className="tier-item-img"
+                    draggable={false}
+                />
             ) : (
-                <span className="tier-item-emoji"><img src="/icons/videogame.png" alt="🎮" style={{ width: '32px', height: '32px' }} /></span>
+                <span className="tier-item-emoji"><img src="/icons/videogame.png" alt="🎮" style={{ width: '32px', height: '32px' }} draggable={false} /></span>
             )}
             <div className="tier-item-overlay">
                 <span className="tier-item-title">{game.name}</span>
@@ -93,18 +100,25 @@ export default function CreateTierlist() {
     const [description, setDescription] = useState('')
     const [visibility, setVisibility] = useState('public')
     const [mediaType, setMediaType] = useState('game') // 'game' | 'anime'
+    const [parentId, setParentId] = useState(null)
+    const [activeItem, setActiveItem] = useState(null) // For drag preview
 
     // Dynamic Tiers State
     const [tiers, setTiers] = useState({ pool: [] })
 
-    // Load existing tierlist if editing
+    // Load existing tierlist if editing or forking
     useEffect(() => {
+        const searchParams = new URLSearchParams(window.location.search)
+        const forkId = searchParams.get('fork')
+
         if (id) {
-            fetchTierlist(id)
+            fetchTierlist(id, false)
+        } else if (forkId) {
+            fetchTierlist(forkId, true)
         }
     }, [id])
 
-    const fetchTierlist = async (tierlistId) => {
+    const fetchTierlist = async (tierlistId, isFork = false) => {
         try {
             const { data, error } = await supabase
                 .from('tierlists')
@@ -117,41 +131,82 @@ export default function CreateTierlist() {
 
             if (error) throw error
 
-            setTitle(data.title)
-            setDescription(data.description || '')
-            setVisibility(data.visibility)
-            setActiveTemplate(data.list_type || 'tierlist')
-            setMediaType(data.media_type || 'game')
+            if (isFork) {
+                // Forking mode: Copy template, media_type, and items to POOL
+                setTitle(`Mi versión de ${data.title}`)
+                // Don't copy description to encourage unique thoughts
+                setDescription('')
+                setVisibility('public')
+                setActiveTemplate(data.list_type || 'tierlist')
+                setMediaType(data.media_type || 'game')
+                setParentId(tierlistId) // Track parent!
 
-            if (data.content && Object.keys(data.content).length > 0) {
-                // Load from JSON content (New format)
-                setTiers(data.content)
-            } else {
-                // Legacy: Reconstruct from relational items
-                // Reconstruct tiers
-                const loadedTiers = { pool: [] }
-                // Initialize empty rows based on template
-                const templateRows = TEMPLATES[data.list_type || 'tierlist'].rows
-                templateRows.forEach(row => { loadedTiers[row] = [] })
+                // Load all items into POOL
+                const poolItems = []
 
-                // Sort items by position
-                const sortedItems = (data.tierlist_items || []).sort((a, b) => a.position - b.position)
+                if (data.content && Object.keys(data.content).length > 0) {
+                    // Flatten all content rows into one pool
+                    Object.values(data.content).flat().forEach(item => {
+                        // Ensure unique IDs in pool just in case
+                        if (!poolItems.some(i => i.id === item.id)) {
+                            poolItems.push({ ...item })
+                        }
+                    })
+                } else {
+                    // Legacy items
+                    (data.tierlist_items || []).forEach(item => {
+                        const game = {
+                            id: item.media_id,
+                            name: item.title,
+                            image_url: item.image_url,
+                            genres: Array.isArray(item.tags) ? item.tags.join(', ') : (item.tags || '')
+                        }
+                        if (!poolItems.some(i => i.id === game.id)) {
+                            poolItems.push(game)
+                        }
+                    })
+                }
 
-                sortedItems.forEach(item => {
-                    const game = {
-                        id: item.media_id,
-                        name: item.title,
-                        image_url: item.image_url,
-                        genres: Array.isArray(item.tags) ? item.tags.join(', ') : (item.tags || '')
-                    }
-
-                    if (loadedTiers[item.tier]) {
-                        loadedTiers[item.tier].push(game)
-                    } else {
-                        loadedTiers.pool.push(game)
-                    }
+                // Initial state for Fork: Everything in pool
+                const initialTiers = { pool: poolItems }
+                TEMPLATES[data.list_type || 'tierlist'].rows.forEach(row => {
+                    initialTiers[row] = []
                 })
-                setTiers(loadedTiers)
+                setTiers(initialTiers)
+
+            } else {
+                // Regular Edit Mode
+                setTitle(data.title)
+                setDescription(data.description || '')
+                setVisibility(data.visibility)
+                setActiveTemplate(data.list_type || 'tierlist')
+                setMediaType(data.media_type || 'game')
+                setParentId(data.parent_id)
+
+                if (data.content && Object.keys(data.content).length > 0) {
+                    setTiers(data.content)
+                } else {
+                    // Legacy reconstruction
+                    const loadedTiers = { pool: [] }
+                    TEMPLATES[data.list_type || 'tierlist'].rows.forEach(row => { loadedTiers[row] = [] })
+                    const sortedItems = (data.tierlist_items || []).sort((a, b) => a.position - b.position)
+
+                    sortedItems.forEach(item => {
+                        const game = {
+                            id: item.media_id,
+                            name: item.title,
+                            image_url: item.image_url,
+                            genres: Array.isArray(item.tags) ? item.tags.join(', ') : (item.tags || '')
+                        }
+
+                        if (loadedTiers[item.tier]) {
+                            loadedTiers[item.tier].push(game)
+                        } else {
+                            loadedTiers.pool.push(game)
+                        }
+                    })
+                    setTiers(loadedTiers)
+                }
             }
         } catch (error) {
             console.error('Error loading tierlist:', error)
@@ -159,14 +214,32 @@ export default function CreateTierlist() {
         }
     }
 
-    // Initialize tiers based on template
+    // Initialize tiers based on template (only if not loading a fork/edit initially)
     useEffect(() => {
-        if (!id) {
+        // If we are setting up a fresh or template switch, preserve pool but reset others
+        // But be careful not to wipe data just loaded from fork
+        if (!id && !tiers.pool?.length && !window.location.search.includes('fork')) {
             const initialTiers = { pool: tiers.pool || [] }
             TEMPLATES[activeTemplate].rows.forEach(row => {
                 initialTiers[row] = tiers[row] || []
             })
             setTiers(initialTiers)
+        } else if (!id && !window.location.search.includes('fork')) {
+            // Changing template manually
+            const initialTiers = { pool: tiers.pool || [] }
+            TEMPLATES[activeTemplate].rows.forEach(row => {
+                initialTiers[row] = tiers[row] || [] // Try to keep items if feasible, or move to pool?
+                // Simple approach: Move everything to pool if template changes? 
+                // For now, let's just ensure rows exist.
+                if (!initialTiers[row]) initialTiers[row] = []
+            })
+            // If keys don't match new template, move them to pool?
+            // Complex. Let's assume user knows what they do when switching template mid-creation.
+            setTiers(prev => {
+                const newTiers = { pool: prev.pool }
+                TEMPLATES[activeTemplate].rows.forEach(r => newTiers[r] = prev[r] || [])
+                return newTiers
+            })
         }
     }, [activeTemplate])
 
@@ -188,7 +261,7 @@ export default function CreateTierlist() {
     const sensors = useSensors(
         useSensor(PointerSensor, {
             activationConstraint: {
-                distance: 5,
+                distance: 3,
             },
         })
     )
@@ -240,8 +313,69 @@ export default function CreateTierlist() {
         })
     }
 
+    const findContainer = (id) => {
+        if (id in tiers) {
+            return id
+        }
+        return Object.keys(tiers).find((key) => tiers[key]?.some(g => g.id.toString() === id.toString()))
+    }
+
+    const handleDragOver = (event) => {
+        const { active, over } = event
+        const overId = over?.id
+        const activeId = active.id.toString()
+
+        if (!overId || active.id === overId) return
+
+        const activeContainer = findContainer(activeId)
+        const overContainer = findContainer(overId)
+
+        if (!activeContainer || !overContainer) return
+
+        if (activeContainer !== overContainer) {
+            setTiers((prev) => {
+                const activeItems = prev[activeContainer]
+                const overItems = prev[overContainer]
+                const activeIndex = activeItems.findIndex(g => g.id.toString() === activeId)
+                const overIndex = prev[overContainer].some(g => g.id.toString() === overId.toString())
+                    ? overItems.findIndex(g => g.id.toString() === overId.toString())
+                    : overItems.length + 1
+
+                let newIndex
+                if (tiers[overContainer].find(g => g.id.toString() === overId.toString())) {
+                    // Dropped on item
+                    const overItemIndex = overItems.findIndex(g => g.id.toString() === overId.toString())
+                    const isBelowOverItem =
+                        over &&
+                        active.rect.current.translated &&
+                        active.rect.current.translated.top > over.rect.top + over.rect.height;
+
+                    const modifier = isBelowOverItem ? 1 : 0;
+                    newIndex = overItemIndex >= 0 ? overItemIndex + modifier : overItems.length + 1;
+                } else {
+                    newIndex = overItems.length + 1
+                }
+
+                return {
+                    ...prev,
+                    [activeContainer]: [
+                        ...prev[activeContainer].filter((item) => item.id.toString() !== active.id.toString())
+                    ],
+                    [overContainer]: [
+                        ...prev[overContainer].slice(0, newIndex),
+                        activeItems[activeIndex],
+                        ...prev[overContainer].slice(newIndex, prev[overContainer].length)
+                    ]
+                }
+            })
+        }
+    }
+
     const handleDragEnd = (event) => {
         const { active, over } = event
+
+        setActiveItem(null) // Clear preview
+
         if (!over) return
 
         const activeId = active.id.toString()
@@ -252,6 +386,7 @@ export default function CreateTierlist() {
         let activeTier = null
         let activeGame = null
         for (const [tier, games] of Object.entries(tiers)) {
+            if (!games) continue
             const game = games.find(g => g.id.toString() === activeId)
             if (game) {
                 activeTier = tier
@@ -268,7 +403,7 @@ export default function CreateTierlist() {
                 setTiers(prev => ({
                     ...prev,
                     [activeTier]: prev[activeTier].filter(g => g.id.toString() !== activeId),
-                    [overId]: [...prev[overId], activeGame]
+                    [overId]: [...(prev[overId] || []), activeGame]
                 }))
             }
             return
@@ -277,6 +412,7 @@ export default function CreateTierlist() {
         // Dropping on another Item
         let overTier = null
         for (const [tier, games] of Object.entries(tiers)) {
+            if (!games) continue
             if (games.find(g => g.id.toString() === overId)) {
                 overTier = tier
                 break
@@ -298,7 +434,7 @@ export default function CreateTierlist() {
                 setTiers(prev => ({
                     ...prev,
                     [activeTier]: prev[activeTier].filter(g => g.id.toString() !== activeId),
-                    [overTier]: [...prev[overTier], activeGame]
+                    [overTier]: [...(prev[overTier] || []), activeGame]
                 }))
             }
         }
@@ -353,6 +489,7 @@ export default function CreateTierlist() {
                         list_type: activeTemplate,
                         media_type: mediaType,
                         visibility,
+                        parent_id: parentId, // Save relationship
                         content // Save JSON content
                     })
                     .select()
@@ -458,28 +595,21 @@ export default function CreateTierlist() {
                                 onChange={(e) => setDescription(e.target.value)}
                                 maxLength={200}
                             />
-                            <div className="visibility-toggle">
-                                <button
-                                    type="button"
-                                    className={`visibility-btn ${visibility === 'public' ? 'active' : ''}`}
-                                    onClick={() => setVisibility('public')}
-                                >
-                                    🌍 Pública
-                                </button>
-                                <button
-                                    type="button"
-                                    className={`visibility-btn ${visibility === 'private' ? 'active' : ''}`}
-                                    onClick={() => setVisibility('private')}
-                                >
-                                    🔒 Privada
-                                </button>
-                            </div>
                         </div>
 
                         <DndContext
                             sensors={sensors}
-                            collisionDetection={closestCenter}
+                            collisionDetection={pointerWithin}
+                            onDragStart={(event) => {
+                                const { active } = event
+                                const activeId = active.id.toString()
+                                const allItems = Object.values(tiers).flat()
+                                const item = allItems.find(g => g.id.toString() === activeId)
+                                setActiveItem(item)
+                            }}
+                            onDragOver={handleDragOver}
                             onDragEnd={handleDragEnd}
+                            onDragCancel={() => setActiveItem(null)}
                         >
                             <div className="tierlist">
                                 {TEMPLATES[activeTemplate].rows.map(tier => (
@@ -540,6 +670,23 @@ export default function CreateTierlist() {
                                     </SortableContext>
                                 </div>
                             </div>
+
+                            <DragOverlay>
+                                {activeItem ? (
+                                    <div className="tier-item dragging-preview">
+                                        {(activeItem.image_url || activeItem.cover_url) ? (
+                                            <img
+                                                src={activeItem.image_url || activeItem.cover_url}
+                                                alt={activeItem.name}
+                                                className="tier-item-img"
+                                                draggable={false}
+                                            />
+                                        ) : (
+                                            <span className="tier-item-emoji"><img src="/icons/videogame.png" alt="🎮" style={{ width: '32px', height: '32px' }} draggable={false} /></span>
+                                        )}
+                                    </div>
+                                ) : null}
+                            </DragOverlay>
                         </DndContext>
                     </div>
 

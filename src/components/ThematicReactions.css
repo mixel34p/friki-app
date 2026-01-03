@@ -1,24 +1,30 @@
+/* Global Section Refinement */
 .thematic-reactions {
     margin: 16px 0;
-    padding: 20px;
+    padding: 12px;
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: 12px;
+    max-width: 600px;
+    /* Constrain width */
+    margin-inline: auto;
+    /* Center it */
 }
 
 .reactions-title {
-    font-size: 0.85rem;
+    font-size: 0.75rem;
     text-transform: uppercase;
     color: var(--text-secondary);
     font-weight: 600;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
     letter-spacing: 0.05em;
+    text-align: center;
 }
 
 .reactions-buttons {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 12px;
+    gap: 8px;
 }
 
 .reaction-btn {
@@ -26,14 +32,15 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    padding: 12px 6px;
+    gap: 4px;
+    padding: 8px 4px;
     background: var(--bg-secondary);
     border: 1px solid var(--border-color);
     border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s ease;
-    min-height: 80px;
+    min-height: 50px;
+    /* Much smaller */
 }
 
 .reaction-btn:hover:not(:disabled) {
@@ -47,8 +54,9 @@
 }
 
 .reaction-btn.active {
-    background: rgba(var(--primary-rgb), 0.1);
-    border-color: var(--primary);
+    background: rgba(139, 92, 246, 0.15);
+    border-color: var(--brand-primary);
+    box-shadow: 0 0 0 1px var(--brand-primary);
 }
 
 .reaction-btn:disabled {
@@ -56,10 +64,11 @@
     cursor: not-allowed;
 }
 
-/* Iconos de imagen */
+/* Icons */
 .reaction-btn img {
-    width: 28px;
-    height: 28px;
+    width: 20px;
+    /* Smaller icon */
+    height: 20px;
     object-fit: contain;
     transition: transform 0.2s;
     filter: grayscale(0.2);
@@ -75,56 +84,56 @@
 }
 
 .reaction-label {
-    font-size: 0.8rem;
+    font-size: 0.7rem;
+    /* Smaller font */
     font-weight: 600;
     color: var(--text-secondary);
     text-align: center;
+    line-height: 1.1;
 }
 
 .reaction-btn.active .reaction-label {
-    color: var(--primary);
+    color: white !important;
+    font-weight: 700;
 }
 
 .reaction-count {
-    background: var(--bg-card);
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 0.75rem;
+    background: var(--bg-tertiary);
+    padding: 1px 6px;
+    border-radius: 8px;
+    font-size: 0.65rem;
     font-weight: 600;
-    color: var(--text-tertiary);
+    color: var(--text-secondary);
+    margin-top: 2px;
 }
 
 .reaction-btn.active .reaction-count {
-    background: var(--primary);
+    background: var(--brand-primary);
     color: white;
 }
 
 .reactions-summary {
-    margin-top: 16px;
-    padding-top: 12px;
+    margin-top: 10px;
+    padding-top: 8px;
     border-top: 1px solid var(--border-color);
     text-align: center;
-    font-size: 0.95rem;
+    font-size: 0.85rem;
     color: var(--text-secondary);
 }
 
 /* RESPONSIVE */
 @media (max-width: 600px) {
-    .reactions-buttons {
-        gap: 8px;
-    }
-
     .reaction-btn {
-        padding: 8px 4px;
-        min-height: 70px;
+        min-height: 45px;
+        padding: 6px 2px;
     }
 
     .reaction-btn img {
-        width: 24px;
-        height: 24px;
+        width: 18px;
+        height: 18px;
     }
 
     .reaction-label {
-        font-size: 0.7rem;
+        font-size: 0.65rem;
     }
 }

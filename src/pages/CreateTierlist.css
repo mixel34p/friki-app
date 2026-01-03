@@ -1,12 +1,17 @@
 .create-tierlist {
     padding-bottom: var(--space-2xl);
+    max-width: 1400px;
+    /* Wider canvas */
+    margin: 0 auto;
 }
 
 .page-title {
     font-family: var(--font-display);
-    font-size: var(--text-3xl);
+    font-size: 1.5rem;
+    /* Reduced from text-3xl */
     font-weight: 700;
-    margin-bottom: var(--space-xl);
+    margin-bottom: var(--space-md);
+    /* Reduced from xl */
 }
 
 /* Page Header & Template Selector */
@@ -14,34 +19,37 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: var(--space-xl);
+    margin-bottom: var(--space-md);
+    /* Reduced from xl */
     flex-wrap: wrap;
-    gap: var(--space-md);
+    gap: var(--space-sm);
 }
 
 .page-header .page-title {
     margin-bottom: 0;
 }
 
-
-
 /* Media Selector */
 .media-selector {
     display: flex;
     gap: var(--space-xs);
-    margin-bottom: var(--space-md);
+    margin-bottom: 0;
+    /* Remove bottom margin inside header context if any */
     background: var(--bg-tertiary);
-    padding: 4px;
+    padding: 2px;
+    /* Reduced padding */
     border-radius: var(--radius-full);
     width: fit-content;
 }
 
 .media-btn {
-    padding: var(--space-xs) var(--space-lg);
+    padding: 4px 12px;
+    /* Reduced padding */
     border: none;
     background: transparent;
     color: var(--text-muted);
-    font-size: var(--text-sm);
+    font-size: var(--text-xs);
+    /* Smaller font */
     font-weight: 600;
     border-radius: var(--radius-full);
     cursor: pointer;
@@ -57,17 +65,20 @@
 .template-selector {
     display: flex;
     background: var(--bg-tertiary);
-    padding: 4px;
+    padding: 2px;
+    /* Reduced padding */
     border-radius: var(--radius-md);
     border: 1px solid var(--border-subtle);
 }
 
 .template-btn {
-    padding: var(--space-xs) var(--space-md);
+    padding: 4px 12px;
+    /* Reduced padding */
     border: none;
     background: transparent;
     color: var(--text-secondary);
-    font-size: var(--text-sm);
+    font-size: var(--text-xs);
+    /* Smaller font */
     font-weight: 500;
     cursor: pointer;
     border-radius: var(--radius-sm);
@@ -94,8 +105,8 @@
 }
 
 .create-layout {
-    display: grid;
-    grid-template-columns: 1fr 320px;
+    display: flex;
+    flex-direction: column;
     gap: var(--space-xl);
 }
 
@@ -112,37 +123,6 @@
     gap: var(--space-md);
 }
 
-.tierlist-title-input {
-    font-size: var(--text-xl);
-    font-weight: 600;
-}
-
-.visibility-toggle {
-    display: flex;
-    gap: var(--space-sm);
-}
-
-.visibility-btn {
-    padding: var(--space-sm) var(--space-md);
-    background: var(--bg-tertiary);
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-md);
-    color: var(--text-secondary);
-    cursor: pointer;
-    transition: all var(--transition-fast);
-}
-
-.visibility-btn:hover {
-    border-color: var(--brand-primary);
-}
-
-.visibility-btn.active {
-    background: rgba(139, 92, 246, 0.15);
-    border-color: var(--brand-primary);
-    color: var(--brand-primary);
-}
-
-/* Tierlist Rows */
 .tierlist {
     display: flex;
     flex-direction: column;
@@ -151,116 +131,94 @@
     background: var(--bg-card);
     border: 1px solid var(--border-subtle);
     max-width: 100%;
+    box-shadow: var(--shadow-lg);
 }
 
 .tier-row {
     display: flex;
-    min-height: 80px;
+    min-height: 85px;
     border-bottom: 1px solid var(--border-subtle);
 }
 
-.tier-row:last-child {
-    border-bottom: none;
-}
-
-.tier-label {
-    width: 100px;
-    min-width: 100px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: var(--text-sm);
-    font-weight: 700;
-    font-family: var(--font-display);
-    text-align: center;
-    padding: var(--space-xs);
-    line-height: 1.2;
-}
-
-.tier-s {
-    background: var(--tier-s);
-    color: white;
-}
-
-.tier-a {
-    background: var(--tier-a);
-    color: white;
-}
-
-.tier-b {
-    background: var(--tier-b);
-    color: #333;
-}
-
-.tier-c {
-    background: var(--tier-c);
-    color: white;
-}
-
-.tier-d {
-    background: var(--tier-d);
-    color: white;
-}
-
-.tier-pool {
-    background: var(--bg-tertiary);
-}
+/* ... tier stuff ... */
 
 .tier-items {
     flex: 1;
     display: flex;
     flex-wrap: wrap;
     align-content: flex-start;
-    gap: var(--space-sm);
-    padding: var(--space-sm);
+    gap: 8px;
+    /* Bigger gap for easier drop */
+    padding: 12px;
+    /* More padding for edge detection */
     background: var(--bg-tertiary);
-    min-height: 80px;
-    transition: all var(--transition-fast);
+    min-height: 85px;
+    transition: background-color 0.2s ease;
 }
 
-.tier-items-over {
-    background: rgba(20, 184, 166, 0.15);
-    outline: 2px dashed var(--brand-primary);
-}
-
-.tier-placeholder {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    height: 100%;
-    color: var(--text-muted);
-    font-size: var(--text-sm);
-    font-style: italic;
-    min-height: 48px;
-}
-
+/* Pool Row Visuals */
 .pool-row {
     background: var(--bg-secondary);
-    border-top: 2px dashed var(--border-default);
+    border-top: 4px solid var(--border-card);
+    margin-top: var(--space-md);
+    border-radius: var(--radius-lg);
+    border: 2px dashed var(--border-default);
+    /* Dashed distinct style */
+    display: flex;
+    /* Ensure it behaves like a row */
 }
 
-/* Tier Items with Images */
-.tier-item {
-    position: relative;
+.tier-pool {
+    background: var(--bg-tertiary);
+    border-right: 1px solid var(--border-subtle);
+    font-size: 1.5rem;
+}
+
+.pool-row .tier-items {
+    background: transparent;
+    /* Clean look */
+}
+
+/* Drag Preview */
+.dragging-preview {
     width: 80px;
     height: 80px;
-    border-radius: var(--radius-md);
+    background: var(--bg-card);
+    border: 2px solid var(--brand-primary);
+    border-radius: var(--radius-sm);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+    pointer-events: none;
+    z-index: 9999;
+    overflow: hidden;
+    opacity: 0.9 !important;
+    transform: scale(1.05);
+}
+
+/* Tier Items (Draggable) */
+.tier-item {
+    position: relative;
+    width: 70px;
+    /* Square Compact */
+    height: 70px;
+    border-radius: var(--radius-sm);
     overflow: hidden;
     cursor: grab;
-    transition: transform var(--transition-fast);
+    transition: transform 0.1s ease;
     background: var(--bg-card);
     border: 1px solid var(--border-subtle);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .tier-item:hover {
-    transform: scale(1.05);
-    z-index: 10;
+    transform: scale(1.1);
+    z-index: 100;
     border-color: var(--brand-primary);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 
 .tier-item:active {
     cursor: grabbing;
+    transform: scale(0.95);
 }
 
 .tier-item-img {
@@ -278,47 +236,35 @@
     font-size: 2rem;
 }
 
-.tier-item-overlay {
-    position: absolute;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.7);
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    padding: 4px;
-    opacity: 0;
-    transition: opacity var(--transition-fast);
-}
-
-.tier-item:hover .tier-item-overlay {
-    opacity: 1;
-}
-
-.tier-item-title {
-    font-size: 0.7rem;
-    color: white;
-    text-align: center;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
+/* Overlay on item hover (Delete button) */
 .tier-item-remove {
     position: absolute;
     top: 2px;
     right: 2px;
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--error);
+    background: rgba(239, 68, 68, 0.9);
     border: none;
     border-radius: 50%;
     color: white;
-    font-size: 10px;
+    font-size: 12px;
     font-weight: bold;
     cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s;
+    z-index: 101;
+}
+
+.tier-item:hover .tier-item-remove {
+    opacity: 1;
+}
+
+.tier-item-title {
+    display: none;
+    /* Hide default title */
 }
 
 /* Game Search Panel */
@@ -326,22 +272,26 @@
     background: var(--bg-card);
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-lg);
-    padding: var(--space-lg);
+    padding: var(--space-md);
     height: fit-content;
     position: sticky;
-    top: 100px;
+    top: 90px;
+    max-height: calc(100vh - 100px);
+    display: flex;
+    flex-direction: column;
 }
 
 .game-search-panel h3 {
     font-family: var(--font-display);
     font-weight: 700;
-    margin-bottom: var(--space-xs);
+    margin-bottom: var(--space-sm);
+    font-size: var(--text-lg);
 }
 
 .input-hint {
     font-size: var(--text-xs);
     color: var(--text-muted);
-    margin-bottom: var(--space-md);
+    margin-bottom: var(--space-sm);
 }
 
 .search-input-wrapper {
@@ -349,13 +299,22 @@
     margin-bottom: var(--space-md);
 }
 
+.search-input-wrapper input {
+    width: 100%;
+    padding: var(--space-sm) 30px var(--space-sm) var(--space-sm);
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+}
+
 .search-spinner {
     position: absolute;
-    right: 12px;
+    right: 10px;
     top: 50%;
     transform: translateY(-50%);
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     border: 2px solid var(--text-muted);
     border-top-color: var(--brand-primary);
     border-radius: 50%;
@@ -363,56 +322,40 @@
 }
 
 .game-list {
-    max-height: 500px;
     overflow-y: auto;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(85px, 1fr));
-    gap: var(--space-xs);
-    padding-right: 4px;
+    grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+    gap: 6px;
+    padding-right: 2px;
+    flex: 1;
+    min-height: 200px;
 }
 
 .game-item {
     display: flex;
     flex-direction: column;
     position: relative;
-    aspect-ratio: 3/4;
+    aspect-ratio: 1;
+    /* Square search results */
     padding: 0;
     background: var(--bg-tertiary);
-    border: 2px solid transparent;
+    border: 1px solid transparent;
     border-radius: var(--radius-md);
     cursor: pointer;
     overflow: hidden;
-    transition: all var(--transition-fast);
-    width: 100%;
-    height: auto;
+    transition: all 0.1s ease;
 }
 
 .game-item:hover {
     border-color: var(--brand-primary);
-    background: var(--bg-hover);
-}
-
-.game-item.disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    background: var(--bg-card);
+    transform: scale(1.05);
+    z-index: 10;
 }
 
 .game-thumb {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    border-radius: 0;
-}
-
-.game-emoji {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 2.5rem;
-    background: var(--bg-secondary);
 }
 
 .game-info {
@@ -420,72 +363,14 @@
     bottom: 0;
     left: 0;
     right: 0;
-    padding: 6px;
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0));
+    padding: 2px;
+    background: rgba(0, 0, 0, 0.8);
+    font-size: 0.65rem;
     color: white;
-    z-index: 2;
-    pointer-events: none;
-}
-
-.game-title {
-    font-weight: 600;
-    font-size: 0.75rem;
+    text-align: center;
+    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    white-space: normal;
-    line-height: 1.1;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
-}
-
-.game-genres,
-.game-year,
-.game-add {
-    display: none;
-}
-
-.game-item-overlay {
-    position: absolute;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.4);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    transition: opacity 0.2s;
-    z-index: 3;
-}
-
-.game-item:hover .game-item-overlay {
-    opacity: 1;
-}
-
-.game-add-icon {
-    font-size: 2rem;
-    color: white;
-    font-weight: bold;
-    transform: scale(0.8);
-    transition: transform 0.2s;
-}
-
-.game-item:hover .game-add-icon {
-    transform: scale(1);
-}
-
-.game-item:hover {
-    border-color: var(--brand-primary);
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
-}
-
-.search-empty-state,
-.no-results {
-    text-align: center;
-    color: var(--text-muted);
-    padding: var(--space-lg);
-    font-size: var(--text-sm);
 }
 
 /* Actions */
@@ -506,105 +391,49 @@
     .game-search-panel {
         position: static;
         order: -1;
+        /* Move to top on mobile */
+        max-height: 400px;
     }
 }
 
+.search-empty-state {
+    grid-column: 1 / -1;
+    /* SPAN FULL WIDTH IN GRID */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: var(--space-xl);
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    width: 100%;
+    min-height: 150px;
+    height: 100%;
+}
+
 @media (max-width: 640px) {
-    .page-header {
-        flex-direction: column;
-        align-items: stretch;
-        gap: var(--space-sm);
-    }
-
     .page-title {
-        font-size: var(--text-2xl);
+        font-size: 2rem;
         text-align: center;
     }
 
-    .template-selector {
-        width: 100%;
-        justify-content: center;
-    }
-
-    .template-btn {
-        flex: 1;
-        text-align: center;
-        padding: var(--space-xs) var(--space-sm);
-        font-size: var(--text-xs);
-    }
-
-    .media-selector {
-        width: 100%;
-        justify-content: center;
-    }
-
-    .media-btn {
-        flex: 1;
-        text-align: center;
-        padding: var(--space-xs) var(--space-sm);
-    }
-
-    /* Tier rows */
     .tier-label {
         width: 50px;
         min-width: 50px;
-        font-size: var(--text-xs);
-    }
-
-    .tier-items {
-        padding: var(--space-xs);
-        gap: var(--space-xs);
+        font-size: 1rem;
     }
 
     .tier-item {
-        width: 55px;
-        height: 55px;
+        width: 50px;
+        height: 50px;
     }
 
-    .tier-item-title {
-        font-size: 0.55rem;
-    }
-
-    .tier-item-remove {
-        width: 14px;
-        height: 14px;
-        font-size: 8px;
-    }
-
-    /* Game search */
-    .game-search-panel {
-        padding: var(--space-md);
-    }
-
-    .game-list {
-        grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
-        gap: 4px;
-    }
-
-    .game-title {
-        font-size: 0.65rem;
-    }
-
-    /* Actions */
     .create-actions {
         flex-direction: column;
     }
 
     .create-actions .btn {
         width: 100%;
-    }
-
-    /* Visibility toggle */
-    .visibility-toggle {
-        flex-wrap: wrap;
-        justify-content: center;
-    }
-
-    .visibility-btn {
-        flex: 1;
-        min-width: 45%;
-        text-align: center;
-        font-size: var(--text-xs);
-        padding: var(--space-xs) var(--space-sm);
     }
 }

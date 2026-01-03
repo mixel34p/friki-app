@@ -133,9 +133,7 @@ function App() {
               </ProtectedRoute>
             } />
             <Route path="/tierlist/:id" element={
-              <ProtectedRoute>
-                <ViewTierlist />
-              </ProtectedRoute>
+              <ViewTierlist />
             } />
             <Route path="/edit-tierlist/:id" element={
               <ProtectedRoute>

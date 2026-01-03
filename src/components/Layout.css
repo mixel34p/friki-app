@@ -33,7 +33,8 @@
 }
 
 .logo-img {
-    height: 120px;
+    height: 70px;
+    /* Reduced from 120px */
     width: auto;
     object-fit: contain;
     transition: transform var(--transition-base);
