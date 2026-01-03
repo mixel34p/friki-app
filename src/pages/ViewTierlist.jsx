@@ -275,9 +275,9 @@ export default function ViewTierlist() {
         <div className="view-tierlist">
             <SEO
                 title={tierlist.title}
-                description="Puedes mirar está tierlist en geeksphere"
+                description="Puedes mirar esta tierlist en geeksphere."
                 ogTitle={tierlist.title}
-                ogDescription="Puedes mirar está tierlist en geeksphere"
+                ogDescription="Puedes mirar esta tierlist en geeksphere."
                 ogImage={tierlist.screenshot_url || Object.values(legacyImages)[0] || '/logo.png'}
             />
             <div className="container">
