@@ -275,8 +275,10 @@ export default function ViewTierlist() {
         <div className="view-tierlist">
             <SEO
                 title={tierlist.title}
-                description={tierlist.description || `Mira esta tierlist de ${tierlist.media_type === 'anime' ? 'Animes' : 'Juegos'} creada por @${owner?.username}`}
-                image={Object.values(legacyImages)[0] || null}
+                description="Puedes mirar está tierlist en geeksphere"
+                ogTitle={tierlist.title}
+                ogDescription="Puedes mirar está tierlist en geeksphere"
+                ogImage={tierlist.screenshot_url || Object.values(legacyImages)[0] || '/logo.png'}
             />
             <div className="container">
                 {/* Header */}
