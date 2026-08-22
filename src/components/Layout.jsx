@@ -144,16 +144,17 @@ export default function Layout() {
         await signOut()
     }
 
-    // Close mobile nav on click outside
+    // Prevent body scrolling when mobile drawer is open
     useEffect(() => {
-        const handleClickOutsideMobileNav = (e) => {
-            if (mobileNavRef.current && !mobileNavRef.current.contains(e.target)) {
-                setMobileNavOpen(false)
-            }
+        if (menuOpen && window.innerWidth <= 960) {
+            document.body.style.overflow = 'hidden'
+        } else {
+            document.body.style.overflow = ''
         }
-        document.addEventListener('mousedown', handleClickOutsideMobileNav)
-        return () => document.removeEventListener('mousedown', handleClickOutsideMobileNav)
-    }, [])
+        return () => {
+            document.body.style.overflow = ''
+        }
+    }, [menuOpen])
 
     // Close mobile nav on route change
     useEffect(() => {
