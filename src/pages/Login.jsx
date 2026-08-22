@@ -1,7 +1,6 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { STATIC_COVERS } from '../lib/constants'
 import SEO from '../components/SEO'
 import './Auth.css'
 
@@ -30,76 +29,64 @@ export default function Login() {
 
     return (
         <div className="auth-page">
-            <SEO title="Iniciar sesión" description="Entra en GeekSphere para acceder a tu biblioteca y conectar con otros fans." />
-            
-            <div className="auth-hero">
-                <div className="auth-hero-bg">
-                    <div className="auth-hero-collage">
-                        {STATIC_COVERS.slice(0, 16).map((url, i) => (
-                            <div key={i} className="auth-collage-img" style={{ backgroundImage: 'url(' + url + ')' }}></div>
-                        ))}
-                    </div>
+            <SEO
+                title="Iniciar sesión"
+                description="Entra en GeekSphere para acceder a tu biblioteca y conectar con otros fans."
+            />
+            <div className="auth-container">
+                <div className="auth-header">
+                    <h1 className="auth-title">Bienvenido de vuelta.</h1>
+                    <p className="auth-subtitle">Entra cuando te apetezca.</p>
                 </div>
-                <div className="auth-hero-content">
-                    <img src="/icons/logo.png" alt="GeekSphere" className="auth-hero-logo" />
-                    <h2>Bienvenido de vuelta.</h2>
-                    <p>Entra cuando te apetezca. Tu biblioteca, tus tierlists y tus amigos te están esperando.</p>
-                </div>
-            </div>
 
-            <div className="auth-container-wrapper">
-                <div className="auth-container">
-                    <div className="auth-header" style={{ textAlign: 'left' }}>
-                        <h1 className="auth-title">Iniciar sesión</h1>
-                        <p className="auth-subtitle">Qué bueno verte por aquí.</p>
+                {error && <div className="auth-error">{error}</div>}
+
+                <form onSubmit={handleSubmit} className="auth-form">
+                    <div className="input-group">
+                        <label className="input-label">Email</label>
+                        <input
+                            type="email"
+                            className="input auth-input"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                        />
                     </div>
 
-                    {error && <div className="auth-error">{error}</div>}
-
-                    <form onSubmit={handleSubmit} className="auth-form">
-                        <div className="input-group">
-                            <label className="input-label">Email</label>
-                            <input
-                                type="email"
-                                className="input auth-input"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                required
-                            />
+                    <div className="input-group">
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <label className="input-label">Contraseña</label>
+                            <Link to="/forgot-password" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                ¿Olvidaste tu contraseña?
+                            </Link>
                         </div>
+                        <input
+                            type="password"
+                            className="input auth-input"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                        />
+                    </div>
 
-                        <div className="input-group">
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <label className="input-label">Contraseña</label>
-                                <Link to="/forgot-password" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                                    ¿Olvidaste tu contraseña?
-                                </Link>
-                            </div>
-                            <input
-                                type="password"
-                                className="input auth-input"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                required
-                            />
-                        </div>
+                    <button
+                        type="submit"
+                        className="btn btn-primary btn-block auth-submit"
+                        disabled={loading}
+                    >
+                        {loading ? 'Entrando...' : 'Entrar'}
+                    </button>
 
-                        <button
-                            type="submit"
-                            className="btn btn-primary auth-submit-next"
-                            disabled={loading}
-                            style={{ marginTop: '1rem' }}
-                        >
-                            {loading ? 'Entrando...' : 'Entrar'}
-                        </button>
-                    </form>
-
-                    <div style={{ marginTop: '2.5rem', textAlign: 'left' }}>
-                        <Link to="/register" style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-                            ¿No tienes cuenta? <span style={{ color: 'var(--text-secondary)' }}>Regístrate gratis</span>
+                    <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+                        <Link to="/register" style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                            Crear cuenta
                         </Link>
                     </div>
-                </div>
+                </form>
+
+                <p className="auth-footer-note">
+                    Aquí no hay prisas.
+                </p>
             </div>
         </div>
     )

@@ -4,14 +4,10 @@
 
 import { supabase } from './supabase'
 
-/**
- * Anime Service - Orchestrates local DB cache + AniList GraphQL API
- */
-
-const ANILIST_API_URL = 'https://graphql.anilist.co'
+const JIKAN_API_BASE = 'https://api.jikan.moe/v4'
 
 /**
- * Search anime (DB first, then AniList)
+ * Search anime (DB first, then Jikan)
  * @param {string} query - Search query
  * @param {number} limit - Max results
  * @returns {Promise<Array>} Array of anime objects
@@ -38,50 +34,15 @@ export async function searchAnime(query, limit = 20) {
             return localResults.slice(0, limit)
         }
 
-        // 3. Fetch from AniList GraphQL API
-        const graphqlQuery = `
-        query ($search: String, $limit: Int) {
-          Page (page: 1, perPage: $limit) {
-            media (search: $search, type: ANIME, sort: SEARCH_MATCH) {
-              id
-              title {
-                romaji
-                english
-              }
-              coverImage {
-                extraLarge
-              }
-              startDate {
-                year
-                month
-                day
-              }
-              averageScore
-              description
-              genres
-            }
-          }
-        }
-        `
-
-        const response = await fetch(ANILIST_API_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-            },
-            body: JSON.stringify({
-                query: graphqlQuery,
-                variables: { search: query, limit: limit }
-            })
-        })
-
-        const { data } = await response.json()
-        const anilistResults = (data?.Page?.media || []).map(anilistToStandard)
+        // 3. Fetch from Jikan API (MAL)
+        // Rate limit: 3 requests per second for Jikan. We should be careful but search is user-triggered.
+        const response = await fetch(`${JIKAN_API_BASE}/anime?q=${encodeURIComponent(query)}&limit=${limit}&sfw=true`)
+        const data = await response.json()
+        const jikanResults = (data.data || []).map(malToStandard)
 
         // 4. Import new anime to local DB
         const localIds = new Set(localResults.map(a => a.id))
-        const newAnime = anilistResults.filter(a => !localIds.has(a.id))
+        const newAnime = jikanResults.filter(a => !localIds.has(a.id))
 
         if (newAnime.length > 0) {
             importAnimeToDb(newAnime) // Fire and forget
@@ -89,7 +50,7 @@ export async function searchAnime(query, limit = 20) {
 
         // 5. Merge
         const allAnime = [...localResults]
-        for (const anime of anilistResults) {
+        for (const anime of jikanResults) {
             if (!localIds.has(anime.id)) {
                 allAnime.push(anime)
             }
@@ -105,7 +66,7 @@ export async function searchAnime(query, limit = 20) {
 
 /**
  * Get anime by ID
- * @param {number} id - AniList ID
+ * @param {number} id - MAL ID
  */
 export async function getAnimeById(id) {
     try {
@@ -120,46 +81,12 @@ export async function getAnimeById(id) {
             return formatAnime(localAnime)
         }
 
-        // 2. Fetch from AniList
-        const graphqlQuery = `
-        query ($id: Int) {
-          Media (id: $id, type: ANIME) {
-            id
-            title {
-              romaji
-              english
-            }
-            coverImage {
-              extraLarge
-            }
-            startDate {
-              year
-              month
-              day
-            }
-            averageScore
-            description
-            genres
-          }
-        }
-        `
+        // 2. Fetch from Jikan
+        const response = await fetch(`${JIKAN_API_BASE}/anime/${id}`)
+        const data = await response.json()
 
-        const response = await fetch(ANILIST_API_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-            },
-            body: JSON.stringify({
-                query: graphqlQuery,
-                variables: { id: parseInt(id) }
-            })
-        })
-
-        const { data } = await response.json()
-
-        if (data?.Media) {
-            const anime = anilistToStandard(data.Media)
+        if (data.data) {
+            const anime = malToStandard(data.data)
             importAnimeToDb([anime])
             return anime
         }
@@ -172,55 +99,24 @@ export async function getAnimeById(id) {
 }
 
 /**
- * Get similar anime from AniList recommendations
- * @param {number} id - AniList ID
+ * Get similar anime from Jikan
+ * @param {number} id - MAL ID
  * @param {number} limit
  */
 export async function getSimilarAnime(id, limit = 10) {
     try {
-        const graphqlQuery = `
-        query ($id: Int) {
-          Media (id: $id, type: ANIME) {
-            recommendations (sort: RATING_DESC, perPage: ${limit}) {
-              nodes {
-                mediaRecommendation {
-                  id
-                  title {
-                    romaji
-                    english
-                  }
-                  coverImage {
-                    extraLarge
-                  }
-                }
-              }
-            }
-          }
-        }
-        `
+        const response = await fetch(`${JIKAN_API_BASE}/anime/${id}/recommendations`)
+        const data = await response.json()
 
-        const response = await fetch(ANILIST_API_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-            },
-            body: JSON.stringify({
-                query: graphqlQuery,
-                variables: { id: parseInt(id) }
-            })
-        })
+        if (!data.data) return []
 
-        const { data } = await response.json()
-        const nodes = data?.Media?.recommendations?.nodes || []
-
-        return nodes.filter(n => n.mediaRecommendation).map(n => ({
-            id: n.mediaRecommendation.id,
-            name: n.mediaRecommendation.title.romaji || n.mediaRecommendation.title.english,
-            title: n.mediaRecommendation.title.romaji || n.mediaRecommendation.title.english,
-            image_url: n.mediaRecommendation.coverImage?.extraLarge,
-            cover_url: n.mediaRecommendation.coverImage?.extraLarge,
-            genres: [], 
+        return data.data.slice(0, limit).map(item => ({
+            id: item.entry.mal_id,
+            name: item.entry.title,
+            title: item.entry.title,
+            image_url: item.entry.images?.jpg?.large_image_url || item.entry.images?.jpg?.image_url,
+            cover_url: item.entry.images?.jpg?.large_image_url || item.entry.images?.jpg?.image_url,
+            genres: [], // Recommendations endpoint doesn't provide genres
             media_type: 'anime'
         }))
     } catch (error) {
@@ -230,25 +126,21 @@ export async function getSimilarAnime(id, limit = 10) {
 }
 
 /**
- * Helper to convert AniList API response to our standard format
+ * Helper to convert MAL API response to our standard format
  */
-function anilistToStandard(media) {
-    const title = media.title?.romaji || media.title?.english || 'Unknown Title'
-    const dateStr = (media.startDate?.year && media.startDate?.month && media.startDate?.day) 
-        ? `${media.startDate.year}-${String(media.startDate.month).padStart(2, '0')}-${String(media.startDate.day).padStart(2, '0')}` 
-        : null
-
+function malToStandard(malItem) {
     return {
-        id: media.id,
-        name: title,
-        title: title,
-        image_url: media.coverImage?.extraLarge,
-        cover_url: media.coverImage?.extraLarge,
-        release_date: dateStr,
-        rating: media.averageScore || null, // AniList is already 0-100! Matches IGDB perfectly
-        summary: media.description?.replace(/<[^>]*>?/gm, ''), // Basic HTML tag strip since AniList returns HTML descriptions
-        genres: media.genres || [],
-        media_type: 'anime'
+        id: malItem.mal_id,
+        name: malItem.title, // Standardize on 'name' for UI compatibility with games
+        title: malItem.title,
+        image_url: malItem.images?.jpg?.large_image_url || malItem.images?.jpg?.image_url,
+        cover_url: malItem.images?.jpg?.large_image_url || malItem.images?.jpg?.image_url, // Alias
+        release_date: malItem.aired?.from,
+        rating: malItem.score ? malItem.score * 10 : null, // Normalize to 0-100? or keep as 0-10. MAL is 0-10. Games are usually 0-100. Let's keep MAL as is or multiply? 
+        // Games rating comes from IGDB which is 0-100. Let's make MAL comparable so 0-10 * 10 = 0-100.
+        summary: malItem.synopsis,
+        genres: malItem.genres?.map(g => g.name) || [],
+        media_type: 'anime' // Important for separation vs games
     }
 }
 
@@ -277,9 +169,9 @@ async function importAnimeToDb(animeList) {
             title: a.title,
             image_url: a.image_url,
             start_date: a.release_date ? new Date(a.release_date).toISOString() : null,
-            score: a.rating ? a.rating / 10 : null, // Store as 0-10 in DB
+            score: a.rating ? a.rating / 10 : null, // Store as 0-10 in DB to respect column decimal(4,2)
             genres: a.genres,
-            synopsis: a.summary?.substring(0, 5000)
+            synopsis: a.summary?.substring(0, 5000) // Truncate if too long
         }))
 
         const { error } = await supabase

@@ -7,8 +7,6 @@ import Register from './pages/Register'
 import ForgotPassword from './pages/ForgotPassword'
 import ConfirmEmail from './pages/ConfirmEmail'
 import UpdatePassword from './pages/UpdatePassword'
-
-// Importamos los componentes, pero usaremos Placeholder temporalmente
 import Home from './pages/Home'
 import Profile from './pages/Profile'
 import EditProfile from './pages/EditProfile'
@@ -20,6 +18,7 @@ import Debates from './pages/Debates'
 import ViewDebate from './pages/ViewDebate'
 import CreateDebate from './pages/CreateDebate'
 import WorkPage from './pages/WorkPage'
+
 import Connections from './pages/Connections'
 import CompareProfiles from './pages/CompareProfiles'
 import Chat from './pages/Chat'
@@ -63,16 +62,6 @@ function PublicOnlyRoute({ children }) {
   return children
 }
 
-// Placeholder component for pages under construction
-function Placeholder({ title }) {
-  return (
-    <div className="container" style={{ paddingTop: '100px', textAlign: 'center', height: '100vh' }}>
-      <h1 style={{ fontFamily: 'var(--font-display)', marginBottom: '1rem', fontSize: '2.5rem' }}>{title}</h1>
-      <p style={{ color: 'var(--text-muted)' }}>Esta página está vacía temporalmente para el rework.</p>
-    </div>
-  )
-}
-
 function App() {
   return (
     <AuthProvider>
@@ -104,6 +93,7 @@ function App() {
               <ConfirmEmail />
             </PublicOnlyRoute>
           } />
+          {/* Note: UpdatePassword can be accessed with an auth token from email link, so usually it's public or handles its own session logic */}
           <Route path="/update-password" element={
             <UpdatePassword />
           } />
@@ -111,12 +101,12 @@ function App() {
           {/* Chat Routes - Fullscreen, no header */}
           <Route path="/chat" element={
             <ProtectedRoute>
-              <Placeholder title="Chat" />
+              <Chat />
             </ProtectedRoute>
           } />
           <Route path="/chat/:connectionId" element={
             <ProtectedRoute>
-              <Placeholder title="Chat" />
+              <Chat />
             </ProtectedRoute>
           } />
 
@@ -124,79 +114,79 @@ function App() {
           <Route element={<Layout />}>
             <Route path="/home" element={
               <ProtectedRoute>
-                <Placeholder title="Inicio (Home)" />
+                <Home />
               </ProtectedRoute>
             } />
             <Route path="/profile/:username?" element={
               <ProtectedRoute>
-                <Placeholder title="Perfil" />
+                <Profile />
               </ProtectedRoute>
             } />
             <Route path="/edit-profile" element={
               <ProtectedRoute>
-                <Placeholder title="Editar Perfil" />
+                <EditProfile />
               </ProtectedRoute>
             } />
             <Route path="/create-tierlist" element={
               <ProtectedRoute>
-                <Placeholder title="Crear Tierlist" />
+                <CreateTierlist />
               </ProtectedRoute>
             } />
             <Route path="/tierlist/:id" element={
-              <Placeholder title="Ver Tierlist" />
+              <ViewTierlist />
             } />
             <Route path="/edit-tierlist/:id" element={
               <ProtectedRoute>
-                <Placeholder title="Editar Tierlist" />
+                <CreateTierlist />
               </ProtectedRoute>
             } />
             <Route path="/discover" element={
               <ProtectedRoute>
-                <Placeholder title="Descubrir" />
+                <Discover />
               </ProtectedRoute>
             } />
             <Route path="/library/:username?" element={
               <ProtectedRoute>
-                <Placeholder title="Biblioteca" />
+                <Library />
               </ProtectedRoute>
             } />
             <Route path="/debates" element={
               <ProtectedRoute>
-                <Placeholder title="Debates" />
+                <Debates />
               </ProtectedRoute>
             } />
             <Route path="/debate/:id" element={
               <ProtectedRoute>
-                <Placeholder title="Ver Debate" />
+                <ViewDebate />
               </ProtectedRoute>
             } />
             <Route path="/debates/create" element={
               <ProtectedRoute>
-                <Placeholder title="Crear Debate" />
+                <CreateDebate />
               </ProtectedRoute>
             } />
 
             {/* Social Discovery Routes */}
             <Route path="/connections" element={
               <ProtectedRoute>
-                <Placeholder title="Conexiones" />
+                <Connections />
               </ProtectedRoute>
             } />
             <Route path="/compare/:userId" element={
               <ProtectedRoute>
-                <Placeholder title="Comparar Perfiles" />
+                <CompareProfiles />
               </ProtectedRoute>
             } />
 
             {/* Work Page Routes */}
             <Route path="/game/:id" element={
               <ProtectedRoute>
-                <Placeholder title="Página de Juego" />
+                <WorkPage mediaType="game" />
               </ProtectedRoute>
             } />
             <Route path="/anime/:id" element={
               <ProtectedRoute>
-                <Placeholder title="Página de Anime" />
+                <WorkPage mediaType="anime" />
               </ProtectedRoute>
             } />
           </Route>
