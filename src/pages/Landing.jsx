@@ -3,8 +3,15 @@ import { Link } from 'react-router-dom'
 import { getRecentReviews } from '../lib/reviewService'
 import { getTrendingWorks } from '../lib/workPageService'
 import { getDebates } from '../lib/debateService'
+import { STATIC_COVERS } from '../lib/constants'
 import SEO from '../components/SEO'
 import './Landing.css'
+
+// SVGs
+const EyeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>;
+const StarIcon = ({ size = 20, fill = "currentColor", stroke = "currentColor" }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>;
+const LayersIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 12 12 17 22 12"/><polyline points="2 17 12 22 22 17"/></svg>;
+const ChatIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>;
 
 export default function Landing() {
     const [trendingGames, setTrendingGames] = useState([])
@@ -17,15 +24,15 @@ export default function Landing() {
         async function loadData() {
             try {
                 const [games, anime, reviews, debates] = await Promise.all([
-                    getTrendingWorks('game', 6),
-                    getTrendingWorks('anime', 6),
-                    getRecentReviews(3),
-                    getDebates({ limit: 3, orderBy: 'active' })
+                    getTrendingWorks('game', 12),
+                    getTrendingWorks('anime', 12),
+                    getRecentReviews(4),
+                    getDebates({ limit: 5, orderBy: 'active' })
                 ])
-                setTrendingGames(games)
-                setTrendingAnime(anime)
-                setRecentReviews(reviews)
-                setActiveDebates(debates)
+                setTrendingGames(games || [])
+                setTrendingAnime(anime || [])
+                setRecentReviews(reviews || [])
+                setActiveDebates(debates || [])
             } catch (err) {
                 console.error('Error loading landing data', err)
             } finally {
@@ -35,226 +42,230 @@ export default function Landing() {
         loadData()
     }, [])
 
-    const WorkCard = ({ work }) => (
-        <Link to={`/${work.media_type}/${work.id}`} className="landing-work-card">
-            <div className="landing-work-cover" style={{ backgroundImage: `url(${work.image})` }}>
-                <div className="landing-work-overlay">
-                    <span className="landing-work-rating">★ {work.rating}</span>
-                </div>
-            </div>
-            <div className="landing-work-info">
-                <h4>{work.title}</h4>
-                <span>{work.tierlists} tierlists</span>
-            </div>
-        </Link>
-    )
-
-    const ReviewCard = ({ review }) => (
-        <div className="landing-review-card">
-            <div className="review-card-header">
-                <img
-                    src={review.profiles?.avatar_url || 'https://via.placeholder.com/32'}
-                    alt={review.profiles?.display_name}
-                    className="review-avatar-sm"
-                />
-                <div className="review-meta">
-                    <span className="review-author">{review.profiles?.display_name}</span>
-                    <span className="review-work-name">sobre {review.work?.title}</span>
-                </div>
-            </div>
-            <div className="review-stars">
-                {'★'.repeat(Math.round(review.rating))}
-                <span className="star-empty">{'★'.repeat(5 - Math.round(review.rating))}</span>
-            </div>
-            <p className="review-snippet">"{review.content.substring(0, 80)}..."</p>
-        </div>
-    )
-
-    const DebateRow = ({ debate }) => (
-        <Link to={`/debate/${debate.id}`} className="landing-debate-row">
-            <div className="debate-icon"><img src="/icons/dialog.png" alt="💬" style={{ width: '20px', height: '20px' }} /></div>
-            <div className="debate-info">
-                <h4>{debate.title}</h4>
-                <span>{debate.posts_count} respuestas • en {debate.media?.[0]?.name || 'General'}</span>
-            </div>
-            <div className="debate-arrow">→</div>
-        </Link>
-    )
+    const row1 = [...STATIC_COVERS, ...STATIC_COVERS, ...STATIC_COVERS, ...STATIC_COVERS];
+    const row2 = [...STATIC_COVERS.slice(4).concat(STATIC_COVERS.slice(0, 4)), ...STATIC_COVERS.slice(4).concat(STATIC_COVERS.slice(0, 4)), ...STATIC_COVERS.slice(4).concat(STATIC_COVERS.slice(0, 4)), ...STATIC_COVERS.slice(4).concat(STATIC_COVERS.slice(0, 4))];
+    const row3 = [...STATIC_COVERS.slice(8).concat(STATIC_COVERS.slice(0, 8)), ...STATIC_COVERS.slice(8).concat(STATIC_COVERS.slice(0, 8)), ...STATIC_COVERS.slice(8).concat(STATIC_COVERS.slice(0, 8)), ...STATIC_COVERS.slice(8).concat(STATIC_COVERS.slice(0, 8))];
 
     return (
-        <div className="landing">
+        <div className="landing-page">
             <SEO
-                title="Inicio"
-                description="Bienvenido a GeekSphere, la red social para fans del anime y videojuegos. Crea tierlists, participa en debates y encuentra gente con tus mismos gustos."
-                keywords="geek, anime, videojuegos, tierlists, comunidad"
+                title="GeekSphere — Tu vida en videojuegos y anime"
+                description="Registra lo que juegas y ves, escribe reseñas, crea tierlists y descubre gente con tus mismos gustos en la mejor red social friki."
+                keywords="geek, anime, videojuegos, tierlists, comunidad, letterboxd para juegos"
             />
-            {/* Header / Nav */}
-            <header className="landing-header">
-                <div className="container header-content">
-                    <div className="logo-container">
-                        <img src="/icons/logo.png" alt="GeekSphere" className="landing-logo" />
-                        <span className="landing-brand">GeekSphere</span>
+            
+            <header className="landing-navbar">
+                <div className="container landing-nav-content">
+                    <div className="landing-logo-box">
+                        <img src="/icons/logo.png" alt="GeekSphere" className="landing-logo-img" />
+                        <span className="landing-logo-text">GeekSphere</span>
                     </div>
-                    <div className="auth-buttons">
-                        <Link to="/login" className="btn btn-secondary">Entrar</Link>
-                        <Link to="/register" className="btn btn-primary">Crear cuenta</Link>
+                    <div className="landing-auth-actions">
+                        <Link to="/login" className="btn btn-ghost landing-btn-login">INICIAR SESIÓN</Link>
+                        <Link to="/register" className="btn btn-primary landing-btn-register">CREAR CUENTA</Link>
                     </div>
                 </div>
             </header>
 
             <main className="landing-main">
-                {/* 1. HERO SECTION */}
-                <section className="hero-section">
-                    <div className="container hero-container">
-                        <div className="hero-content">
-                            <span className="hero-badge">Beta Abierta</span>
-                            <h1 className="hero-title">
-                                Descubre gente a través <br />
-                                <span className="text-gradient">de tus gustos</span>
-                            </h1>
-                            <p className="hero-subtitle">
-                                Crea tierlists, escribe opiniones y participa en debates sin presión social.
-                                Aquí lo importante es lo que te gusta.
-                            </p>
-                            <div className="hero-cta">
-                                <button className="btn btn-outline btn-lg" onClick={() => document.getElementById('explore').scrollIntoView({ behavior: 'smooth' })}>
-                                    <img src="/icons/lupa.png" alt="👁️" style={{ width: '20px', height: '20px', verticalAlign: 'middle', marginRight: '8px' }} /> Explorar como invitado
-                                </button>
-                                <Link to="/register" className="btn btn-primary btn-lg">
-                                    <img src="/icons/luckyblock.png" alt="🚀" style={{ width: '20px', height: '20px', verticalAlign: 'middle', marginRight: '8px' }} /> Crear cuenta
-                                </Link>
+                <section className="landing-hero">
+                    <div className="hero-backdrop">
+                        <div className="hero-track-container">
+                            <div className="hero-track track-left">
+                                {[...STATIC_COVERS, ...STATIC_COVERS].map((url, i) => (
+                                    <div key={`t1-${i}`} className="hero-cover-item" style={{ backgroundImage: `url(${url})` }}></div>
+                                ))}
+                            </div>
+                            <div className="hero-track track-right">
+                                {[...STATIC_COVERS].reverse().concat([...STATIC_COVERS].reverse()).map((url, i) => (
+                                    <div key={`t2-${i}`} className="hero-cover-item" style={{ backgroundImage: `url(${url})` }}></div>
+                                ))}
+                            </div>
+                            <div className="hero-track track-left-slow">
+                                {[...STATIC_COVERS.slice(15), ...STATIC_COVERS.slice(0, 15), ...STATIC_COVERS.slice(15), ...STATIC_COVERS.slice(0, 15)].map((url, i) => (
+                                    <div key={`t3-${i}`} className="hero-cover-item" style={{ backgroundImage: `url(${url})` }}></div>
+                                ))}
                             </div>
                         </div>
+                        <div className="hero-gradient-overlay"></div>
                     </div>
-                    <div className="hero-bg-glow"></div>
+
+                    <div className="container hero-content">
+                        <h1 className="hero-headline">Sigue la pista a lo que<br/>juegas y ves.</h1>
+                        <p className="hero-subheadline">
+                            La red social para fans. Registra tu progreso, crea tierlists,<br/>
+                            escribe reseñas y descubre con quién compartes afinidad.
+                        </p>
+                        <div className="hero-cta-group">
+                            <Link to="/register" className="btn btn-primary btn-lg hero-cta-btn">Empezar — Es gratis</Link>
+                        </div>
+                        <p className="hero-subtext">La comunidad de videojuegos y anime más sana.</p>
+                    </div>
                 </section>
 
-                {/* 2. FEATURES GRID */}
-                <section className="features-section">
+                <section className="landing-features">
                     <div className="container">
                         <div className="features-grid">
-                            <div className="feature-card">
-                                <div className="feature-icon"><img src="/icons/tierlist.png" alt="📊" style={{ width: '32px', height: '32px' }} /></div>
-                                <h3>Crear Tierlists</h3>
-                                <p>Ordena videojuegos y anime a tu manera. Tu identidad son tus gustos.</p>
+                            <div className="feature-col">
+                                <div className="feature-icon-box"><EyeIcon /></div>
+                                <h3>Registra todo</h3>
+                                <p>Mantén un diario visual de lo que estás jugando, viendo, lo que has completado y tu wishlist.</p>
                             </div>
-                            <div className="feature-card">
-                                <div className="feature-icon"><img src="/icons/star.png" alt="⭐" style={{ width: '32px', height: '32px' }} /></div>
-                                <h3>Reseñas Reales</h3>
-                                <p>Opiniones sinceras de 1 a 5 estrellas. Sin algoritmos ocultos.</p>
+                            <div className="feature-col">
+                                <div className="feature-icon-box"><StarIcon /></div>
+                                <h3>Opina y puntúa</h3>
+                                <p>Da calificaciones de media estrella y escribe reseñas sinceras sobre tus obras favoritas.</p>
                             </div>
-                            <div className="feature-card">
-                                <div className="feature-icon"><img src="/icons/wishlist.png" alt="🤝" style={{ width: '32px', height: '32px' }} /></div>
-                                <h3>Matching</h3>
-                                <p>Encuentra personas con una afinidad alta contigo basada en lo que jugáis.</p>
-                            </div>
-                            <div className="feature-card">
-                                <div className="feature-icon"><img src="/icons/scale.png" alt="🧠" style={{ width: '32px', height: '32px' }} /></div>
-                                <h3>Debates Sanos</h3>
-                                <p>Conversaciones centradas en obras concretas. Sin toxicidad.</p>
+                            <div className="feature-col">
+                                <div className="feature-icon-box"><LayersIcon /></div>
+                                <h3>Crea Tierlists</h3>
+                                <p>Construye, comparte y debate listas personalizadas con el creador más rápido de internet.</p>
                             </div>
                         </div>
                     </div>
                 </section>
 
-                {/* 3. EXPLORE SECTION */}
-                <div id="explore" className="explore-wrapper">
-
-                    {/* Trending Games */}
-                    <section className="content-section">
-                        <div className="container">
-                            <h2 className="section-title"><img src="/icons/videogame.png" alt="🎮" style={{ width: '24px', height: '24px', verticalAlign: '-3px', marginRight: '8px' }} /> Videojuegos Destacados</h2>
-                            <div className="works-scroll">
-                                {loading ? <div className="loader">Cargando...</div> :
-                                    trendingGames.map(game => <WorkCard key={game.id} work={game} />)
-                                }
-                            </div>
+                <section className="landing-trending">
+                    <div className="container">
+                        <div className="trending-header">
+                            <h2 className="landing-section-title">En tendencia esta semana</h2>
+                            <span className="trending-subtitle">Las obras más populares en la comunidad</span>
                         </div>
-                    </section>
 
-                    {/* Trending Anime */}
-                    <section className="content-section">
-                        <div className="container">
-                            <h2 className="section-title"><img src="/icons/anime.png" alt="📺" style={{ width: '24px', height: '24px', verticalAlign: '-3px', marginRight: '8px' }} /> Anime Destacado</h2>
-                            <div className="works-scroll">
-                                {loading ? <div className="loader">Cargando...</div> :
-                                    trendingAnime.map(anime => <WorkCard key={anime.id} work={anime} />)
-                                }
+                        {loading ? (
+                            <div className="landing-skeleton-grid">
+                                {[...Array(6)].map((_, i) => <div key={i} className="skeleton skeleton-cover"></div>)}
                             </div>
-                        </div>
-                    </section>
+                        ) : (
+                            <div className="trending-lists">
+                                <div className="trending-row">
+                                    <div className="trending-row-header">
+                                        <h3 className="trending-row-title">Videojuegos</h3>
+                                        <Link to="/discover" className="trending-row-link">Ver todos</Link>
+                                    </div>
+                                    <div className="trending-covers">
+                                        {trendingGames.slice(0, 6).map((game, index) => (
+                                            <div key={game.id} className="trending-item">
+                                                <Link to={`/game/${game.id}`} className="mini-cover-card">
+                                                    {game.image ? <img src={game.image} alt={game.title} loading="lazy" /> : <div className="lbx-poster-placeholder"></div>}
+                                                    <div className="mini-cover-overlay">
+                                                        <span className="rating-badge">
+                                                            <StarIcon size={12} fill="currentColor" stroke="none" />
+                                                            {game.rating ? parseFloat(game.rating).toFixed(1) : '-'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="trending-rank">{index + 1}</div>
+                                                </Link>
+                                                <div className="trending-item-info">
+                                                    <h4 className="trending-item-title">{game.title}</h4>
+                                                    <span className="trending-item-year">2026</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="trending-row">
+                                    <div className="trending-row-header">
+                                        <h3 className="trending-row-title">Anime</h3>
+                                        <Link to="/discover" className="trending-row-link">Ver todos</Link>
+                                    </div>
+                                    <div className="trending-covers">
+                                        {trendingAnime.slice(0, 6).map((anime, index) => (
+                                            <div key={anime.id} className="trending-item">
+                                                <Link to={`/anime/${anime.id}`} className="mini-cover-card">
+                                                    {anime.image ? <img src={anime.image} alt={anime.title} loading="lazy" /> : <div className="lbx-poster-placeholder"></div>}
+                                                    <div className="mini-cover-overlay">
+                                                        <span className="rating-badge">
+                                                            <StarIcon size={12} fill="currentColor" stroke="none" />
+                                                            {anime.rating ? parseFloat(anime.rating).toFixed(1) : '-'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="trending-rank">{index + 1}</div>
+                                                </Link>
+                                                <div className="trending-item-info">
+                                                    <h4 className="trending-item-title">{anime.title}</h4>
+                                                    <span className="trending-item-year">2026</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </section>
 
-                    {/* Recent Reviews & Debates Split */}
-                    <section className="content-section dual-col-section">
-                        <div className="container dual-col-container">
-                            <div className="col-left">
-                                <h2 className="section-title"><img src="/icons/checklist.png" alt="📝" style={{ width: '24px', height: '24px', verticalAlign: 'middle', marginRight: '8px' }} /> Opiniones Recientes</h2>
-                                <div className="reviews-list">
+                <section className="landing-community-lbx">
+                    <div className="container">
+                        <div className="lbx-community-layout">
+                            
+                            <div className="lbx-reviews-section">
+                                <h2 className="landing-section-title">Reseñas populares</h2>
+                                <div className="lbx-reviews-grid">
                                     {recentReviews.map(review => (
-                                        <ReviewCard key={review.id} review={review} />
+                                        <div key={review.id} className="lbx-review-card">
+                                            <div className="lbx-review-poster">
+                                                {review.work?.image ? (
+                                                    <img src={review.work.image} alt={review.work.title} />
+                                                ) : (
+                                                    <div className="lbx-poster-placeholder"></div>
+                                                )}
+                                            </div>
+                                            <div className="lbx-review-content">
+                                                <div className="lbx-review-header">
+                                                    <h4 className="lbx-work-title">{review.work?.title || 'Obra desconocida'}</h4>
+                                                    <div className="lbx-user-row">
+                                                        <img src={review.profiles?.avatar_url || 'https://via.placeholder.com/24'} alt="" className="lbx-avatar" />
+                                                        <span className="lbx-username">{review.profiles?.display_name || review.profiles?.username}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="lbx-stars">
+                                                    {Array.from({ length: 5 }).map((_, idx) => (
+                                                        <StarIcon key={idx} size={12} fill={idx < Math.round(review.rating || 0) ? "currentColor" : "none"} stroke={idx < Math.round(review.rating || 0) ? "none" : "var(--text-muted)"} />
+                                                    ))}
+                                                </div>
+                                                <p className="lbx-review-text">"{review.content?.substring(0, 100)}..."</p>
+                                            </div>
+                                        </div>
                                     ))}
                                 </div>
                             </div>
-                            <div className="col-right">
-                                <h2 className="section-title"><img src="/icons/fire.gif" alt="🔥" style={{ width: '24px', height: '24px', verticalAlign: 'middle', marginRight: '8px' }} /> Debates Activos</h2>
-                                <div className="debates-list">
+
+                            <div className="lbx-debates-section">
+                                <h2 className="landing-section-title">Debates</h2>
+                                <div className="lbx-debates-list">
                                     {activeDebates.map(debate => (
-                                        <DebateRow key={debate.id} debate={debate} />
+                                        <Link key={debate.id} to={`/debate/${debate.id}`} className="lbx-debate-item">
+                                            <h4 className="lbx-debate-title">{debate.title}</h4>
+                                            <div className="lbx-debate-meta">
+                                                {debate.media?.[0]?.name && (
+                                                    <span className="lbx-debate-category">{debate.media[0].name}</span>
+                                                )}
+                                                <span className="lbx-debate-replies">
+                                                    <ChatIcon size={12} /> {debate.posts_count}
+                                                </span>
+                                            </div>
+                                        </Link>
                                     ))}
                                 </div>
                             </div>
-                        </div>
-                    </section>
-                </div>
 
-                {/* 4. HOW IT WORKS */}
-                <section className="how-it-works-section">
-                    <div className="container">
-                        <h2 className="section-center-title">¿Cómo funciona?</h2>
-                        <div className="steps-container">
-                            <div className="step">
-                                <div className="step-number">1</div>
-                                <h3>Crea tu perfil</h3>
-                                <p>Personaliza tu avatar y biografía.</p>
-                            </div>
-                            <div className="step-connector"></div>
-                            <div className="step">
-                                <div className="step-number">2</div>
-                                <h3>Organiza tus gustos</h3>
-                                <p>Añade juegos y animes a tu biblioteca y tierlists.</p>
-                            </div>
-                            <div className="step-connector"></div>
-                            <div className="step">
-                                <div className="step-number">3</div>
-                                <h3>Descubre gente</h3>
-                                <p>El sistema te sugiere usuarios compatibles.</p>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                {/* 5. VALUES / CTA */}
-                <section className="values-section">
-                    <div className="container">
-                        <div className="values-box">
-                            <h2>Aquí tú importas</h2>
-                            <div className="values-list">
-                                <span><img src="/icons/star.png" alt="✨" style={{ width: '18px', height: '18px', verticalAlign: 'middle', marginRight: '6px' }} /> Sin contadores de popularidad</span>
-                                <span><img src="/icons/cross.png" alt="🛡️" style={{ width: '18px', height: '18px', verticalAlign: 'middle', marginRight: '6px' }} /> Sin presión social</span>
-                                <span><img src="/icons/mushroom.png" alt="💚" style={{ width: '18px', height: '18px', verticalAlign: 'middle', marginRight: '6px' }} /> Comunidad apasionada</span>
-                            </div>
-                            <p className="cta-text">¿Te apetece crear tu propio perfil de gustos?</p>
-                            <Link to="/register" className="btn btn-primary btn-xl">
-                                Crear mi cuenta ahora
-                            </Link>
                         </div>
                     </div>
                 </section>
             </main>
 
             <footer className="landing-footer">
-                <div className="container">
-                    <p>GeekSphere © 2026. Hecho por desarrolladores indie.</p>
+                <div className="container footer-content">
+                    <div className="footer-brand">
+                        <img src="/icons/logo.png" alt="" />
+                        <span>GeekSphere © 2026</span>
+                    </div>
+                    <div className="footer-links">
+                        <Link to="/">Términos</Link>
+                        <Link to="/">Privacidad</Link>
+                        <Link to="/">Acerca de</Link>
+                    </div>
                 </div>
             </footer>
         </div>

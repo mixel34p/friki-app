@@ -1,32 +1,48 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { STATIC_COVERS } from '../lib/constants'
 import SEO from '../components/SEO'
 import './Auth.css'
 
 export default function Register() {
-    const [email, setEmail] = useState('')
+    const [step, setStep] = useState(1)
+    
     const [username, setUsername] = useState('')
+    const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
+    
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
     const { signUp } = useAuth()
     const navigate = useNavigate()
 
-    const handleSubmit = async (e) => {
+    const handleNext = (e) => {
         e.preventDefault()
         setError('')
 
-        // Validate username
-        if (username.length < 3) {
-            setError('El username debe tener al menos 3 caracteres')
-            return
+        if (step === 1) {
+            if (username.length < 3) {
+                setError('El username debe tener al menos 3 caracteres')
+                return
+            }
+            if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+                setError('El username solo puede contener letras, números y guiones bajos')
+                return
+            }
+            setStep(2)
+        } else if (step === 2) {
+            if (!email.includes('@')) {
+                setError('Introduce un email válido')
+                return
+            }
+            setStep(3)
         }
+    }
 
-        if (!/^[a-zA-Z0-9_]+$/.test(username)) {
-            setError('El username solo puede contener letras, números y guiones bajos')
-            return
-        }
+    const handleSubmit = async (e) => {
+        e.preventDefault()
+        setError('')
 
         if (password.length < 6) {
             setError('La contraseña debe tener al menos 6 caracteres')
@@ -40,81 +56,116 @@ export default function Register() {
             navigate('/confirm-email')
         } catch (err) {
             setError(err.message || 'Error al registrarse')
-        } finally {
             setLoading(false)
         }
     }
 
     return (
         <div className="auth-page">
-            <SEO
-                title="Crear cuenta"
-                description="Únete a GeekSphere y empieza a organizar tus gustos en anime y videojuegos."
-            />
-            <div className="auth-container">
-                <div className="auth-header">
-                    <h1 className="auth-title">Crea tu perfil de gustos.</h1>
-                    <p className="auth-subtitle">
-                        No hay likes. No hay seguidores.<br />
-                        Solo lo que te gusta.
-                    </p>
+            <SEO title="Crear cuenta" description="Únete a GeekSphere y empieza a organizar tus gustos en anime y videojuegos." />
+            
+            <div className="auth-hero">
+                <div className="auth-hero-bg">
+                    <div className="auth-hero-collage">
+                        {STATIC_COVERS.slice(16, 32).map((url, i) => (
+                            <div key={i} className="auth-collage-img" style={{ backgroundImage: `url(${url})` }}></div>
+                        ))}
+                    </div>
                 </div>
+                <div className="auth-hero-content">
+                    <img src="/icons/logo.png" alt="GeekSphere" className="auth-hero-logo" />
+                    <h2>Tu universo friki,<br/>tus reglas.</h2>
+                    <p>Únete a la comunidad definitiva para registrar, valorar y debatir sobre tus videojuegos y animes favoritos.</p>
+                </div>
+            </div>
 
-                {error && <div className="auth-error">{error}</div>}
-
-                <form onSubmit={handleSubmit} className="auth-form">
-                    <div className="input-group">
-                        <label className="input-label">Nombre de usuario</label>
-                        <input
-                            type="text"
-                            className="input auth-input"
-                            value={username}
-                            onChange={(e) => setUsername(e.target.value.toLowerCase())}
-                            required
-                        />
+            <div className="auth-container-wrapper">
+                <div className="auth-container onboarding-container">
+                    <div className="onboarding-progress">
+                        <div className={`progress-bar ${step >= 1 ? 'active' : ''}`}></div>
+                        <div className={`progress-bar ${step >= 2 ? 'active' : ''}`}></div>
+                        <div className={`progress-bar ${step >= 3 ? 'active' : ''}`}></div>
                     </div>
 
-                    <div className="input-group">
-                        <label className="input-label">Email</label>
-                        <input
-                            type="email"
-                            className="input auth-input"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
-                        />
+                    <div className="auth-header" style={{ textAlign: 'left', marginBottom: '2rem' }}>
+                        {step === 1 && <h1 className="auth-title">¿Cómo te llamamos?</h1>}
+                        {step === 2 && <h1 className="auth-title">¿Cuál es tu correo?</h1>}
+                        {step === 3 && <h1 className="auth-title">Protege tu cuenta</h1>}
+                        
+                        <p className="auth-subtitle">
+                            {step === 1 && "Este será tu nombre único en GeekSphere."}
+                            {step === 2 && "Lo usaremos para recuperar tu cuenta si lo necesitas."}
+                            {step === 3 && "Elige una contraseña segura."}
+                        </p>
                     </div>
 
-                    <div className="input-group">
-                        <label className="input-label">Contraseña</label>
-                        <input
-                            type="password"
-                            className="input auth-input"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                        />
+                    {error && <div className="auth-error">{error}</div>}
+
+                    <form onSubmit={step === 3 ? handleSubmit : handleNext} className="auth-form">
+                        
+                        {step === 1 && (
+                            <div className="input-group slide-in">
+                                <input
+                                    type="text"
+                                    className="input auth-input"
+                                    placeholder="Ej: xX_Sephiroth_Xx"
+                                    value={username}
+                                    onChange={(e) => setUsername(e.target.value.toLowerCase())}
+                                    autoFocus
+                                    required
+                                />
+                            </div>
+                        )}
+
+                        {step === 2 && (
+                            <div className="input-group slide-in">
+                                <input
+                                    type="email"
+                                    className="input auth-input"
+                                    placeholder="tu@correo.com"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    autoFocus
+                                    required
+                                />
+                            </div>
+                        )}
+
+                        {step === 3 && (
+                            <div className="input-group slide-in">
+                                <input
+                                    type="password"
+                                    className="input auth-input"
+                                    placeholder="Mínimo 6 caracteres"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    autoFocus
+                                    required
+                                />
+                            </div>
+                        )}
+
+                        <div className="auth-actions-row">
+                            {step > 1 && (
+                                <button type="button" className="btn btn-ghost" onClick={() => setStep(step - 1)}>
+                                    Atrás
+                                </button>
+                            )}
+                            <button
+                                type="submit"
+                                className="btn btn-primary auth-submit-next"
+                                disabled={loading}
+                            >
+                                {loading ? 'Creando...' : step === 3 ? 'Finalizar' : 'Continuar'}
+                            </button>
+                        </div>
+                    </form>
+
+                    <div style={{ marginTop: '2.5rem', textAlign: 'left' }}>
+                        <Link to="/login" style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+                            ¿Ya tienes cuenta? <span style={{ color: 'var(--text-secondary)' }}>Inicia sesión</span>
+                        </Link>
                     </div>
-
-                    <button
-                        type="submit"
-                        className="btn btn-primary btn-block auth-submit"
-                        disabled={loading}
-                    >
-                        {loading ? 'Creando...' : 'Crear cuenta'}
-                    </button>
-
-                    <p style={{ textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
-                        Puedes cambiarlo todo más adelante.
-                    </p>
-                </form>
-
-
-
-                <div style={{ textAlign: 'center', marginTop: '2rem' }}>
-                    <Link to="/login" style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-                        ¿Ya tienes cuenta?
-                    </Link>
                 </div>
             </div>
         </div>

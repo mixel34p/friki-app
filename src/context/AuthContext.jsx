@@ -103,6 +103,17 @@ export function AuthProvider({ children }) {
     }
 
     const signUp = async (email, password, username) => {
+        // Check if username is already taken
+        const { data: existingUser } = await supabase
+            .from('profiles')
+            .select('username')
+            .ilike('username', username)
+            .maybeSingle()
+            
+        if (existingUser) {
+            throw new Error('Ese nombre de usuario ya está cogido. ¡Prueba con otro!')
+        }
+
         const { data, error } = await supabase.auth.signUp({
             email,
             password,

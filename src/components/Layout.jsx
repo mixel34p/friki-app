@@ -163,9 +163,11 @@ export default function Layout() {
     return (
         <div className="layout">
             <header className="header">
-                <div className="container header-content">
+                <div className="header-content" style={{ padding: '0 5%' }}>
+                    {/* Logo */}
                     <Link to="/home" className="logo">
                         <img src="/icons/logo.png" alt="GeekSphere" className="logo-img" />
+                        <span className="logo-text">GeekSphere</span>
                     </Link>
 
                     {/* Desktop Navigation */}
@@ -175,12 +177,6 @@ export default function Layout() {
                             className={`nav-link ${isActive('/home') ? 'active' : ''}`}
                         >
                             Inicio
-                        </Link>
-                        <Link
-                            to="/library"
-                            className={`nav-link ${isActive('/library') ? 'active' : ''}`}
-                        >
-                            Mi Biblioteca
                         </Link>
                         <Link
                             to="/discover"
@@ -195,77 +191,25 @@ export default function Layout() {
                             Debates
                         </Link>
                         <Link
-                            to="/create-tierlist"
-                            className={`nav-link ${isActive('/create-tierlist') ? 'active' : ''}`}
+                            to="/library"
+                            className={`nav-link ${isActive('/library') ? 'active' : ''}`}
                         >
-                            + Crear
+                            Biblioteca
+                        </Link>
+                        <Link
+                            to="/create-tierlist"
+                            className="create-btn-pill"
+                        >
+                            + Nueva lista
                         </Link>
                     </nav>
 
-                    {/* Mobile Navigation */}
-                    <div className="mobile-nav-wrapper" ref={mobileNavRef}>
-                        <button
-                            className="hamburger-btn"
-                            onClick={() => setMobileNavOpen(!mobileNavOpen)}
-                            aria-label="Menú"
-                        >
-                            {mobileNavOpen ? '✕' : '☰'}
-                        </button>
-
-                        {mobileNavOpen && (
-                            <nav className="nav-mobile-dropdown">
-
-                                <Link
-                                    to="/home"
-                                    className={`mobile-nav-link ${isActive('/home') ? 'active' : ''}`}
-                                    onClick={() => setMobileNavOpen(false)}
-                                >
-                                    🏠 Inicio
-                                </Link>
-                                <Link
-                                    to="/library"
-                                    className={`mobile-nav-link ${isActive('/library') ? 'active' : ''}`}
-                                    onClick={() => setMobileNavOpen(false)}
-                                >
-                                    <img src="/icons/book.png" alt="📚" style={{ width: '18px', height: '18px', verticalAlign: 'middle', marginRight: '8px' }} /> Mi Biblioteca
-                                </Link>
-                                <Link
-                                    to="/discover"
-                                    className={`mobile-nav-link ${isActive('/discover') ? 'active' : ''}`}
-                                    onClick={() => setMobileNavOpen(false)}
-                                >
-                                    <img src="/icons/lupa.png" alt="🔍" style={{ width: '18px', height: '18px', verticalAlign: 'middle', marginRight: '8px' }} /> Descubrir
-                                </Link>
-                                <Link
-                                    to="/debates"
-                                    className={`mobile-nav-link ${isActive('/debates') || location.pathname.startsWith('/debate') ? 'active' : ''}`}
-                                    onClick={() => setMobileNavOpen(false)}
-                                >
-                                    <img src="/icons/dialog.png" alt="💬" style={{ width: '18px', height: '18px', verticalAlign: 'middle', marginRight: '8px' }} /> Debates
-                                </Link>
-                                <Link
-                                    to="/create-tierlist"
-                                    className={`mobile-nav-link ${isActive('/create-tierlist') ? 'active' : ''}`}
-                                    onClick={() => setMobileNavOpen(false)}
-                                >
-                                    ➕ Crear Tierlist
-                                </Link>
-                                <Link
-                                    to="/connections"
-                                    className={`mobile-nav-link ${isActive('/connections') ? 'active' : ''}`}
-                                    onClick={() => setMobileNavOpen(false)}
-                                >
-                                    <img src="/icons/wishlist.png" alt="🤝" style={{ width: '18px', height: '18px', verticalAlign: 'middle', marginRight: '8px' }} /> Conexiones
-                                </Link>
-                            </nav>
-                        )}
-                    </div>
-
+                    {/* Header Actions */}
                     <div className="header-actions">
                         {!user ? (
-                            <div className="auth-buttons" style={{ display: 'flex', gap: '8px' }}>
-                                <Link to="/login" className="btn btn-ghost" style={{ padding: '8px 16px' }}>Login</Link>
-                                <Link to="/register" className="btn btn-primary" style={{ padding: '8px 16px' }}>Registro</Link>
+                            <div className="auth-buttons">
+                                <Link to="/login" className="btn btn-ghost" style={{ padding: '6px 14px', fontSize: 'var(--text-sm)' }}>Entrar</Link>
+                                <Link to="/register" className="btn btn-primary" style={{ padding: '6px 14px', fontSize: 'var(--text-sm)' }}>Registro</Link>
                             </div>
                         ) : (
                             <>
@@ -276,7 +220,11 @@ export default function Layout() {
                                         onClick={() => setNotifOpen(!notifOpen)}
                                         title="Notificaciones"
                                     >
-                                        <img src="/icons/bell.png" alt="Notificaciones" style={{ width: '30px', height: '30px' }} />
+                                        {/* Bell SVG */}
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                                            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                                        </svg>
                                         {unreadCount > 0 && <span className="notif-badge">{unreadCount}</span>}
                                     </button>
 
@@ -333,7 +281,6 @@ export default function Layout() {
                                                             </Link>
                                                         )
                                                     })
-
                                                 )}
                                             </div>
                                         </div>
@@ -345,6 +292,7 @@ export default function Layout() {
                                     <button
                                         className="user-menu-btn"
                                         onClick={() => setMenuOpen(!menuOpen)}
+                                        title={profile?.display_name}
                                     >
                                         {profile?.avatar_url ? (
                                             <img src={profile.avatar_url} alt="" className="user-avatar-sm" />
@@ -353,7 +301,7 @@ export default function Layout() {
                                                 {profile?.display_name?.charAt(0) || '?'}
                                             </div>
                                         )}
-                                        <span className="user-menu-arrow">{menuOpen ? '▲' : '▼'}</span>
+                                        <span className="user-menu-name">{profile?.display_name}</span>
                                     </button>
 
                                     {menuOpen && (
@@ -364,17 +312,17 @@ export default function Layout() {
                                             </div>
                                             <div className="dropdown-divider"></div>
                                             <Link to="/library" className="dropdown-item">
-                                                <img src="/icons/book.png" alt="📚" style={{ width: '16px', height: '16px', verticalAlign: 'middle', marginRight: '6px' }} /> Mi Biblioteca
+                                                <img src="/icons/book.png" alt="" style={{ width: '16px', height: '16px' }} /> Mi Biblioteca
                                             </Link>
                                             <Link to="/profile" className="dropdown-item">
-                                                <img src="/icons/mushroom.png" alt="👤" style={{ width: '16px', height: '16px', verticalAlign: 'middle', marginRight: '6px' }} /> Mi perfil
+                                                <img src="/icons/mushroom.png" alt="" style={{ width: '16px', height: '16px' }} /> Mi perfil
                                             </Link>
                                             <Link to="/edit-profile" className="dropdown-item">
-                                                <img src="/icons/gear.gif" alt="⚙️" style={{ width: '16px', height: '16px', verticalAlign: 'middle', marginRight: '6px' }} /> Editar perfil
+                                                <img src="/icons/gear.gif" alt="" style={{ width: '16px', height: '16px' }} /> Editar perfil
                                             </Link>
                                             <div className="dropdown-divider"></div>
                                             <button className="dropdown-item dropdown-logout" onClick={handleSignOut}>
-                                                🚪 Cerrar sesión
+                                                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Cerrar sesión
                                             </button>
                                         </div>
                                     )}
@@ -388,6 +336,27 @@ export default function Layout() {
             <main className="main">
                 <Outlet />
             </main>
+
+            {/* Bottom Nav for Mobile (Only visible on max-width 768px) */}
+            <nav className="bottom-nav">
+                <Link to="/home" className={`bottom-nav-item ${isActive('/home') ? 'active' : ''}`}>
+                    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                </Link>
+                <Link to="/discover" className={`bottom-nav-item ${isActive('/discover') ? 'active' : ''}`}>
+                    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+                </Link>
+                <Link to="/create-tierlist" className="bottom-nav-item bottom-nav-fab">
+                    <div className="fab-inner">
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    </div>
+                </Link>
+                <Link to="/debates" className={`bottom-nav-item ${isActive('/debates') || location.pathname.startsWith('/debate') ? 'active' : ''}`}>
+                    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                </Link>
+                <Link to="/library" className={`bottom-nav-item ${isActive('/library') ? 'active' : ''}`}>
+                    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+                </Link>
+            </nav>
         </div>
     )
 }
