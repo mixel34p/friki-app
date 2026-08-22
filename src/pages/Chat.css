@@ -336,7 +336,7 @@
     margin-left: 0.25rem;
 }
 
-.chat-layout .header-actions {
+.header-actions {
     display: flex;
     gap: 0.5rem;
     align-items: center;
@@ -1193,7 +1193,7 @@
         max-width: 85%;
     }
 
-    .chat-layout .header-actions {
+    .header-actions {
         display: none;
     }
 }

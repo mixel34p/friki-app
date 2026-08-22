@@ -91,9 +91,10 @@ export default function Landing() {
                     </div>
 
                     <div className="container hero-content">
-                        <h1 className="hero-headline">Sigue la pista a lo que juegas y ves.</h1>
+                        <h1 className="hero-headline">Sigue la pista a lo que<br/>juegas y ves.</h1>
                         <p className="hero-subheadline">
-                            La red social para fans. Registra tu progreso, crea tierlists, escribe reseñas y descubre con quién compartes afinidad.
+                            La red social para fans. Registra tu progreso, crea tierlists,<br/>
+                            escribe reseñas y descubre con quién compartes afinidad.
                         </p>
                         <div className="hero-cta-group">
                             <Link to="/register" className="btn btn-primary btn-lg hero-cta-btn">Empezar — Es gratis</Link>

@@ -312,8 +312,6 @@
     height: 32px;
     border-radius: var(--radius-full);
     object-fit: cover;
-    overflow: hidden;
-    flex-shrink: 0;
     box-shadow: 0 2px 4px rgba(0,0,0,0.4);
 }
 
@@ -448,7 +446,7 @@
 
 /* -- RESPONSIVE -- */
 @media (max-width: 960px) {
-    .header { height: 56px; z-index: 2000; }
+    .header { height: 56px; }
     .nav-desktop { display: none; }
     
     .header-content {
@@ -490,7 +488,6 @@
     .user-menu {
         position: static;
         margin-right: auto;
-        order: -1;
     }
     .user-menu-btn {
         padding: 0;
@@ -499,36 +496,12 @@
     }
     .user-menu-btn:hover { background: transparent; border-color: transparent; }
     .user-menu-name { display: none; }
-        display: block !important;
-    }
-    
-    /* Avatar placeholder fix for mobile */
-    .user-avatar-sm.user-avatar-placeholder {
-        width: 30px !important;
-        height: 30px !important;
-        min-width: 30px;
-        min-height: 30px;
-        font-size: 0.85rem;
-        border-radius: var(--radius-full) !important;
-        overflow: hidden;
-        display: flex !important;
-        align-items: center;
-        justify-content: center;
-    }
+    .user-avatar-sm { width: 34px; height: 34px; }
     
     /* Notifications on Right */
     .notif-wrapper {
-        flex-shrink: 0;
-    }
-
-    .notif-btn {
-        width: 36px;
-        height: 36px;
-    }
-
-    .notif-btn svg {
-        width: 18px;
-        height: 18px;
+        position: static;
+        margin-left: auto;
     }
     
     /* Turn Dropdown into Side Drawer on Mobile */
@@ -550,17 +523,6 @@
         display: flex;
         flex-direction: column;
         padding-top: env(safe-area-inset-top);
-    }
-
-    /* Notification dropdown mobile positioning */
-    .notif-dropdown {
-        position: fixed;
-        top: 56px;
-        left: var(--space-sm);
-        right: var(--space-sm);
-        width: auto;
-        max-width: none;
-        border-radius: var(--radius-lg);
     }
     
     @keyframes slideInLeft {
@@ -632,8 +594,8 @@
     }
 
     .fab-inner {
-        width: 50px;
-        height: 50px;
+        width: 56px;
+        height: 56px;
         background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
         border-radius: var(--radius-full);
         display: flex;
@@ -641,7 +603,7 @@
         justify-content: center;
         color: #000;
         box-shadow: 0 4px 16px rgba(20, 184, 166, 0.4);
-        border: 3px solid var(--bg-primary);
+        border: 4px solid var(--bg-primary);
         transition: transform 0.2s ease;
     }
 
@@ -678,47 +640,4 @@
 }
 @media (max-width: 960px) {
     .user-menu { order: -1; }
-}
-/* -- ENHANCED DROPDOWN/DRAWER UI -- */
-@media (min-width: 961px) {
-    .drawer-overlay {
-        display: none;
-    }
-}
-.dropdown-avatar-lg {
-    width: 64px;
-    height: 64px;
-    border-radius: var(--radius-full);
-    object-fit: cover;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-    margin-bottom: var(--space-xs);
-    border: 2px solid rgba(20, 184, 166, 0.3);
-}
-.dropdown-header {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    padding: var(--space-lg) var(--space-md) var(--space-md);
-    background: linear-gradient(180deg, rgba(20,184,166,0.15) 0%, transparent 100%);
-    border-bottom: 1px solid var(--border-subtle);
-}
-.dropdown-user-info {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-}
-.dropdown-body {
-    display: flex;
-    flex-direction: column;
-    padding: var(--space-sm) 0;
-}
-.dropdown-item svg {
-    margin-right: 12px;
-    color: var(--brand-primary);
-}
-.dropdown-footer {
-    margin-top: auto;
-    padding-bottom: env(safe-area-inset-bottom);
 }
