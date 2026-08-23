@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { ToastProvider } from './components/Toast'
 import Layout from './components/Layout'
 import Landing from './pages/Landing'
 import Login from './pages/Login'
@@ -25,9 +26,12 @@ import CompareProfiles from './pages/CompareProfiles'
 import Chat from './pages/Chat'
 import './index.css'
 
+import { useLocation } from 'react-router-dom'
+
 // Protected Route component
-function ProtectedRoute({ children }) {
-  const { user, loading } = useAuth()
+function ProtectedRoute({ children, requireProfile = true }) {
+  const { user, profile, loading } = useAuth()
+  const location = useLocation()
 
   if (loading) {
     return (
@@ -39,6 +43,16 @@ function ProtectedRoute({ children }) {
 
   if (!user) {
     return <Navigate to="/login" replace />
+  }
+
+  // If the route requires a profile and the user doesn't have one, force onboarding
+  if (requireProfile && !profile && location.pathname !== '/onboarding') {
+    return <Navigate to="/onboarding" replace />
+  }
+  
+  // If the user already has a profile and tries to access onboarding, send them home
+  if (!requireProfile && profile && location.pathname === '/onboarding') {
+      return <Navigate to="/home" replace />
   }
 
   return children
@@ -73,10 +87,13 @@ function Placeholder({ title }) {
   )
 }
 
+import Onboarding from './pages/Onboarding'
+
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
+      <ToastProvider>
+        <BrowserRouter>
         <Routes>
           {/* Public routes */}
           <Route path="/" element={
@@ -108,6 +125,13 @@ function App() {
             <UpdatePassword />
           } />
 
+          {/* Onboarding Route */}
+          <Route path="/onboarding" element={
+            <ProtectedRoute requireProfile={false}>
+              <Onboarding />
+            </ProtectedRoute>
+          } />
+
           {/* Chat Routes - Fullscreen, no header */}
           <Route path="/chat" element={
             <ProtectedRoute>
@@ -129,14 +153,10 @@ function App() {
             } />
             <Route path="/profile/:username?" element={
               <ProtectedRoute>
-                <Placeholder title="Perfil" />
+                <Profile />
               </ProtectedRoute>
             } />
-            <Route path="/edit-profile" element={
-              <ProtectedRoute>
-                <Placeholder title="Editar Perfil" />
-              </ProtectedRoute>
-            } />
+            <Route path="/edit-profile" element={<Navigate to="/profile?edit=true" replace />} />
             <Route path="/create-tierlist" element={
               <ProtectedRoute>
                 <Placeholder title="Crear Tierlist" />
@@ -204,7 +224,8 @@ function App() {
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </BrowserRouter>
+        </BrowserRouter>
+      </ToastProvider>
     </AuthProvider>
   )
 }

@@ -499,8 +499,6 @@
     }
     .user-menu-btn:hover { background: transparent; border-color: transparent; }
     .user-menu-name { display: none; }
-        display: block !important;
-    }
     
     /* Avatar placeholder fix for mobile */
     .user-avatar-sm.user-avatar-placeholder {
@@ -567,6 +565,7 @@
         from { transform: translateX(-100%); }
         to { transform: translateX(0); }
     }
+
 }
 .mobile-nav-divider {
     height: 1px;

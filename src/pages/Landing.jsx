@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { motion, useScroll, useTransform } from 'framer-motion'
 import { getRecentReviews } from '../lib/reviewService'
 import { getTrendingWorks } from '../lib/workPageService'
 import { getDebates } from '../lib/debateService'
@@ -19,6 +20,11 @@ export default function Landing() {
     const [recentReviews, setRecentReviews] = useState([])
     const [activeDebates, setActiveDebates] = useState([])
     const [loading, setLoading] = useState(true)
+
+    const { scrollY } = useScroll();
+    const heroOpacity = useTransform(scrollY, [0, 800], [1, 0.2]);
+    const heroScale = useTransform(scrollY, [0, 800], [1, 0.95]);
+    const heroY = useTransform(scrollY, [0, 800], [0, 60]);
 
     useEffect(() => {
         async function loadData() {
@@ -69,8 +75,16 @@ export default function Landing() {
 
             <main className="landing-main">
                 <section className="landing-hero">
-                    <div className="hero-backdrop">
+                    <motion.div 
+                        className="hero-backdrop"
+                        style={{ opacity: heroOpacity, scale: heroScale }}
+                    >
                         <div className="hero-track-container">
+                            <div className="hero-track track-right">
+                                {[...STATIC_COVERS.slice(10), ...STATIC_COVERS.slice(0, 10), ...STATIC_COVERS.slice(10), ...STATIC_COVERS.slice(0, 10)].map((url, i) => (
+                                    <div key={`t0-${i}`} className="hero-cover-item" style={{ backgroundImage: `url(${url})` }}></div>
+                                ))}
+                            </div>
                             <div className="hero-track track-left">
                                 {[...STATIC_COVERS, ...STATIC_COVERS].map((url, i) => (
                                     <div key={`t1-${i}`} className="hero-cover-item" style={{ backgroundImage: `url(${url})` }}></div>
@@ -86,11 +100,19 @@ export default function Landing() {
                                     <div key={`t3-${i}`} className="hero-cover-item" style={{ backgroundImage: `url(${url})` }}></div>
                                 ))}
                             </div>
+                            <div className="hero-track track-right">
+                                {[...STATIC_COVERS.slice(5), ...STATIC_COVERS.slice(0, 5), ...STATIC_COVERS.slice(5), ...STATIC_COVERS.slice(0, 5)].map((url, i) => (
+                                    <div key={`t4-${i}`} className="hero-cover-item" style={{ backgroundImage: `url(${url})` }}></div>
+                                ))}
+                            </div>
                         </div>
                         <div className="hero-gradient-overlay"></div>
-                    </div>
+                    </motion.div>
 
-                    <div className="container hero-content">
+                    <motion.div 
+                        className="container hero-content"
+                        style={{ opacity: heroOpacity, scale: heroScale, y: heroY }}
+                    >
                         <h1 className="hero-headline">Sigue la pista a lo que juegas y ves.</h1>
                         <p className="hero-subheadline">
                             La red social para fans. Registra tu progreso, crea tierlists, escribe reseñas y descubre con quién compartes afinidad.
@@ -98,11 +120,11 @@ export default function Landing() {
                         <div className="hero-cta-group">
                             <Link to="/register" className="btn btn-primary btn-lg hero-cta-btn">Empezar — Es gratis</Link>
                         </div>
-                        <p className="hero-subtext">La comunidad de videojuegos y anime más sana.</p>
-                    </div>
+                    </motion.div>
                 </section>
 
-                <section className="landing-features">
+                <div className="landing-content-wrapper">
+                    <section className="landing-features">
                     <div className="container">
                         <div className="features-grid">
                             <div className="feature-col">
@@ -157,7 +179,7 @@ export default function Landing() {
                                                 </Link>
                                                 <div className="trending-item-info">
                                                     <h4 className="trending-item-title">{game.title}</h4>
-                                                    <span className="trending-item-year">2026</span>
+                                                    <span className="trending-item-year">{game.year || '-'}</span>
                                                 </div>
                                             </div>
                                         ))}
@@ -183,7 +205,7 @@ export default function Landing() {
                                                 </Link>
                                                 <div className="trending-item-info">
                                                     <h4 className="trending-item-title">{anime.title}</h4>
-                                                    <span className="trending-item-year">2026</span>
+                                                    <span className="trending-item-year">{anime.year || '-'}</span>
                                                 </div>
                                             </div>
                                         ))}
@@ -252,6 +274,7 @@ export default function Landing() {
                         </div>
                     </div>
                 </section>
+                </div>
             </main>
 
             <footer className="landing-footer">

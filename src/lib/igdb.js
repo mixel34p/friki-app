@@ -42,12 +42,16 @@ export async function searchGamesIGDB(query, limit = 20) {
     try {
         const body = `
             search "${query}";
-            fields id, name, slug, cover.url, first_release_date, rating, 
+            fields id, name, slug, cover.url, first_release_date, rating, total_rating_count,
                    genres.name, platforms.name, summary;
+            where parent_game = null & version_parent = null;
             limit ${limit};
         `
 
         const games = await callIgdbProxy('/games', body)
+
+        // Sort locally by popularity so main games float to top instead of obscure spin-offs
+        games.sort((a, b) => (b.total_rating_count || 0) - (a.total_rating_count || 0))
 
         return games.map(game => ({
             id: game.id,

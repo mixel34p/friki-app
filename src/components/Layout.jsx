@@ -144,9 +144,9 @@ export default function Layout() {
         await signOut()
     }
 
-    // Prevent body scrolling when mobile drawer is open
+    // Prevent body scrolling when drawer is open (mobile & PC)
     useEffect(() => {
-        if (menuOpen && window.innerWidth <= 960) {
+        if (menuOpen) {
             document.body.style.overflow = 'hidden'
         } else {
             document.body.style.overflow = ''
@@ -322,23 +322,17 @@ export default function Layout() {
                                                         <span className="dropdown-username">@{profile?.username}</span>
                                                     </div>
                                                 </div>
-                                                
-                                                <div className="dropdown-body">
+                                                                                        <div className="dropdown-body">
                                                     <Link to="/profile" className="dropdown-item" onClick={() => setMenuOpen(false)}>
                                                         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                                                        Mi perfil
+                                                        Ver perfil
                                                     </Link>
-                                                    <Link to="/library" className="dropdown-item" onClick={() => setMenuOpen(false)}>
-                                                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
-                                                        Mi biblioteca
-                                                    </Link>
-                                                    
-                                                    <div className="dropdown-divider"></div>
-                                                    
-                                                    <Link to="/edit-profile" className="dropdown-item" onClick={() => setMenuOpen(false)}>
+                                                    <Link to="/profile?edit=true" className="dropdown-item" onClick={() => setMenuOpen(false)}>
                                                         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-                                                        Ajustes
+                                                        Configuración
                                                     </Link>
+
+                                                    <div className="dropdown-divider"></div>
                                                     
                                                     <div className="dropdown-footer">
                                                         <button className="dropdown-item dropdown-logout" onClick={handleSignOut}>

@@ -52,9 +52,9 @@ export async function searchGames(query, limit = 20) {
 
         const localResults = (localGames || []).map(formatGame)
 
-        // 2. If we have enough local results, return them
+        // 2. If we have enough local results, return them sorted by rating
         if (localResults.length >= limit / 2) {
-            return localResults.slice(0, limit)
+            return localResults.sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, limit)
         }
 
         // 3. Fetch from IGDB for more results
@@ -68,7 +68,7 @@ export async function searchGames(query, limit = 20) {
             importGamesToDb(newGames) // Fire and forget
         }
 
-        // 5. Merge and deduplicate results
+        // 5. Merge, deduplicate, and sort by rating so best games stay on top
         const allGames = [...localResults]
         for (const game of igdbResults) {
             if (!localIds.has(game.id)) {
@@ -76,7 +76,7 @@ export async function searchGames(query, limit = 20) {
             }
         }
 
-        return allGames.slice(0, limit)
+        return allGames.sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, limit)
     } catch (error) {
         console.error('searchGames error:', error)
         return []

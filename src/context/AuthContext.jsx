@@ -56,7 +56,7 @@ export function AuthProvider({ children }) {
             const { data, error } = await supabase
                 .from('profiles')
                 .select('*')
-                .eq('user_id', userId)
+                .eq('id', userId)
                 .maybeSingle()
 
             if (error) {
@@ -67,33 +67,8 @@ export function AuthProvider({ children }) {
                 console.log('📋 Profile loaded:', data.username)
                 setProfile(data)
             } else {
-                // FALLBACK: Create default profile if missing (rare case if signUp works right)
-                // Try to get user metadata for better defaults
-                const { data: { user: userData } } = await supabase.auth.getUser()
-                const metaUsername = userData?.user_metadata?.username
-
-                console.log('🆕 Creating fallback profile...')
-                const { data: newProfile } = await supabase
-                    .from('profiles')
-                    .insert({
-                        user_id: userId,
-                        username: metaUsername || `user_${userId.substring(0, 8)}`,
-                        display_name: metaUsername || 'Nuevo Friki',
-                        color_primary: '#8b5cf6',
-                        color_secondary: '#6366f1',
-                        color_accent: '#f59e0b',
-                        favorite_genres: [],
-                        platforms: [],
-                        favorite_era: 'current',
-                        library: []
-                    })
-                    .select()
-                    .single()
-
-                if (newProfile) {
-                    console.log('✅ Fallback profile created')
-                    setProfile(newProfile)
-                }
+                console.log('👻 No profile found, user needs onboarding')
+                setProfile(null)
             }
         } catch (err) {
             console.error('💥 loadProfile error:', err)
@@ -123,29 +98,6 @@ export function AuthProvider({ children }) {
         })
 
         if (error) throw error
-
-        // Explicitly create profile here to ensure correct data
-        if (data.user) {
-            const { error: profileError } = await supabase
-                .from('profiles')
-                .insert({
-                    user_id: data.user.id,
-                    username: username,
-                    display_name: username, // Use username as initial display name
-                    color_primary: '#8b5cf6',
-                    color_secondary: '#6366f1',
-                    color_accent: '#f59e0b',
-                    favorite_genres: [],
-                    platforms: [],
-                    favorite_era: 'current',
-                    library: []
-                })
-
-            if (profileError) {
-                console.error('Manual profile creation failed:', profileError)
-                // loadProfile might fix it later via metadata
-            }
-        }
 
         return data
     }
@@ -177,7 +129,7 @@ export function AuthProvider({ children }) {
         const { data, error } = await supabase
             .from('profiles')
             .update(updates)
-            .eq('user_id', user.id)
+            .eq('id', user.id)
             .select()
             .single()
 

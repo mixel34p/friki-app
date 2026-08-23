@@ -510,7 +510,7 @@ export async function getTrendingWorks(mediaType, limit = 6) {
         // 2. Fetch details for these candidates
         const { data: works } = await supabase
             .from(table)
-            .select(`id, ${mediaType === 'game' ? 'name' : 'title'}, ${mediaType === 'game' ? 'cover_url' : 'image_url'}`)
+            .select(`id, ${mediaType === 'game' ? 'name' : 'title'}, ${mediaType === 'game' ? 'cover_url' : 'image_url'}, ${mediaType === 'game' ? 'release_date' : 'start_date'}`)
             .in('id', finalIds)
 
         if (!works) return []
@@ -566,6 +566,7 @@ export async function getTrendingWorks(mediaType, limit = 6) {
                 id: work.id,
                 title: mediaType === 'game' ? work.name : work.title,
                 image: mediaType === 'game' ? work.cover_url : work.image_url,
+                year: (mediaType === 'game' ? work.release_date : work.start_date) ? new Date(mediaType === 'game' ? work.release_date : work.start_date).getFullYear() : null,
                 media_type: mediaType,
                 rating: avgRating,
                 tierlists: tierlistsCount,

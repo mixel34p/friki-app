@@ -73,13 +73,23 @@
 
 /* ── Hero Section ── */
 .landing-hero {
-    position: relative;
-    min-height: 90vh;
+    position: sticky;
+    top: 0;
+    height: 100svh;
     display: flex;
     align-items: center;
     justify-content: center;
     padding-top: 80px;
     overflow: hidden;
+    z-index: 1;
+}
+
+.landing-content-wrapper {
+    position: relative;
+    z-index: 10;
+    background: var(--bg-primary);
+    box-shadow: 0 -16px 48px rgba(0,0,0,0.6);
+    border-top: 1px solid var(--border-subtle);
 }
 
 .hero-backdrop {
@@ -190,9 +200,13 @@
 }
 
 /* ── Global Section Styles ── */
-.landing-main > section:not(.landing-hero) {
+.landing-content-wrapper > section {
     padding: var(--space-3xl) 0;
     border-top: 1px solid var(--border-subtle);
+}
+
+.landing-content-wrapper > section:first-child {
+    border-top: none;
 }
 
 .landing-section-title {
@@ -624,8 +638,10 @@
     .landing-navbar { padding: var(--space-sm) 0; }
     .landing-nav-content { padding: 0 var(--space-md); }
     .landing-auth-actions { gap: var(--space-sm); }
-    .landing-btn-login { display: none; }
-    .landing-btn-register {
+    /* On mobile, show Login instead of Register because Hero already has Register CTA */
+    .landing-btn-register { display: none; }
+    .landing-btn-login {
+        display: inline-flex;
         padding: 0.5rem 1.2rem;
         font-size: 0.75rem;
     }
@@ -634,14 +650,11 @@
 
     /* Hero */
     .landing-hero {
-        min-height: 75vh;
+        height: 100svh;
+        min-height: 100svh;
         padding-top: 60px;
     }
-    .hero-cover-item {
-        width: 120px;
-        height: 180px;
-        border-radius: var(--radius-sm);
-    }
+
     .hero-headline {
         font-size: 2.2rem;
         margin-bottom: var(--space-md);
@@ -679,7 +692,7 @@
     .feature-col p { font-size: 0.88rem; }
 
     /* Sections */
-    .landing-main > section:not(.landing-hero) {
+    .landing-content-wrapper > section {
         padding: var(--space-2xl) 0;
     }
     .landing-section-title {
@@ -722,13 +735,8 @@
 
 @media (max-width: 480px) {
     /* Hero extra-small */
-    .landing-hero { min-height: 70vh; }
-    .hero-cover-item {
-        width: 90px;
-        height: 135px;
-    }
-    .hero-track-container { gap: 6px; }
-    .hero-track { gap: 6px; }
+    .landing-hero { height: 100svh; min-height: 100svh; }
+
     .hero-headline { font-size: 1.85rem; }
     .hero-subheadline { font-size: 0.92rem; }
     .hero-content { padding: 0 var(--space-sm); }

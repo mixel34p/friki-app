@@ -1,0 +1,224 @@
+/* ══════════════════════════════════════════════════════
+   TOAST SYSTEM — Geeksphere Design System v3
+   ══════════════════════════════════════════════════════ */
+
+@keyframes toast-slide-in {
+    from {
+        transform: translateX(calc(100% + 32px));
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes toast-slide-out {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+        max-height: 120px;
+        margin-bottom: 10px;
+    }
+    to {
+        transform: translateX(calc(100% + 32px));
+        opacity: 0;
+        max-height: 0;
+        margin-bottom: 0;
+    }
+}
+
+@keyframes toast-progress {
+    from { transform: scaleX(1); }
+    to   { transform: scaleX(0); }
+}
+
+/* Container pegado a bottom-right */
+.toast-container {
+    position: fixed;
+    bottom: 28px;
+    right: 24px;
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: none;
+    width: 360px;
+}
+
+/* ── Card ── */
+.toast-card {
+    pointer-events: all;
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 14px 14px 18px;
+    background: rgba(14, 14, 16, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-top: 2px solid var(--toast-color, #14b8a6);
+    border-radius: 14px;
+    box-shadow:
+        0 0 0 0.5px rgba(0, 0, 0, 0.5),
+        0 8px 32px rgba(0, 0, 0, 0.5),
+        0 0 40px -8px var(--toast-glow, rgba(20, 184, 166, 0.15));
+    backdrop-filter: blur(20px) saturate(1.4);
+    -webkit-backdrop-filter: blur(20px) saturate(1.4);
+    animation: toast-slide-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    overflow: hidden;
+    cursor: default;
+    user-select: none;
+}
+
+.toast-card.exiting {
+    animation: toast-slide-out 0.3s ease-in forwards;
+}
+
+/* ── Icon bubble ── */
+.toast-icon-wrap {
+    flex-shrink: 0;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: var(--toast-icon-bg, rgba(20, 184, 166, 0.1));
+    border: 1px solid var(--toast-icon-border, rgba(20, 184, 166, 0.2));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--toast-color, #14b8a6);
+    margin-top: 1px;
+}
+
+.toast-icon-wrap svg {
+    width: 18px;
+    height: 18px;
+}
+
+/* ── Text block ── */
+.toast-body {
+    flex: 1;
+    min-width: 0;
+    padding-top: 1px;
+}
+
+.toast-title {
+    font-family: var(--font-display, 'Space Grotesk', sans-serif);
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #f4f4f5;
+    line-height: 1.2;
+    margin-bottom: 3px;
+}
+
+.toast-message {
+    font-size: 0.78rem;
+    color: rgba(161, 161, 170, 0.9);
+    font-weight: 400;
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 240px;
+}
+
+/* ── Dismiss btn ── */
+.toast-dismiss {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    color: rgba(113, 113, 122, 0.7);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    margin-top: -2px;
+    margin-right: -2px;
+    padding: 0;
+}
+
+.toast-dismiss svg {
+    width: 13px;
+    height: 13px;
+}
+
+.toast-dismiss:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: #f4f4f5;
+}
+
+/* ── Progress bar — bottom ── */
+.toast-progress-wrap {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 0 0 14px 14px;
+    overflow: hidden;
+}
+
+.toast-progress-bar {
+    height: 100%;
+    background: var(--toast-color, #14b8a6);
+    transform-origin: left center;
+    animation: toast-progress var(--toast-duration, 4000ms) linear forwards;
+    opacity: 0.6;
+}
+
+/* ── Type variants ── */
+.toast-card[data-type="success"] {
+    --toast-color: #14b8a6;
+    --toast-glow: rgba(20, 184, 166, 0.18);
+    --toast-icon-bg: rgba(20, 184, 166, 0.1);
+    --toast-icon-border: rgba(20, 184, 166, 0.2);
+}
+
+.toast-card[data-type="error"] {
+    --toast-color: #ef4444;
+    --toast-glow: rgba(239, 68, 68, 0.18);
+    --toast-icon-bg: rgba(239, 68, 68, 0.1);
+    --toast-icon-border: rgba(239, 68, 68, 0.2);
+}
+
+.toast-card[data-type="warning"] {
+    --toast-color: #f59e0b;
+    --toast-glow: rgba(245, 158, 11, 0.15);
+    --toast-icon-bg: rgba(245, 158, 11, 0.1);
+    --toast-icon-border: rgba(245, 158, 11, 0.2);
+}
+
+.toast-card[data-type="info"] {
+    --toast-color: #3b82f6;
+    --toast-glow: rgba(59, 130, 246, 0.15);
+    --toast-icon-bg: rgba(59, 130, 246, 0.1);
+    --toast-icon-border: rgba(59, 130, 246, 0.2);
+}
+
+.toast-card[data-type="copy"] {
+    --toast-color: #14b8a6;
+    --toast-glow: rgba(20, 184, 166, 0.18);
+    --toast-icon-bg: rgba(20, 184, 166, 0.1);
+    --toast-icon-border: rgba(20, 184, 166, 0.2);
+}
+
+/* Discord (purple) override via inline var */
+.toast-card[data-type="discord"] {
+    --toast-color: #5865f2;
+    --toast-glow: rgba(88, 101, 242, 0.2);
+    --toast-icon-bg: rgba(88, 101, 242, 0.12);
+    --toast-icon-border: rgba(88, 101, 242, 0.25);
+}
+
+@media (max-width: 480px) {
+    .toast-container {
+        right: 12px;
+        left: 12px;
+        bottom: 16px;
+        width: auto;
+    }
+}

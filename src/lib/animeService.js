@@ -233,7 +233,7 @@ export async function getSimilarAnime(id, limit = 10) {
  * Helper to convert AniList API response to our standard format
  */
 function anilistToStandard(media) {
-    const title = media.title?.romaji || media.title?.english || 'Unknown Title'
+    const title = media.title?.english || media.title?.romaji || 'Unknown Title'
     const dateStr = (media.startDate?.year && media.startDate?.month && media.startDate?.day) 
         ? `${media.startDate.year}-${String(media.startDate.month).padStart(2, '0')}-${String(media.startDate.day).padStart(2, '0')}` 
         : null

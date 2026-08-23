@@ -1,0 +1,55 @@
+Created At: 2026-08-23T18:43:26+02:00
+Completed At: 2026-08-23T18:43:26+02:00
+File Path: `file:///c:/Users/Equipo/Documents/friki-app/src/pages/EditProfile.css`
+Total Lines: 806
+Total Bytes: 16909
+Showing lines 760 to 806
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+760:     font-weight: 600;
+761:     color: var(--text-muted);
+762: }
+763: 
+764: .blocked-details {
+765:     display: flex;
+766:     flex-direction: column;
+767:     gap: 0.15rem;
+768: }
+769: 
+770: .blocked-name {
+771:     font-weight: 600;
+772:     color: var(--text-primary);
+773: }
+774: 
+775: .blocked-username {
+776:     font-size: 0.85rem;
+777:     color: var(--text-muted);
+778: }
+779: 
+780: .btn-unblock {
+781:     padding: 0.5rem 1rem;
+782:     background: transparent;
+783:     border: 1px solid #10b981;
+784:     color: #10b981;
+785:     border-radius: 8px;
+786:     font-weight: 500;
+787:     cursor: pointer;
+788:     transition: all 0.2s;
+789: }
+790: 
+791: .btn-unblock:hover {
+792:     background: #10b981;
+793:     color: white;
+794: }
+795: 
+796: 
+797: /* ── Favorite Grid ── */
+798: .ep-favorites-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px; }
+799: .ep-favorite-item { position: relative; border-radius: var(--radius-md); overflow: hidden; aspect-ratio: 2/3; background: var(--bg-tertiary); border: 1px solid var(--border-default); }
+800: .ep-favorite-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+801: .ep-favorite-item-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0.1) 100%); display: flex; flex-direction: column; justify-content: flex-end; padding: 8px; opacity: 0; transition: opacity var(--transition-fast); }
+802: .ep-favorite-item:hover .ep-favorite-item-overlay { opacity: 1; }
+803: .ep-favorite-name { font-size: 0.75rem; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
+804: .ep-remove-item-btn { position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; border-radius: 50%; background: rgba(239, 68, 68, 0.9); color: white; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; backdrop-filter: blur(4px); transition: transform var(--transition-fast); }
+805: .ep-remove-item-btn:hover { transform: scale(1.1); }
+806: 
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

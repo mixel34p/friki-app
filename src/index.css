@@ -571,9 +571,29 @@ button { font-family: var(--font-sans); }
   .nav { gap: 0; }
   .nav-link { padding: var(--space-sm); font-size: var(--text-xs); }
   .modal { max-height: 95vh; }
+  
+  /* Mobile Profile Header Hide */
+  body.hide-main-header-on-mobile .header { display: none !important; }
+  body.hide-main-header-on-mobile .main { margin-top: 0 !important; padding-top: 0 !important; }
 }
 @media (max-width: 480px) {
   .container { padding: 0 var(--space-sm); }
 }
 
 
+
+/* ── Favorite Grid ── */
+.ep-favorites-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px; }
+.ep-favorite-item { position: relative; border-radius: var(--radius-md); overflow: hidden; aspect-ratio: 2/3; background: var(--bg-tertiary); border: 1px solid var(--border-default); }
+.ep-favorite-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ep-favorite-item-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0.1) 100%); display: flex; flex-direction: column; justify-content: flex-end; padding: 8px; opacity: 0; transition: opacity var(--transition-fast); }
+.ep-favorite-item:hover .ep-favorite-item-overlay { opacity: 1; }
+.ep-favorite-name { font-size: 0.75rem; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
+.ep-remove-item-btn { position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; border-radius: 50%; background: rgba(239, 68, 68, 0.9); color: white; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; backdrop-filter: blur(4px); transition: transform var(--transition-fast); }
+.ep-remove-item-btn:hover { transform: scale(1.1); }
+
+
+/* ── Empty Slots ── */
+.ep-empty-slot { appearance: none; outline: none; margin: 0; padding: 0; border-radius: var(--radius-md); aspect-ratio: 2/3; background: var(--bg-secondary); border: 2px dashed var(--border-subtle); display: flex; align-items: center; justify-content: center; color: var(--text-muted); cursor: pointer; transition: all 0.2s; box-sizing: border-box; }
+.ep-empty-slot:hover { border-color: var(--brand-primary); color: var(--brand-primary); background: rgba(20, 184, 166, 0.1); }
+.ep-empty-slot.active { border-color: var(--brand-primary); color: var(--brand-primary); border-style: solid; }
