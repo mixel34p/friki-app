@@ -1,13 +1,15 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { STATIC_COVERS } from '../lib/constants'
+import SEO from '../components/SEO'
 import './Auth.css'
 
 export default function UpdatePassword() {
     const [password, setPassword] = useState('')
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
-    const { supabase } = useAuth() // Assuming we might need direct access or verify session
+    const { supabase } = useAuth()
     const navigate = useNavigate()
 
     const handleSubmit = async (e) => {
@@ -25,7 +27,7 @@ export default function UpdatePassword() {
             const { error } = await supabase.auth.updateUser({ password })
             if (error) throw error
 
-            navigate('/home') // Or login
+            navigate('/home')
         } catch (err) {
             console.error(err)
             setError(err.message || 'Error al actualizar contraseña')
@@ -36,37 +38,57 @@ export default function UpdatePassword() {
 
     return (
         <div className="auth-page">
-            <div className="auth-container">
-                <div className="auth-header">
-                    <h1 className="auth-title">Nueva contraseña</h1>
-                    <p className="auth-subtitle">
-                        Elige una nueva contraseña para tu cuenta.
-                    </p>
+            <SEO title="Nueva contraseña" description="Establece una nueva contraseña para tu cuenta de GeekSphere." />
+
+            <div className="auth-hero">
+                <div className="auth-hero-bg">
+                    <div className="auth-hero-collage">
+                        {STATIC_COVERS.slice(8, 24).map((url, i) => (
+                            <div key={i} className="auth-collage-img" style={{ backgroundImage: `url(${url})` }}></div>
+                        ))}
+                    </div>
                 </div>
+                <div className="auth-hero-content">
+                    <img src="/icons/logo.png" alt="GeekSphere" className="auth-hero-logo" />
+                    <h2>Asegura tu cuenta.</h2>
+                    <p>Elige una contraseña fuerte que no hayas utilizado en otros sitios web.</p>
+                </div>
+            </div>
 
-                <form onSubmit={handleSubmit} className="auth-form">
-                    {error && <div className="auth-error">{error}</div>}
-
-                    <div className="input-group">
-                        <label className="input-label">Nueva contraseña</label>
-                        <input
-                            type="password"
-                            className="input auth-input"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                            placeholder="Mínimo 6 caracteres"
-                        />
+            <div className="auth-container-wrapper">
+                <div className="auth-container">
+                    <div className="auth-header" style={{ textAlign: 'left', marginBottom: '2rem' }}>
+                        <h1 className="auth-title">Nueva contraseña</h1>
+                        <p className="auth-subtitle">Elige una nueva contraseña para tu cuenta.</p>
                     </div>
 
-                    <button
-                        type="submit"
-                        className="btn btn-primary btn-block auth-submit"
-                        disabled={loading}
-                    >
-                        {loading ? 'Actualizando...' : 'Cambiar contraseña'}
-                    </button>
-                </form>
+                    <form onSubmit={handleSubmit} className="auth-form">
+                        {error && <div className="auth-error slide-in">{error}</div>}
+
+                        <div className="input-group slide-in">
+                            <input
+                                type="password"
+                                className="input auth-input"
+                                placeholder="Mínimo 6 caracteres"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                                autoFocus
+                            />
+                        </div>
+
+                        <div className="auth-actions-row slide-in" style={{ animationDelay: '0.1s', marginTop: '1rem' }}>
+                            <button
+                                type="submit"
+                                className="btn btn-primary auth-submit-next"
+                                disabled={loading}
+                                style={{ width: '100%' }}
+                            >
+                                {loading ? 'Actualizando...' : 'Cambiar contraseña'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     )

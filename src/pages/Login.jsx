@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { STATIC_COVERS } from '../lib/constants'
@@ -51,47 +51,48 @@ export default function Login() {
                 <div className="auth-container">
                     <div className="auth-header" style={{ textAlign: 'left' }}>
                         <h1 className="auth-title">Iniciar sesión</h1>
-                        <p className="auth-subtitle">Qué bueno verte por aquí.</p>
                     </div>
 
                     {error && <div className="auth-error">{error}</div>}
 
                     <form onSubmit={handleSubmit} className="auth-form">
-                        <div className="input-group">
-                            <label className="input-label">Email</label>
+                        <div className="input-group slide-in">
                             <input
                                 type="email"
                                 className="input auth-input"
+                                placeholder="tu@correo.com"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 required
                             />
                         </div>
 
-                        <div className="input-group">
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <label className="input-label">Contraseña</label>
-                                <Link to="/forgot-password" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                                    ¿Olvidaste tu contraseña?
-                                </Link>
-                            </div>
+                        <div className="input-group slide-in" style={{ animationDelay: '0.1s' }}>
                             <input
                                 type="password"
                                 className="input auth-input"
+                                placeholder="Contraseña"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 required
                             />
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
+                                <Link to="/forgot-password" style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                                    ¿Olvidaste tu contraseña?
+                                </Link>
+                            </div>
                         </div>
 
-                        <button
-                            type="submit"
-                            className="btn btn-primary auth-submit-next"
-                            disabled={loading}
-                            style={{ marginTop: '1rem' }}
-                        >
-                            {loading ? 'Entrando...' : 'Entrar'}
-                        </button>
+                        <div className="auth-actions-row" style={{ marginTop: '1rem' }}>
+                            <button
+                                type="submit"
+                                className="btn btn-primary auth-submit-next"
+                                disabled={loading}
+                                style={{ width: '100%' }}
+                            >
+                                {loading ? 'Entrando...' : 'Entrar'}
+                            </button>
+                        </div>
                     </form>
 
                     <div style={{ marginTop: '2.5rem', textAlign: 'left' }}>
