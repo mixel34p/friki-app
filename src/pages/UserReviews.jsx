@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { getUserLibrary } from '../lib/libraryService'
 import { getWorkById } from '../lib/workPageService'
 import LoadingSpinner from '../components/LoadingSpinner'
+import ReviewLikeButton from '../components/ReviewLikeButton'
 import '../components/LibraryGrid.css'
 import './UserReviews.css'
 
@@ -177,6 +178,7 @@ export default function UserReviews() {
                                             </>
                                         )}
                                     </p>
+                                    <ReviewLikeButton entryId={log.id} />
                                 </div>
                             </div>
                         ))}

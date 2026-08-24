@@ -340,3 +340,66 @@
 .review-more-btn:hover {
     color: var(--text-primary);
 }
+
+.review-like-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 0;
+    margin-top: 0.75rem;
+    align-self: flex-end;
+    width: fit-content;
+    transition: color var(--transition-fast), transform 0.1s ease;
+}
+
+.review-like-btn:hover:not(:disabled) {
+    color: var(--text-secondary);
+}
+
+.review-like-btn.liked {
+    color: var(--brand-primary);
+}
+
+.review-like-btn:active:not(:disabled) {
+    transform: scale(0.9);
+}
+
+.review-like-btn.liked svg {
+    animation: heartBounce 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes heartBounce {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.4); }
+    100% { transform: scale(1); }
+}
+
+.review-like-btn.loading {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.review-like-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.review-avatar {
+    width: 64px;
+    height: 64px;
+    background-size: cover;
+    background-position: center;
+    border-radius: 50%;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    transition: transform 0.2s;
+}
+.review-poster-link:hover .review-avatar {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 15px rgba(0,0,0,0.7);
+}

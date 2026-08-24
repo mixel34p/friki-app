@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { getUserLibrary } from '../lib/libraryService'
 import { getWorkById } from '../lib/workPageService'
 import LoadingSpinner from './LoadingSpinner'
+import ReviewLikeButton from './ReviewLikeButton'
 import './LibraryGrid.css'
 
 export default function LibraryGrid({ userId, username }) {
@@ -203,6 +204,7 @@ export default function LibraryGrid({ userId, username }) {
                                             </>
                                         )}
                                     </p>
+                                    <ReviewLikeButton entryId={log.id} />
                                 </div>
                             </div>
                         ))}

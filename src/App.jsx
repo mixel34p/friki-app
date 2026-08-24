@@ -25,6 +25,7 @@ import Connections from './pages/Connections'
 import CompareProfiles from './pages/CompareProfiles'
 import UserReviews from './pages/UserReviews'
 import UserDiary from './pages/UserDiary'
+import WorkReviews from './pages/WorkReviews'
 import Chat from './pages/Chat'
 import './index.css'
 
@@ -229,6 +230,16 @@ function App() {
             <Route path="/anime/:id" element={
               <ProtectedRoute>
                 <WorkPage mediaType="anime" />
+              </ProtectedRoute>
+            } />
+            <Route path="/game/:id/reviews" element={
+              <ProtectedRoute>
+                <WorkReviews mediaType="game" />
+              </ProtectedRoute>
+            } />
+            <Route path="/anime/:id/reviews" element={
+              <ProtectedRoute>
+                <WorkReviews mediaType="anime" />
               </ProtectedRoute>
             } />
           </Route>

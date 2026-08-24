@@ -9,10 +9,13 @@ import {
     getSimilarWorks,
     getWorkStats
 } from '../lib/workPageService'
-import { getWorkLog } from '../lib/libraryService'
+import { getWorkLog, getWorkReviews } from '../lib/libraryService'
 import { DEBATE_TYPES } from '../lib/debateService'
 import LogModal from '../components/LogModal'
 import LoadingSpinner from '../components/LoadingSpinner'
+import ReviewLikeButton from '../components/ReviewLikeButton'
+import { BADGES_MAP } from '../lib/badges'
+import '../components/LibraryGrid.css'
 import './WorkPage.css'
 
 export default function WorkPage({ mediaType }) {
@@ -24,6 +27,8 @@ export default function WorkPage({ mediaType }) {
     const [work, setWork] = useState(null)
     const [debates, setDebates] = useState([])
     const [similarWorks, setSimilarWorks] = useState([])
+    const [recentReviews, setRecentReviews] = useState([])
+    const [revealedSpoilers, setRevealedSpoilers] = useState({})
     const [userReview, setUserReview] = useState(null)
     const [reviewStats, setReviewStats] = useState({ average: 0, count: 0, recentMembers: [] })
 
@@ -41,8 +46,18 @@ export default function WorkPage({ mediaType }) {
         if (work) {
             loadDebates()
             loadStats()
+            loadReviews()
         }
     }, [work, reviewsRefreshTrigger])
+
+    const loadReviews = async () => {
+        const { data } = await getWorkReviews(id, mediaType, 1, 3)
+        setRecentReviews(data)
+    }
+
+    const toggleSpoiler = (reviewId) => {
+        setRevealedSpoilers(prev => ({ ...prev, [reviewId]: true }))
+    }
 
     const loadStats = async () => {
         const stats = await getWorkStats(mediaType, parseInt(id))
@@ -293,6 +308,57 @@ export default function WorkPage({ mediaType }) {
                         <h3 className="work-section-title">Sinopsis</h3>
                         <p className="work-synopsis">{synopsis}</p>
                     </div>
+
+                    {/* Recent Reviews Section */}
+                    {recentReviews.length > 0 && (
+                        <div className="work-page-reviews">
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', marginTop: '2rem' }}>
+                                <h3 className="work-section-title" style={{ margin: 0 }}>Reseñas Recientes</h3>
+                                <Link to={`/${mediaType}/${id}/reviews`} className="btn btn-outline" style={{ padding: '0.25rem 0.75rem', fontSize: '0.85rem' }}>
+                                    Ver todas
+                                </Link>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                {recentReviews.map(log => (
+                                    <div key={log.id} className="review-card">
+                                        <Link to={`/profile/${log.profiles?.username}`} className="review-poster-link">
+                                            <div 
+                                                className="review-poster" 
+                                                style={{ backgroundImage: `url(${log.profiles?.avatar_url || 'https://via.placeholder.com/48'})`, borderRadius: '50%', width: '48px', height: '48px' }}
+                                            ></div>
+                                        </Link>
+                                        <div className="review-content">
+                                            <div className="review-header">
+                                                <Link to={`/profile/${log.profiles?.username}`} className="review-title">
+                                                    {log.profiles?.display_name || log.profiles?.username}
+                                                </Link>
+                                                {log.profiles?.featured_badge && BADGES_MAP[log.profiles?.featured_badge] && (
+                                                    <span style={{ color: BADGES_MAP[log.profiles.featured_badge].color, marginLeft: '6px', display: 'inline-flex' }} title={BADGES_MAP[log.profiles.featured_badge].title}>
+                                                        {BADGES_MAP[log.profiles.featured_badge].icon}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            {log.rating && (
+                                                <div className="review-metadata">
+                                                    {renderRatingStars(log.rating)}
+                                                </div>
+                                            )}
+                                            <p className="review-text">
+                                                {log.contains_spoiler && !revealedSpoilers[log.id] ? (
+                                                    <span className="spoiler-warning" onClick={() => toggleSpoiler(log.id)}>
+                                                        Esta reseña contiene spoilers. Haz clic para ver.
+                                                    </span>
+                                                ) : (
+                                                    <>{log.review_text.length > 300 ? log.review_text.substring(0, 300) + '...' : log.review_text}</>
+                                                )}
+                                            </p>
+                                            <ReviewLikeButton entryId={log.id} />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     {/* We can embed the debates here */}
                     {debates.length > 0 && (

@@ -202,8 +202,11 @@ export const getTierlistLikes = async (tierlistId) => {
         .select('*', { count: 'exact', head: true })
         .eq('tierlist_id', tierlistId)
 
-    if (error) throw error
-    return count
+    if (error) {
+        console.error('getTierlistLikes error:', error)
+        return 0
+    }
+    return count || 0
 }
 
 export const checkUserLike = async (tierlistId) => {
@@ -212,10 +215,69 @@ export const checkUserLike = async (tierlistId) => {
 
     const { data } = await supabase
         .from('tierlist_likes')
-        .select('user_id')
+        .select('*')
         .eq('tierlist_id', tierlistId)
         .eq('user_id', user.id)
-        .maybeSingle()
+        .single()
+
+    return !!data
+}
+
+// Review Likes (library_entries)
+export const toggleReviewLike = async (entryId) => {
+    const user = await getCurrentUser()
+    if (!user) throw new Error('Debes iniciar sesión')
+
+    // Check if liked
+    const { data: existing } = await supabase
+        .from('review_likes')
+        .select('*')
+        .eq('entry_id', entryId)
+        .eq('user_id', user.id)
+        .single()
+
+    if (existing) {
+        // Unlike
+        const { error } = await supabase
+            .from('review_likes')
+            .delete()
+            .eq('entry_id', entryId)
+            .eq('user_id', user.id)
+        if (error) throw error
+        return false // Not liked anymore
+    } else {
+        // Like
+        const { error } = await supabase
+            .from('review_likes')
+            .insert({ entry_id: entryId, user_id: user.id })
+        if (error) throw error
+        return true // Liked
+    }
+}
+
+export const getReviewLikes = async (entryId) => {
+    const { count, error } = await supabase
+        .from('review_likes')
+        .select('*', { count: 'exact', head: true })
+        .eq('entry_id', entryId)
+
+    if (error) {
+        console.error('getReviewLikes error:', error)
+        return 0
+    }
+    return count || 0
+}
+
+export const checkUserReviewLike = async (entryId) => {
+    const user = await getCurrentUser()
+    if (!user) return false
+
+    const { data } = await supabase
+        .from('review_likes')
+        .select('*')
+        .eq('entry_id', entryId)
+        .eq('user_id', user.id)
+        .single()
 
     return !!data
 }

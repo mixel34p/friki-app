@@ -1,0 +1,101 @@
+
+.work-reviews-page {
+    min-height: 100vh;
+    padding-bottom: 4rem;
+}
+
+.wr-header {
+    position: relative;
+    height: 220px;
+    display: flex;
+    align-items: flex-end;
+    padding: 2rem 5%;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid var(--border-subtle);
+    overflow: hidden;
+    margin-top: calc(-1 * var(--space-xl));
+}
+
+.wr-backdrop {
+    position: absolute;
+    inset: -20px;
+    background-size: cover;
+    background-position: center 20%;
+    filter: blur(15px) brightness(0.3) saturate(1.2);
+    z-index: 0;
+}
+
+.wr-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, var(--bg-primary) 0%, transparent 100%);
+    z-index: 1;
+}
+
+.wr-header-content {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: flex-end;
+    gap: 1.5rem;
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.wr-poster {
+    width: 90px;
+    height: 135px;
+    object-fit: cover;
+    border-radius: var(--radius-sm);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,255,255,0.1);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.wr-poster:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0,0,0,0.8);
+    border-color: rgba(255,255,255,0.2);
+}
+
+.wr-info {
+    padding-bottom: 0.5rem;
+}
+
+.wr-title {
+    font-family: var(--font-display);
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem 0;
+    color: var(--text-primary);
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.wr-title a {
+    color: var(--text-primary);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.wr-title a:hover {
+    color: var(--brand-primary);
+}
+
+.wr-year {
+    font-size: 1.25rem;
+    color: var(--text-muted);
+    font-weight: 400;
+}
+
+.wr-stats {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.95rem;
+    color: var(--brand-primary);
+    font-weight: 500;
+}

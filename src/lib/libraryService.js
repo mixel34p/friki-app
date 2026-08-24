@@ -1,4 +1,4 @@
-import { supabase } from './supabase'
+﻿import { supabase } from './supabase'
 
 /**
  * Registra o actualiza una obra (juego/anime) en el diario del usuario
@@ -34,7 +34,7 @@ export async function logWork(userId, workId, workType, logData) {
 }
 
 /**
- * Obtiene el log/reseña específico de un usuario para una obra
+ * Obtiene el log/reseÃ±a especÃ­fico de un usuario para una obra
  */
 export async function getWorkLog(userId, workId, workType) {
     if (!userId || !workId) return null
@@ -92,3 +92,26 @@ export async function deleteWorkLog(userId, workId, workType) {
     
     return true
 }
+
+// Obtener reseñas (library_entries) de una obra con paginación
+export async function getWorkReviews(workId, workType, page = 1, limit = 3) {
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    const { data, count, error } = await supabase
+        .from('library_entries')
+        .select('*', { count: 'exact' })
+        .eq('work_id', String(workId))
+        .eq('work_type', workType)
+        .not('review_text', 'is', null)
+        .order('created_at', { ascending: false })
+        .range(from, to);
+
+    if (error) {
+        console.error('Error fetching work reviews:', error);
+        return { data: [], count: 0 };
+    }
+    if (!data || data.length === 0) return { data: [], count: count || 0 }; const userIds = [...new Set(data.map(e => e.user_id))]; const { data: profiles } = await supabase.from('profiles').select('id, username, avatar_url, display_name, featured_badge').in('id', userIds); const pMap = {}; if (profiles) profiles.forEach(p => pMap[p.id] = p); return { data: data.map(e => ({...e, profiles: pMap[e.user_id] || null})), count: count || 0 };
+}
+
+
