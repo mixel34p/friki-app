@@ -401,7 +401,7 @@
 /* ── Contenido inferior ── */
 .profile-section-tabs {
     max-width: 1120px;
-    margin: 1rem auto 0;
+    margin: 2rem auto 0;
     padding: 0 var(--space-lg);
     display: flex;
     justify-content: center;
