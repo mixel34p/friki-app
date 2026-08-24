@@ -102,6 +102,7 @@ export default function Profile() {
     const [isPlaying, setIsPlaying] = useState(false)
     const audioRef = useRef(null)
     const [activeFavTab, setActiveFavTab] = useState('games')
+    const [activeProfileTab, setActiveProfileTab] = useState('actividad')
 
     const { toast } = useToast()
     const isOwnProfile = !username || username === myProfile?.username
@@ -582,10 +583,50 @@ export default function Profile() {
                 </div>
             </div>
 
-            {/* --- Wishlist Row Removed (moved to LibraryGrid) --- */}
+            {/* --- PROFILE SECTION TABS --- */}
+            <div className="profile-section-tabs">
+                {[
+                    { id: 'actividad', label: 'Actividad' },
+                    { id: 'biblioteca', label: 'Biblioteca' },
+                    { id: 'tierlists', label: 'Tierlists' },
+                    { id: 'debates', label: 'Debates' },
+                ].map(tab => (
+                    <button
+                        key={tab.id}
+                        className={`profile-section-tab ${activeProfileTab === tab.id ? 'active' : ''}`}
+                        onClick={() => setActiveProfileTab(tab.id)}
+                    >
+                        {tab.label}
+                    </button>
+                ))}
+            </div>
 
             <div className="profile-content">
-                {profile && <LibraryGrid userId={profile.id} username={profile.username} wishlist={profile.wishlist} />}
+                {activeProfileTab === 'actividad' && (
+                    profile && <LibraryGrid userId={profile.id} username={profile.username} wishlist={profile.wishlist} />
+                )}
+                {activeProfileTab === 'biblioteca' && (
+                    <div className="profile-tab-placeholder">
+                        <div className="placeholder-icon">📚</div>
+                        <h3>Biblioteca</h3>
+                        <p>Explora todos los juegos y animes que {profile?.username} ha registrado.</p>
+                        <Link to={`/library/${profile?.username}`} className="btn btn-primary">Ver biblioteca completa</Link>
+                    </div>
+                )}
+                {activeProfileTab === 'tierlists' && (
+                    <div className="profile-tab-placeholder">
+                        <div className="placeholder-icon">🏆</div>
+                        <h3>Tierlists</h3>
+                        <p>Las tierlists de {profile?.username} estarán aquí pronto.</p>
+                    </div>
+                )}
+                {activeProfileTab === 'debates' && (
+                    <div className="profile-tab-placeholder">
+                        <div className="placeholder-icon">💬</div>
+                        <h3>Debates</h3>
+                        <p>Los debates de {profile?.username} estarán aquí pronto.</p>
+                    </div>
+                )}
             </div>
 
             <FollowsModal

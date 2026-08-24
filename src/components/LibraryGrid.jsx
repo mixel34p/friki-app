@@ -211,7 +211,7 @@ export default function LibraryGrid({ userId, username, wishlist = [] }) {
                         ))}
                     </div>
                 )}
-                </div>
+            </div>
 
             {/* RIGHT COLUMN: DIARY */}
             <div className="activity-col activity-diary">
@@ -258,23 +258,38 @@ export default function LibraryGrid({ userId, username, wishlist = [] }) {
                         ))}
                     </div>
                 )}
-                
-                {/* COMPACT WISHLIST SECTION */}
-                {wishlist && wishlist.length > 0 && (
-                    <div className="activity-wishlist" style={{ marginTop: '2.5rem' }}>
-                        <div className="activity-col-header">
-                            <h3>Deseados</h3>
-                            {username && <Link to={`/profile/${username}/wishlist`} className="activity-view-all">Ver más</Link>}
-                        </div>
-                        <div className="pwb-items" style={{ padding: '0.5rem 0' }}>
-                            {wishlist.slice(0, 10).map(item => (
-                                <Link key={`${item.type}-${item.id}`} to={`/${item.type}/${item.id}`} className="pwb-item" style={{ backgroundImage: `url(${item.image_url})` }} title={item.title}></Link>
-                            ))}
-                        </div>
-                    </div>
-                )}
             </div>
         </div>
+
+        {/* WISHLIST — below both columns, centered */}
+        {wishlist && wishlist.length > 0 && (
+            <div className="profile-wishlist-section">
+                <div className="activity-col-header">
+                    <h3>Lista de Deseos</h3>
+                    {username && <Link to={`/profile/${username}/wishlist`} className="activity-view-all">Ver más</Link>}
+                </div>
+                <div className="wishlist-poster-stack">
+                    {wishlist.slice(0, 10).map(item => (
+                        <Link
+                            key={`${item.type}-${item.id}`}
+                            to={`/${item.type}/${item.id}`}
+                            className="wishlist-stack-item"
+                            title={item.title}
+                        >
+                            <img src={item.image_url} alt={item.title} />
+                            <div className="wishlist-stack-overlay">
+                                <span>{item.title}</span>
+                            </div>
+                        </Link>
+                    ))}
+                    {wishlist.length > 10 && (
+                        <Link to={`/profile/${username}/wishlist`} className="wishlist-stack-more">
+                            +{wishlist.length - 10} más
+                        </Link>
+                    )}
+                </div>
+            </div>
+        )}
         </>
     )
 }
