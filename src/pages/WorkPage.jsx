@@ -252,8 +252,8 @@ export default function WorkPage({ mediaType }) {
                     <div className="work-title-row">
                         <h1 className="work-title-cinematic">
                             {title}
-                            {releaseYear && <span className="work-year-cinematic" style={{ marginLeft: '12px' }}>{releaseYear}</span>}
                         </h1>
+                        {releaseYear && <span className="work-year-cinematic">{releaseYear}</span>}
                     </div>
 
                     {creatorText && (
