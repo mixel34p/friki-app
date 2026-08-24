@@ -1,7 +1,6 @@
 /* Profile Activity Layout (formerly LibraryGrid) */
 .profile-activity-container {
     width: 100% !important;
-    margin-top: var(--space-xl);
     display: grid !important;
     grid-template-columns: 5fr 3fr !important;
     gap: 3rem !important;

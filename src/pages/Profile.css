@@ -459,7 +459,7 @@
 .profile-content {
     max-width: 1120px;
     margin: 0 auto;
-    padding: 0 var(--space-lg) var(--space-xl);
+    padding: var(--space-xl) var(--space-lg) var(--space-xl);
 }
 
 .profile-tab-placeholder {
