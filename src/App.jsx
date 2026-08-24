@@ -26,6 +26,7 @@ import CompareProfiles from './pages/CompareProfiles'
 import UserReviews from './pages/UserReviews'
 import UserDiary from './pages/UserDiary'
 import WorkReviews from './pages/WorkReviews'
+import WishlistPage from './pages/WishlistPage'
 import Chat from './pages/Chat'
 import './index.css'
 
@@ -242,11 +243,11 @@ function App() {
                 <WorkReviews mediaType="anime" />
               </ProtectedRoute>
             } />
+            <Route path="/profile/:username/wishlist" element={<ProtectedRoute><WishlistPage /></ProtectedRoute>} />
           </Route>
 
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
-          <Route path="/profile/:username/wishlist" element={<ProtectedRoute><Placeholder title="Lista de Deseados" /></ProtectedRoute>} />
         </Routes>
         </BrowserRouter>
       </ToastProvider>
@@ -255,4 +256,6 @@ function App() {
 }
 
 export default App
+
+
 
