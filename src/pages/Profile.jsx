@@ -584,7 +584,7 @@ export default function Profile() {
 
             {/* ─── Área de contenido (se llenará próximamente) ─── */}
             <div className="profile-content">
-                {profile && <LibraryGrid userId={profile.id} />}
+                {profile && <LibraryGrid userId={profile.id} username={profile.username} />}
             </div>
 
             <FollowsModal

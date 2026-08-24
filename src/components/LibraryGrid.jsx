@@ -5,7 +5,7 @@ import { getWorkById } from '../lib/workPageService'
 import LoadingSpinner from './LoadingSpinner'
 import './LibraryGrid.css'
 
-export default function LibraryGrid({ userId }) {
+export default function LibraryGrid({ userId, username }) {
     const [loading, setLoading] = useState(true)
     const [recentReviews, setRecentReviews] = useState([])
     const [diaryMonths, setDiaryMonths] = useState([])
@@ -156,7 +156,7 @@ export default function LibraryGrid({ userId }) {
             <div className="activity-col activity-reviews">
                 <div className="activity-col-header">
                     <h3>Reseñas Recientes</h3>
-                    <Link to="/library" className="activity-view-all">Ver todas</Link>
+                    {username && <Link to={`/profile/${username}/reviews`} className="activity-view-all">Ver todas</Link>}
                 </div>
                 
                 {recentReviews.length === 0 ? (
@@ -214,7 +214,7 @@ export default function LibraryGrid({ userId }) {
             <div className="activity-col activity-diary">
                 <div className="activity-col-header">
                     <h3>Diario</h3>
-                    <Link to="/library" className="activity-view-all">Ver diario</Link>
+                    {username && <Link to={`/profile/${username}/diary`} className="activity-view-all">Ver diario</Link>}
                 </div>
 
                 {diaryMonths.length === 0 ? (

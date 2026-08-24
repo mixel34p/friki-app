@@ -23,6 +23,8 @@ import CreateDebate from './pages/CreateDebate'
 import WorkPage from './pages/WorkPage'
 import Connections from './pages/Connections'
 import CompareProfiles from './pages/CompareProfiles'
+import UserReviews from './pages/UserReviews'
+import UserDiary from './pages/UserDiary'
 import Chat from './pages/Chat'
 import './index.css'
 
@@ -154,6 +156,16 @@ function App() {
             <Route path="/profile/:username?" element={
               <ProtectedRoute>
                 <Profile />
+              </ProtectedRoute>
+            } />
+            <Route path="/profile/:username/reviews" element={
+              <ProtectedRoute>
+                <UserReviews />
+              </ProtectedRoute>
+            } />
+            <Route path="/profile/:username/diary" element={
+              <ProtectedRoute>
+                <UserDiary />
               </ProtectedRoute>
             } />
             <Route path="/edit-profile" element={<Navigate to="/profile?edit=true" replace />} />

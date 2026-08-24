@@ -1,0 +1,130 @@
+.user-reviews-page {
+    max-width: 900px;
+    margin: 0 0 0 4rem;
+    padding: 3rem 1rem 5rem;
+    animation: fadeIn 0.4s ease-out;
+}
+
+/* Header Premium */
+.user-page-header {
+    margin-bottom: 2rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding-bottom: 1rem;
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+}
+
+.user-page-header-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+
+
+.user-page-title-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.user-page-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background-size: cover;
+    background-position: center;
+    border: 2px solid var(--border-subtle);
+    transition: border-color 0.2s;
+}
+
+.user-page-avatar:hover {
+    border-color: var(--brand-primary);
+}
+
+.user-page-header h2 {
+    font-family: var(--font-display);
+    font-size: 1.8rem;
+    color: var(--text-primary);
+    margin: 0;
+    letter-spacing: -0.5px;
+}
+
+.user-link {
+    color: var(--brand-primary);
+    text-decoration: none;
+    position: relative;
+}
+
+.user-link::after {
+    content: '';
+    position: absolute;
+    bottom: 2px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: var(--brand-primary);
+    transform: scaleX(0);
+    transform-origin: right;
+    transition: transform 0.3s ease;
+}
+
+.user-link:hover::after {
+    transform: scaleX(1);
+    transform-origin: left;
+}
+
+.user-page-stats {
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    background: rgba(255, 255, 255, 0.05);
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-weight: 500;
+}
+
+/* List layout */
+.reviews-list-container {
+    display: flex;
+    flex-direction: column;
+}
+
+.reviews-list-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+/* Decoración lateral en desktop */
+.user-reviews-page::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 300px;
+    height: 100vh;
+    background: radial-gradient(circle at left center, rgba(20, 184, 166, 0.05) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: -1;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 768px) {
+    .user-reviews-page {
+        margin: 0 auto;
+        padding: 1.5rem;
+    }
+    
+    .user-page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+}
+
