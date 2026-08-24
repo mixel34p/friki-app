@@ -11,7 +11,7 @@ export default function QuickReviewModal({
     onClose,
     onSaved
 }) {
-    const { user } = useAuth()
+    const { user, profile, updateProfile } = useAuth()
     const [rating, setRating] = useState(existingReview?.rating || 0)
     const [hoverRating, setHoverRating] = useState(0)
     const [content, setContent] = useState(existingReview?.content || '')
@@ -40,6 +40,17 @@ export default function QuickReviewModal({
                     userId: user.id
                 })
             }
+
+            // Remove from wishlist if it's there
+            if (profile && profile.wishlist) {
+                const wishlistIndex = profile.wishlist.findIndex(i => String(i.id) === String(workId) && i.type === workType);
+                if (wishlistIndex >= 0) {
+                    const newWishlist = [...profile.wishlist];
+                    newWishlist.splice(wishlistIndex, 1);
+                    await updateProfile({ wishlist: newWishlist });
+                }
+            }
+
             onSaved()
         } catch (error) {
             console.error(error)

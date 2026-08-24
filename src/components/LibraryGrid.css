@@ -1,4 +1,4 @@
-/* Profile Activity Layout (formerly LibraryGrid) */
+﻿/* Profile Activity Layout (formerly LibraryGrid) */
 
 .profile-activity-container {
     width: 100%;
@@ -85,7 +85,7 @@
     background: var(--bg-card);
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-lg);
-    padding: 1.5rem;
+    padding: 1rem 0;
     transition: border-color 0.2s;
 }
 
@@ -403,3 +403,90 @@
     transform: translateY(-2px);
     box-shadow: 0 8px 15px rgba(0,0,0,0.7);
 }
+
+/* Wishlist Showcase */
+.wishlist-cards-showcase {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 1rem;
+}
+.wishlist-showcase-card {
+    position: relative;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    aspect-ratio: 3/4;
+    display: block;
+    box-shadow: var(--shadow-lg);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.wishlist-showcase-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(20, 184, 166, 0.2);
+}
+.ws-img {
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+}
+.ws-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+    padding: 1rem 0.5rem 0.5rem;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+.wishlist-showcase-card:hover .ws-overlay {
+    opacity: 1;
+}
+.ws-title {
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: bold;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+
+
+
+
+.pwb-items {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding: 8px 4px 16px 4px;
+    scrollbar-width: none;
+}
+
+.pwb-item {
+    width: 48px;
+    height: 68px;
+    border-radius: 6px;
+    background-size: cover;
+    background-position: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    flex-shrink: 0;
+    border: 1px solid rgba(255,255,255,0.05);
+    display: block;
+}
+
+.pwb-item:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 12px rgba(20, 184, 166, 0.3);
+    border-color: var(--brand-primary);
+    z-index: 10;
+}
+
+
+
+
+
+.pwb-items::-webkit-scrollbar { display: none; }
+

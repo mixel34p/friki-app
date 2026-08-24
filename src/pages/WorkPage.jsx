@@ -20,8 +20,9 @@ import './WorkPage.css'
 
 export default function WorkPage({ mediaType }) {
     const { id } = useParams()
-    const { user } = useAuth()
+    const { user, profile, updateProfile } = useAuth()
     const navigate = useNavigate()
+    const isOwner = user && profile
 
     // Data states
     const [work, setWork] = useState(null)
@@ -57,6 +58,38 @@ export default function WorkPage({ mediaType }) {
 
     const toggleSpoiler = (reviewId) => {
         setRevealedSpoilers(prev => ({ ...prev, [reviewId]: true }))
+    }
+
+    const currentWishlist = profile?.wishlist || [];
+    const wishlistIndex = currentWishlist.findIndex(i => String(i.id) === String(id) && i.type === mediaType);
+    const isInWishlist = wishlistIndex >= 0;
+
+    const toggleWishlist = async () => {
+        if (!isOwner) {
+            alert('Debes iniciar sesión para añadir a la wishlist.');
+            return;
+        }
+
+        let newWishlist = [...currentWishlist];
+
+        if (isInWishlist) {
+            newWishlist.splice(wishlistIndex, 1);
+        } else {
+            const newEntry = {
+                id: String(id),
+                type: mediaType,
+                title: mediaType === 'game' ? work.name : work.title,
+                image_url: mediaType === 'game' ? work.cover_url : work.image_url,
+                added_at: new Date().toISOString()
+            };
+            newWishlist.push(newEntry);
+        }
+
+        try {
+            await updateProfile({ wishlist: newWishlist });
+        } catch (error) {
+            console.error('Error toggling wishlist', error);
+        }
     }
 
     const loadStats = async () => {
@@ -249,6 +282,15 @@ export default function WorkPage({ mediaType }) {
                                 Registrar / Reseñar
                             </button>
                         )}
+                        <button 
+                            className={`wishlist-icon-btn ${isInWishlist ? 'active' : ''}`} 
+                            onClick={toggleWishlist}
+                            title={isInWishlist ? 'Quitar de Wishlist' : 'Añadir a Wishlist'}
+                        >
+                            <svg viewBox="0 0 24 24" width="22" height="22" fill={isInWishlist ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                            </svg>
+                        </button>
                     </div>
                 </div>
             </div>

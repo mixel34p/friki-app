@@ -6,7 +6,7 @@ import LoadingSpinner from './LoadingSpinner'
 import ReviewLikeButton from './ReviewLikeButton'
 import './LibraryGrid.css'
 
-export default function LibraryGrid({ userId, username }) {
+export default function LibraryGrid({ userId, username, wishlist = [] }) {
     const [loading, setLoading] = useState(true)
     const [recentReviews, setRecentReviews] = useState([])
     const [diaryMonths, setDiaryMonths] = useState([])
@@ -152,6 +152,7 @@ export default function LibraryGrid({ userId, username }) {
     }
 
     return (
+        <>
         <div className="profile-activity-container">
             {/* LEFT COLUMN: RECENT REVIEWS */}
             <div className="activity-col activity-reviews">
@@ -161,7 +162,7 @@ export default function LibraryGrid({ userId, username }) {
                 </div>
                 
                 {recentReviews.length === 0 ? (
-                    <div className="activity-empty-box">Aún no hay reseñas.</div>
+                    <div className="activity-empty-box">Aún no hay Reseñas.</div>
                 ) : (
                     <div className="reviews-list">
                         {recentReviews.map(log => (
@@ -210,7 +211,7 @@ export default function LibraryGrid({ userId, username }) {
                         ))}
                     </div>
                 )}
-            </div>
+                </div>
 
             {/* RIGHT COLUMN: DIARY */}
             <div className="activity-col activity-diary">
@@ -257,8 +258,26 @@ export default function LibraryGrid({ userId, username }) {
                         ))}
                     </div>
                 )}
+                
+                {/* COMPACT WISHLIST SECTION */}
+                {wishlist && wishlist.length > 0 && (
+                    <div className="activity-wishlist" style={{ marginTop: '2.5rem' }}>
+                        <div className="activity-col-header">
+                            <h3>Deseados</h3>
+                            {username && <Link to={`/profile/${username}/wishlist`} className="activity-view-all">Ver más</Link>}
+                        </div>
+                        <div className="pwb-items" style={{ padding: '0.5rem 0' }}>
+                            {wishlist.slice(0, 10).map(item => (
+                                <Link key={`${item.type}-${item.id}`} to={`/${item.type}/${item.id}`} className="pwb-item" style={{ backgroundImage: `url(${item.image_url})` }} title={item.title}></Link>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
+        </>
     )
 }
+
+
 

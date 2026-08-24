@@ -582,9 +582,10 @@ export default function Profile() {
                 </div>
             </div>
 
-            {/* ─── Área de contenido (se llenará próximamente) ─── */}
+            {/* --- Wishlist Row Removed (moved to LibraryGrid) --- */}
+
             <div className="profile-content">
-                {profile && <LibraryGrid userId={profile.id} username={profile.username} />}
+                {profile && <LibraryGrid userId={profile.id} username={profile.username} wishlist={profile.wishlist} />}
             </div>
 
             <FollowsModal

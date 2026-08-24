@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+﻿import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { ToastProvider } from './components/Toast'
 import Layout from './components/Layout'
@@ -85,7 +85,7 @@ function Placeholder({ title }) {
   return (
     <div className="container" style={{ paddingTop: '100px', textAlign: 'center', height: '100vh' }}>
       <h1 style={{ fontFamily: 'var(--font-display)', marginBottom: '1rem', fontSize: '2.5rem' }}>{title}</h1>
-      <p style={{ color: 'var(--text-muted)' }}>Esta página está vacía temporalmente para el rework.</p>
+      <p style={{ color: 'var(--text-muted)' }}>Esta pÃ¡gina estÃ¡ vacÃ­a temporalmente para el rework.</p>
     </div>
   )
 }
@@ -246,6 +246,7 @@ function App() {
 
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="/profile/:username/wishlist" element={<ProtectedRoute><Placeholder title="Lista de Deseados" /></ProtectedRoute>} />
         </Routes>
         </BrowserRouter>
       </ToastProvider>
@@ -254,3 +255,4 @@ function App() {
 }
 
 export default App
+

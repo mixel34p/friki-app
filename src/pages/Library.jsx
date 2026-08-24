@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { searchGames } from '../lib/gameService'
@@ -13,7 +13,7 @@ const STATUSES = [
     { id: 'completed', label: 'Terminado', color: 'var(--status-completed, #22c55e)' },
     { id: 'backlog', label: 'Pendiente', color: 'var(--status-backlog, #f59e0b)' },
     { id: 'dropped', label: 'Abandonado', color: 'var(--status-dropped, #ef4444)' },
-    { id: 'wishlist', label: 'Wishlist', color: 'var(--status-wishlist, #8b5cf6)' }
+    
 ]
 
 const StarRating = ({ rating, onChange }) => {
@@ -48,8 +48,10 @@ export default function Library() {
     const isOwner = user && myProfile && (!username || username === myProfile.username)
     const currentProfile = isOwner ? myProfile : viewProfile
 
+    const [searchParams] = useSearchParams()
+    
     const [activeMediaType, setActiveMediaType] = useState('game')
-    const [activeFilter, setActiveFilter] = useState('all')
+    const [activeFilter, setActiveFilter] = useState(() => searchParams.get('status') || 'all')
     const [viewMode, setViewMode] = useState('grid') // grid | list
     const [sortBy, setSortBy] = useState('recent') // recent | title | rating
     const [ratingFilter, setRatingFilter] = useState('all') // all | rated | unrated
@@ -74,7 +76,7 @@ export default function Library() {
             return
         }
         if (!username && !user) {
-            setError('Debes iniciar sesión para ver tu biblioteca')
+            setError('Debes iniciar sesiÃ³n para ver tu biblioteca')
             setLoading(false)
             return
         }
@@ -172,6 +174,16 @@ export default function Library() {
             const updateData = activeMediaType === 'game'
                 ? { library: newLibrary }
                 : { anime_library: newLibrary }
+                
+            // Remove from wishlist if present
+            if (myProfile.wishlist) {
+                const wishlistIndex = myProfile.wishlist.findIndex(i => i.id === item.id.toString() && i.type === activeMediaType);
+                if (wishlistIndex >= 0) {
+                    const newWishlist = [...myProfile.wishlist];
+                    newWishlist.splice(wishlistIndex, 1);
+                    updateData.wishlist = newWishlist;
+                }
+            }
 
             await updateProfile(updateData)
             setSearchQuery('')
@@ -209,7 +221,7 @@ export default function Library() {
 
     const openReviewModal = async (item) => {
         const safeId = item.id || item.game_id || item.anime_id || item.work_id
-        const safeTitle = item.title || item.name || 'Sin título'
+        const safeTitle = item.title || item.name || 'Sin tÃ­tulo'
         
         let existingReview = null
         try {
@@ -292,7 +304,7 @@ export default function Library() {
                             </Link>
                         )}
                         <div className="lib-stats-line" style={{ marginTop: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-                            {library.length} {activeMediaType === 'game' ? 'juegos' : 'animes'} · {avgRating}⭐ promedio
+                            {library.length} {activeMediaType === 'game' ? 'juegos' : 'animes'} Â· {avgRating}â­ promedio
                         </div>
                     </div>
 
@@ -325,7 +337,7 @@ export default function Library() {
 
                         {isOwner && (
                             <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
-                                + Añadir
+                                + AÃ±adir
                             </button>
                         )}
                     </div>
@@ -362,8 +374,8 @@ export default function Library() {
                             <option value="unrated">Sin rating</option>
                         </select>
                         <select className="input lib-sort-select" value={sortBy} onChange={e => setSortBy(e.target.value)} style={{ padding: '4px 8px', fontSize: '0.9rem' }}>
-                            <option value="recent">Más reciente</option>
-                            <option value="title">Título A-Z</option>
+                            <option value="recent">MÃ¡s reciente</option>
+                            <option value="title">TÃ­tulo A-Z</option>
                             <option value="rating">Mayor rating</option>
                         </select>
                     </div>
@@ -372,13 +384,13 @@ export default function Library() {
                 {/* Library Content */}
                 {processedLibrary.length === 0 ? (
                     <div className="lib-empty-state" style={{ textAlign: 'center', padding: '4rem 1rem', color: 'var(--text-muted)' }}>
-                        <p>No se encontraron resultados en esta categoría.</p>
+                        <p>No se encontraron resultados en esta categorÃ­a.</p>
                     </div>
                 ) : viewMode === 'grid' ? (
                     <div className="covers-grid">
                         {processedLibrary.map((item, index) => {
                             const safeId = item.id || item.game_id || item.anime_id || item.work_id
-                            const safeTitle = item.title || item.name || 'Sin título'
+                            const safeTitle = item.title || item.name || 'Sin tÃ­tulo'
                             const imageUrl = item.image_url || item.cover_url
                             const statusInfo = getStatusInfo(item.status)
                             const hasReview = reviewedIds.has(String(safeId))
@@ -396,7 +408,7 @@ export default function Library() {
                                     <div className="cover-status-dot" style={{ backgroundColor: statusInfo.color }} title={statusInfo.label}></div>
                                     
                                     {hasReview && (
-                                        <div className="cover-review-indicator" title="Tiene reseña">
+                                        <div className="cover-review-indicator" title="Tiene reseÃ±a">
                                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
                                         </div>
                                     )}
@@ -431,7 +443,7 @@ export default function Library() {
                                                         <button 
                                                             className="overlay-icon-btn" 
                                                             onClick={() => openReviewModal(item)}
-                                                            title="Escribir/Ver reseña"
+                                                            title="Escribir/Ver reseÃ±a"
                                                             style={{ background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: '4px', padding: '4px', cursor: 'pointer', flex: 1, display: 'flex', justifyContent: 'center' }}
                                                         >
                                                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
@@ -457,7 +469,7 @@ export default function Library() {
                     <div className="list-view" style={{ display: 'flex', flexDirection: 'column' }}>
                         {processedLibrary.map((item, index) => {
                             const safeId = item.id || item.game_id || item.anime_id || item.work_id
-                            const safeTitle = item.title || item.name || 'Sin título'
+                            const safeTitle = item.title || item.name || 'Sin tÃ­tulo'
                             const imageUrl = item.image_url || item.cover_url
                             const statusInfo = getStatusInfo(item.status)
                             const hasReview = reviewedIds.has(String(safeId))
@@ -488,7 +500,7 @@ export default function Library() {
                                                 className="btn btn-ghost btn-sm"
                                                 onClick={() => openReviewModal(item)}
                                                 style={{ padding: '0.5rem' }}
-                                                title={hasReview ? "Editar reseña" : "Añadir reseña"}
+                                                title={hasReview ? "Editar reseÃ±a" : "AÃ±adir reseÃ±a"}
                                             >
                                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={hasReview ? "var(--brand-primary)" : "currentColor"} strokeWidth="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
                                             </button>
@@ -516,14 +528,14 @@ export default function Library() {
                 <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
                     <div className="modal lib-add-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '680px' }}>
                         <div className="modal-header">
-                            <h2>Añadir a {activeMediaType === 'game' ? 'Juegos' : 'Anime'}</h2>
-                            <button className="modal-close" onClick={() => setShowAddModal(false)}>×</button>
+                            <h2>AÃ±adir a {activeMediaType === 'game' ? 'Juegos' : 'Anime'}</h2>
+                            <button className="modal-close" onClick={() => setShowAddModal(false)}>Ã—</button>
                         </div>
                         <div className="modal-body">
                             <input
                                 type="text"
                                 className="input"
-                                placeholder="Buscar título..."
+                                placeholder="Buscar tÃ­tulo..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 autoFocus
@@ -583,3 +595,4 @@ export default function Library() {
         </div>
     )
 }
+
