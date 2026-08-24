@@ -1,25 +1,24 @@
 /* Profile Activity Layout (formerly LibraryGrid) */
-
 .profile-activity-container {
     width: 100%;
     margin-top: var(--space-xl);
-    display: flex;
+    display: grid;
+    grid-template-columns: 5fr 3fr;
     gap: 3rem;
 }
 
 .activity-col {
     display: flex;
     flex-direction: column;
+    min-width: 0;
 }
 
 .activity-reviews {
-    flex: 5;
-    min-width: 0;
+    /* flex properties removed since it's now a grid child */
 }
 
 .activity-diary {
-    flex: 3;
-    min-width: 0;
+    /* flex properties removed since it's now a grid child */
 }
 
 /* Wishlist — below both columns, centered */
@@ -384,7 +383,7 @@
 
 @media (max-width: 500px) {
     .profile-activity-container {
-        flex-direction: column;
+        grid-template-columns: 1fr;
         gap: 2rem;
     }
     
