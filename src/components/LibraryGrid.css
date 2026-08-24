@@ -382,7 +382,7 @@
     color: var(--brand-primary);
 }
 
-@media (max-width: 640px) {
+@media (max-width: 500px) {
     .profile-activity-container {
         flex-direction: column;
         gap: 2rem;
