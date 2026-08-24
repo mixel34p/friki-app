@@ -1,16 +1,17 @@
 /* Profile Activity Layout (formerly LibraryGrid) */
 .profile-activity-container {
-    width: 100%;
+    width: 100% !important;
     margin-top: var(--space-xl);
-    display: grid;
-    grid-template-columns: 5fr 3fr;
-    gap: 3rem;
+    display: grid !important;
+    grid-template-columns: 5fr 3fr !important;
+    gap: 3rem !important;
+    align-items: start !important;
 }
 
 .activity-col {
     display: flex;
     flex-direction: column;
-    min-width: 0;
+    min-width: 0 !important;
 }
 
 .activity-reviews {
@@ -383,8 +384,8 @@
 
 @media (max-width: 500px) {
     .profile-activity-container {
-        grid-template-columns: 1fr;
-        gap: 2rem;
+        grid-template-columns: 1fr !important;
+        gap: 2rem !important;
     }
     
     .diary-entry-title {
