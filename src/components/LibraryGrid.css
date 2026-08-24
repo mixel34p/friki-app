@@ -384,6 +384,8 @@
 
 @media (max-width: 500px) {
     .profile-activity-container {
+        --grid-cols: 1fr !important;
+        --grid-gap: 2rem !important;
         grid-template-columns: 1fr !important;
         gap: 2rem !important;
     }

@@ -153,9 +153,9 @@ export default function LibraryGrid({ userId, username, wishlist = [] }) {
 
     return (
         <>
-        <div className="profile-activity-container">
+        <div className="profile-activity-container" style={{ display: 'grid', gridTemplateColumns: 'var(--grid-cols, 5fr 3fr)', gap: 'var(--grid-gap, 3rem)', width: '100%', alignItems: 'start' }}>
             {/* LEFT COLUMN: RECENT REVIEWS */}
-            <div className="activity-col activity-reviews">
+            <div className="activity-col activity-reviews" style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                 <div className="activity-col-header">
                     <h3>Reseñas Recientes</h3>
                     {username && <Link to={`/profile/${username}/reviews`} className="activity-view-all">Ver todas</Link>}
@@ -214,7 +214,7 @@ export default function LibraryGrid({ userId, username, wishlist = [] }) {
             </div>
 
             {/* RIGHT COLUMN: DIARY */}
-            <div className="activity-col activity-diary">
+            <div className="activity-col activity-diary" style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                 <div className="activity-col-header">
                     <h3>Diario</h3>
                     {username && <Link to={`/profile/${username}/diary`} className="activity-view-all">Ver diario</Link>}
