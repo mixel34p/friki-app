@@ -424,28 +424,24 @@
     font-weight: 600;
     color: var(--text-muted);
     cursor: pointer;
+    transition: color 0.2s ease;
+    font-family: var(--font-display);
     position: relative;
-    transition: color 0.2s;
-    letter-spacing: 0.3px;
-    white-space: nowrap;
-    flex-shrink: 0;
 }
 
 .profile-section-tab::after {
     content: '';
     position: absolute;
     bottom: -1px;
-    left: 0;
-    right: 0;
+    left: 50%;
+    width: 0;
     height: 2px;
-    background: var(--brand-primary);
-    border-radius: 2px 2px 0 0;
-    opacity: 0;
-    transition: opacity 0.2s;
+    background-color: var(--brand-primary);
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .profile-section-tab:hover {
-    color: var(--text-secondary);
+    color: var(--text-primary);
 }
 
 .profile-section-tab.active {
@@ -453,13 +449,29 @@
 }
 
 .profile-section-tab.active::after {
-    opacity: 1;
+    width: 100%;
+    left: 0;
 }
 
 .profile-content {
     max-width: 1120px;
     margin: 0 auto;
     padding: var(--space-xl) var(--space-lg) var(--space-xl);
+}
+
+.profile-content > * {
+    animation: tabFadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes tabFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .profile-tab-placeholder {

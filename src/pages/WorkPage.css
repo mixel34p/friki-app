@@ -1,4 +1,4 @@
-﻿/* ==========================================================================
+/* ==========================================================================
    WORK PAGE CINEMATIC REDESIGN
    ========================================================================== */
 
@@ -356,7 +356,8 @@
         gap: 1rem;
     }
     .similar-works-grid {
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0.5rem;
     }
 }/* Members Avatars Stats */
 .members-avatars { display: flex; align-items: center; gap: 0.5rem; }

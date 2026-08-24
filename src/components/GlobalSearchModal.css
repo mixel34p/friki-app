@@ -61,6 +61,17 @@
     pointer-events: none;
 }
 
+.spotlight-results {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 8px;
+    animation: tabFadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
 .spotlight-header {
     width: 100%;
     display: flex;
@@ -84,7 +95,19 @@
     padding: 0.5rem 1rem;
     cursor: pointer;
     position: relative;
-    transition: color 0.3s;
+    transition: color 0.2s ease;
+}
+
+.spotlight-tabs button::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: 0;
+    height: 3px;
+    background-color: var(--brand-primary);
+    border-radius: 2px;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .spotlight-tabs button:hover {
@@ -96,15 +119,8 @@
 }
 
 .spotlight-tabs button.active::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 20px;
-    height: 3px;
-    background: var(--brand-primary);
-    border-radius: 2px;
+    width: 100%;
+    left: 0;
 }
 
 .spotlight-input-wrapper {
@@ -141,15 +157,6 @@
     border-color: var(--brand-primary);
 }
 
-.spotlight-results {
-    flex: 1;
-    overflow-y: auto;
-    width: 100%;
-    padding: 1rem;
-    /* Custom scrollbar for spotlight */
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255,255,255,0.2) transparent;
-}
 
 .spotlight-results::-webkit-scrollbar {
     width: 6px;
@@ -282,3 +289,4 @@
     }
 }
 
+@keyframes tabFadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
