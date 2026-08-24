@@ -51,6 +51,7 @@ export async function searchAnime(query, limit = 20) {
               coverImage {
                 extraLarge
               }
+              bannerImage
               startDate {
                 year
                 month
@@ -116,7 +117,10 @@ export async function getAnimeById(id) {
             .eq('id', id)
             .single()
 
-        if (localAnime) {
+        const hasBanner = localAnime?.banner_url !== null;
+        const hasStudios = localAnime?.studios !== null;
+
+        if (localAnime && hasBanner && hasStudios) {
             return formatAnime(localAnime)
         }
 
@@ -132,6 +136,10 @@ export async function getAnimeById(id) {
             coverImage {
               extraLarge
             }
+            bannerImage
+            status
+            episodes
+            studios(isMain: true) { nodes { name } }
             startDate {
               year
               month
@@ -192,6 +200,7 @@ export async function getSimilarAnime(id, limit = 10) {
                   coverImage {
                     extraLarge
                   }
+                  bannerImage
                 }
               }
             }
@@ -213,16 +222,22 @@ export async function getSimilarAnime(id, limit = 10) {
 
         const { data } = await response.json()
         const nodes = data?.Media?.recommendations?.nodes || []
-
-        return nodes.filter(n => n.mediaRecommendation).map(n => ({
+        const mapped = nodes.filter(n => n.mediaRecommendation).map(n => ({
             id: n.mediaRecommendation.id,
             name: n.mediaRecommendation.title.romaji || n.mediaRecommendation.title.english,
             title: n.mediaRecommendation.title.romaji || n.mediaRecommendation.title.english,
             image_url: n.mediaRecommendation.coverImage?.extraLarge,
             cover_url: n.mediaRecommendation.coverImage?.extraLarge,
+            banner_url: n.mediaRecommendation.bannerImage || null,
             genres: [], 
             media_type: 'anime'
         }))
+        
+        if (mapped.length > 0) {
+            importAnimeToDb(mapped)
+        }
+        
+        return mapped
     } catch (error) {
         console.error('getSimilarAnime error:', error)
         return []
@@ -244,10 +259,14 @@ function anilistToStandard(media) {
         title: title,
         image_url: media.coverImage?.extraLarge,
         cover_url: media.coverImage?.extraLarge,
+        banner_url: media.bannerImage || null,
         release_date: dateStr,
         rating: media.averageScore || null, // AniList is already 0-100! Matches IGDB perfectly
         summary: media.description?.replace(/<[^>]*>?/gm, ''), // Basic HTML tag strip since AniList returns HTML descriptions
         genres: media.genres || [],
+        status: media.status || null,
+        episodes: media.episodes || null,
+        studios: media.studios?.nodes?.map(n => n.name) || [],
         media_type: 'anime'
     }
 }
@@ -262,31 +281,27 @@ function formatAnime(dbAnime) {
         title: dbAnime.title,
         image_url: dbAnime.image_url,
         cover_url: dbAnime.image_url,
+        banner_url: dbAnime.banner_url || null,
         release_date: dbAnime.start_date,
         rating: dbAnime.score ? dbAnime.score * 10 : null,
         summary: dbAnime.synopsis,
         genres: dbAnime.genres || [],
+        status: dbAnime.status || null,
+        episodes: dbAnime.episodes || null,
+        studios: dbAnime.studios || [],
         media_type: 'anime'
     }
 }
 
 async function importAnimeToDb(animeList) {
+    if (!animeList || animeList.length === 0) return
+
     try {
-        const toInsert = animeList.map(a => ({
-            id: a.id,
-            title: a.title,
-            image_url: a.image_url,
-            start_date: a.release_date ? new Date(a.release_date).toISOString() : null,
-            score: a.rating ? a.rating / 10 : null, // Store as 0-10 in DB
-            genres: a.genres,
-            synopsis: a.summary?.substring(0, 5000)
-        }))
-
-        const { error } = await supabase
-            .from('anime')
-            .upsert(toInsert, { onConflict: 'id', ignoreDuplicates: true })
-
-        if (error) console.error('Import anime error:', error)
+        const ids = animeList.map(a => a.id)
+        const { error } = await supabase.functions.invoke('secure-sync', {
+            body: { type: 'anime', ids }
+        })
+        if (error) console.error('Import anime secure-sync error:', error)
     } catch (e) {
         console.error('importAnimeToDb error:', e)
     }

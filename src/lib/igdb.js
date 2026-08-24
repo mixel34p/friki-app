@@ -41,33 +41,70 @@ export async function searchGamesIGDB(query, limit = 20) {
 
     try {
         const body = `
-            search "${query}";
-            fields id, name, slug, cover.url, first_release_date, rating, total_rating_count,
-                   genres.name, platforms.name, summary;
-            where parent_game = null & version_parent = null;
-            limit ${limit};
+              search "${query}";
+              fields id, name, slug, cover.url, first_release_date, rating, total_rating_count, category, parent_game, version_parent,
+                     genres.name, platforms.name, summary, artworks.url, screenshots.url;
+              limit 50;
         `
 
-        const games = await callIgdbProxy('/games', body)
+        let games = await callIgdbProxy('/games', body)
 
-        // Sort locally by popularity so main games float to top instead of obscure spin-offs
-        games.sort((a, b) => (b.total_rating_count || 0) - (a.total_rating_count || 0))
+        // Advanced filter: Remove DLCs and garbage, but keep main games and popular expansions like Persona 5 Royal
+        games = games.filter(game => {
+            // Filter out alternate editions (Launch Edition, Deluxe Edition, etc)
+            if (game.version_parent) return false;
+            
+            // If it has a parent game, it's either an expansion, remake, OR a misclassified DLC
+            if (game.parent_game) {
+                // If it's explicitly marked as remake/remaster/expansion, keep it
+                const allowedCategories = [2, 4, 8, 9, 10]; // Expansion, Standalone Expansion, Remake, Remaster, Expanded Game
+                if (allowedCategories.includes(game.category)) return true;
+                
+                // Otherwise (category 0 or null), only keep it if it's popular enough
+                // This filters out obscure DLCs but keeps games like Persona 5 Royal
+                if (game.total_rating_count && game.total_rating_count > 5) return true;
+                
+                return false; // Hide obscure DLCs
+            }
+            
+            return true; // Keep all normal main games
+        })
 
-        return games.map(game => ({
-            id: game.id,
-            name: game.name,
-            slug: game.slug,
-            cover_url: game.cover?.url
-                ? 'https:' + game.cover.url.replace('t_thumb', 't_cover_big')
-                : null,
-            release_date: game.first_release_date
-                ? new Date(game.first_release_date * 1000).toISOString().split('T')[0]
-                : null,
-            rating: game.rating ? (game.rating / 10).toFixed(1) : null,
-            genres: game.genres?.map(g => g.name) || [],
-            platforms: game.platforms?.map(p => p.name) || [],
-            summary: game.summary || null
-        }))
+        // Sort locally: Exact matches first, then by popularity
+        const lowerQuery = query.toLowerCase()
+        games.sort((a, b) => {
+            const aExact = a.name.toLowerCase() === lowerQuery ? 1 : 0
+            const bExact = b.name.toLowerCase() === lowerQuery ? 1 : 0
+            
+            if (aExact !== bExact) return bExact - aExact
+            
+            return (b.total_rating_count || 0) - (a.total_rating_count || 0)
+        })
+
+        return games.map(game => {
+            let banner = null
+            if (game.artworks && game.artworks.length > 0) {
+                banner = 'https:' + game.artworks[0].url.replace('t_thumb', 't_1080p')
+            } else if (game.screenshots && game.screenshots.length > 0) {
+                banner = 'https:' + game.screenshots[0].url.replace('t_thumb', 't_1080p')
+            }
+            return {
+                id: game.id,
+                name: game.name,
+                slug: game.slug,
+                cover_url: game.cover?.url
+                    ? 'https:' + game.cover.url.replace('t_thumb', 't_cover_big')
+                    : null,
+                banner_url: banner,
+                release_date: game.first_release_date
+                    ? new Date(game.first_release_date * 1000).toISOString().split('T')[0]
+                    : null,
+                rating: game.rating ? (game.rating / 10).toFixed(1) : null,
+                genres: game.genres?.map(g => g.name) || [],
+                platforms: game.platforms?.map(p => p.name) || [],
+                summary: game.summary || null
+            }
+        }).slice(0, limit)
     } catch (error) {
         console.error('IGDB search error:', error)
         return []
@@ -83,7 +120,8 @@ export async function getGameByIdIGDB(id) {
     try {
         const body = `
             fields id, name, slug, cover.url, first_release_date, rating, 
-                   genres.name, platforms.name, summary;
+                   genres.name, platforms.name, summary,
+                   artworks.url, screenshots.url, involved_companies.company.name, involved_companies.developer;
             where id = ${id};
         `
 
@@ -92,6 +130,15 @@ export async function getGameByIdIGDB(id) {
         if (games.length === 0) return null
 
         const game = games[0]
+        
+        // Find best banner (artwork or screenshot)
+        let banner = null
+        if (game.artworks && game.artworks.length > 0) {
+            banner = 'https:' + game.artworks[0].url.replace('t_thumb', 't_1080p')
+        } else if (game.screenshots && game.screenshots.length > 0) {
+            banner = 'https:' + game.screenshots[0].url.replace('t_thumb', 't_1080p')
+        }
+
         return {
             id: game.id,
             name: game.name,
@@ -99,16 +146,18 @@ export async function getGameByIdIGDB(id) {
             cover_url: game.cover?.url
                 ? 'https:' + game.cover.url.replace('t_thumb', 't_cover_big')
                 : null,
+            banner_url: banner,
             release_date: game.first_release_date
                 ? new Date(game.first_release_date * 1000).toISOString().split('T')[0]
                 : null,
-            rating: game.rating ? (game.rating / 10).toFixed(1) : null,
-            genres: game.genres?.map(g => g.name) || [],
-            platforms: game.platforms?.map(p => p.name) || [],
-            summary: game.summary || null
+            genres: game.genres ? game.genres.map(g => g.name) : [],
+            platforms: game.platforms ? game.platforms.map(p => p.name) : [],
+            summary: game.summary || '',
+            involved_companies: game.involved_companies || [],
+            igdb_rating: game.rating ? Math.round(game.rating) / 10 : null
         }
     } catch (error) {
-        console.error('IGDB get game error:', error)
+        console.error('Error fetching from IGDB proxy:', error)
         return null
     }
 }

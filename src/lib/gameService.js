@@ -97,7 +97,11 @@ export async function getGameById(id) {
             .eq('id', id)
             .single()
 
-        if (localGame && !error) {
+        // Auto-repair: If it's missing banner or developers, fetch from API to update DB
+        const hasBanner = localGame?.banner_url !== null;
+        const hasDevelopers = localGame?.developers !== null;
+
+        if (localGame && !error && hasBanner && hasDevelopers) {
             return formatGame(localGame)
         }
 
@@ -105,8 +109,12 @@ export async function getGameById(id) {
         const igdbGame = await getGameByIdIGDB(id)
 
         if (igdbGame) {
-            // Import to local DB
+            // Import to local DB (this auto-repairs missing fields!)
             importGamesToDb([igdbGame])
+            
+            // If we had a local game but just fetched from IGDB to repair,
+            // we should still return the formatted localGame supplemented with the new data
+            // But since IGDB game is what we want, just return it.
             return igdbGame
         }
 
@@ -122,28 +130,20 @@ export async function getGameById(id) {
  * @param {Array} games - Array of game objects
  */
 async function importGamesToDb(games) {
+    if (!games || games.length === 0) return
+
     try {
-        const toInsert = games.map(game => ({
-            id: game.id,
-            name: game.name,
-            slug: game.slug,
-            cover_url: game.cover_url,
-            release_date: game.release_date,
-            rating: game.rating,
-            genres: game.genres,
-            platforms: game.platforms,
-            summary: game.summary
-        }))
-
-        const { error } = await supabase
-            .from('games')
-            .upsert(toInsert, { onConflict: 'id', ignoreDuplicates: true })
-
-        if (error) {
-            console.error('Import games error:', error)
-        }
+        const ids = games.map(game => game.id)
+        
+        // Use secure-sync Edge Function to fetch from IGDB and upsert server-side
+        // This ensures the client cannot insert spoofed data directly into the DB.
+        const { error } = await supabase.functions.invoke('secure-sync', {
+            body: { type: 'game', ids }
+        })
+        
+        if (error) throw error
     } catch (error) {
-        console.error('importGamesToDb error:', error)
+        console.error('Error importing games via secure-sync:', error)
     }
 }
 
@@ -151,16 +151,24 @@ async function importGamesToDb(games) {
  * Format game from DB to standard structure
  */
 function formatGame(dbGame) {
+    let relDate = dbGame.release_date
+    if (relDate && /^\d+$/.test(relDate.toString()) && relDate.toString().length === 10) {
+        relDate = new Date(parseInt(relDate, 10) * 1000).toISOString().split('T')[0]
+    }
+
     return {
         id: dbGame.id,
         name: dbGame.name,
         slug: dbGame.slug,
         image_url: dbGame.cover_url, // Alias for compatibility
         cover_url: dbGame.cover_url,
-        release_date: dbGame.release_date,
+        banner_url: dbGame.banner_url,
+        release_date: relDate,
         rating: dbGame.rating,
+        igdb_rating: dbGame.rating,
         genres: dbGame.genres || [],
         platforms: dbGame.platforms || [],
+        developers: dbGame.developers || [],
         summary: dbGame.summary
     }
 }

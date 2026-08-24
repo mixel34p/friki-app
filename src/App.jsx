@@ -223,12 +223,12 @@ function App() {
             {/* Work Page Routes */}
             <Route path="/game/:id" element={
               <ProtectedRoute>
-                <Placeholder title="Página de Juego" />
+                <WorkPage mediaType="game" />
               </ProtectedRoute>
             } />
             <Route path="/anime/:id" element={
               <ProtectedRoute>
-                <Placeholder title="Página de Anime" />
+                <WorkPage mediaType="anime" />
               </ProtectedRoute>
             } />
           </Route>

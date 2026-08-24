@@ -23,73 +23,62 @@ export default function WorkPage({ mediaType }) {
     // Data states
     const [work, setWork] = useState(null)
     const [debates, setDebates] = useState([])
-    const [tierlistData, setTierlistData] = useState({ tierlists: [], stats: {} })
-    const [users, setUsers] = useState([])
     const [similarWorks, setSimilarWorks] = useState([])
-    const [reviewStats, setReviewStats] = useState({ average: 0, count: 0 })
     const [userReview, setUserReview] = useState(null)
+    const [reviewStats, setReviewStats] = useState({ average: 0, count: 0, recentMembers: [] })
 
     // UI states
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
-    const [debateFilter, setDebateFilter] = useState('recent')
     const [showReviewModal, setShowReviewModal] = useState(false)
     const [reviewsRefreshTrigger, setReviewsRefreshTrigger] = useState(0)
-    const [editingReview, setEditingReview] = useState(null)
-
-    // Collapsible sections
-    const [expandedSections, setExpandedSections] = useState({
-        synopsis: true,
-        tierlists: true,
-        debates: true,
-        users: false,
-        recommendations: false
-    })
 
     useEffect(() => {
         loadWorkData()
-    }, [id, mediaType, user]) // Add user to dependecy to re-check review status
+    }, [id, mediaType, user])
 
     useEffect(() => {
         if (work) {
             loadDebates()
+            loadStats()
         }
-    }, [work, debateFilter])
+    }, [work, reviewsRefreshTrigger])
+
+    const loadStats = async () => {
+        const stats = await getWorkStats(mediaType, parseInt(id))
+        setReviewStats({
+            average: stats.avgRating,
+            count: stats.membersCount,
+            recentMembers: stats.recentMembers || []
+        })
+    }
 
     const loadWorkData = async () => {
         setLoading(true)
         setError(null)
-
         try {
-            // Load work details
             const workData = await getWorkById(mediaType, parseInt(id))
-
             if (!workData) {
                 setError('Obra no encontrada')
                 setLoading(false)
                 return
             }
-
             setWork(workData)
 
             const promises = [
-                getTierlistsWithWork(mediaType, parseInt(id)),
-                getUsersWhoInteractedWithWork(mediaType, parseInt(id), user?.id),
                 getSimilarWorks(mediaType, parseInt(id), workData.genres)
             ]
-
             if (user) {
                 promises.push(getWorkLog(user.id, parseInt(id), mediaType))
             }
 
             const results = await Promise.all(promises)
+            setSimilarWorks(results[0] || [])
 
-            setTierlistData(results[0])
-            setUsers(results[1])
-            setSimilarWorks(results[2])
-
-            if (user && results[3]) {
-                setUserReview(results[3])
+            if (user && results[1]) {
+                setUserReview(results[1])
+            } else {
+                setUserReview(null)
             }
         } catch (err) {
             console.error('Error loading work data:', err)
@@ -101,9 +90,9 @@ export default function WorkPage({ mediaType }) {
 
     const loadDebates = async () => {
         const debatesData = await getDebatesForWork(mediaType, parseInt(id), {
-            orderBy: debateFilter
+            orderBy: 'recent'
         })
-        setDebates(debatesData)
+        setDebates(debatesData || [])
     }
 
     const handleReviewAdded = async (savedLog) => {
@@ -113,399 +102,268 @@ export default function WorkPage({ mediaType }) {
             setUserReview(savedLog)
         }
         setReviewsRefreshTrigger(prev => prev + 1)
-        setEditingReview(null) // Clear edit state
-    }
-
-    // Called when a user clicks 'Edit' on a review card
-    const handleEditReview = (review) => {
-        setEditingReview(review)
-        setShowReviewModal(true)
-    }
-
-    // Close modal handler
-    const handleCloseModal = () => {
         setShowReviewModal(false)
-        setEditingReview(null)
-    }
-
-    const toggleSection = (section) => {
-        setExpandedSections(prev => ({
-            ...prev,
-            [section]: !prev[section]
-        }))
     }
 
     const getHighResImage = (url) => {
         if (!url) return null
         let finalUrl = url.startsWith('//') ? `https:${url}` : url
-        return finalUrl.replace(/t_[a-z0-9_]+/, 't_cover_big')
+        return finalUrl.replace(/t_[a-z0-9_]+/, 't_cover_big').replace(/t_thumb/, 't_cover_big')
     }
 
     const getReleaseYear = (date) => {
         if (!date) return null
-        const d = new Date(date)
+        // Fix for unix timestamps accidentally stored as strings
+        if (typeof date === 'string' && /^\d+$/.test(date) && date.length === 10) {
+            date = parseInt(date, 10)
+        }
+        const d = new Date(typeof date === 'number' && date.toString().length === 10 ? date * 1000 : date)
         return isNaN(d.getTime()) ? null : d.getFullYear()
     }
 
-    const getTierColor = (tier) => {
-        const colors = {
-            'S': 'var(--tier-s)',
-            'A': 'var(--tier-a)',
-            'B': 'var(--tier-b)',
-            'C': 'var(--tier-c)',
-            'D': 'var(--tier-d)'
-        }
-        return colors[tier?.toUpperCase()] || 'var(--text-muted)'
-    }
-
-    // Helper to render visual stars
-    const renderRatingStars = (average) => {
+    const renderRatingStars = (rating) => {
+        if (!rating) return null
         const stars = []
-        const fullStars = Math.floor(average)
-        const hasHalfStar = average % 1 >= 0.5
-
         for (let i = 1; i <= 5; i++) {
-            if (i <= fullStars) {
-                stars.push(<span key={i} style={{ color: '#fbbf24', textShadow: '0 0 5px rgba(251, 191, 36, 0.5)' }}>★</span>)
-            } else if (i === fullStars + 1 && hasHalfStar) {
-                stars.push(
-                    <span key={i} style={{ position: 'relative', display: 'inline-block', color: 'var(--text-muted)' }}>
-                        ★
-                        <span style={{ position: 'absolute', top: 0, left: 0, width: '50%', overflow: 'hidden', color: '#fbbf24', textShadow: '0 0 5px rgba(251, 191, 36, 0.5)' }}>★</span>
-                    </span>
-                )
-            } else {
-                stars.push(<span key={i} style={{ color: 'var(--text-muted)' }}>★</span>)
-            }
+            let fill = "transparent"
+            if (rating >= i) fill = "var(--brand-primary)"
+            else if (rating >= i - 0.5) fill = "url(#halfStarWork)"
+            stars.push(
+                <svg key={i} viewBox="0 0 24 24" width="16" height="16">
+                    <defs>
+                        <linearGradient id="halfStarWork" x1="0" x2="100%" y1="0" y2="0">
+                            <stop offset="50%" stopColor="var(--brand-primary)" />
+                            <stop offset="50%" stopColor="transparent" />
+                        </linearGradient>
+                    </defs>
+                    <path 
+                        d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+                        fill={rating >= i - 0.5 && rating < i ? "url(#halfStarWork)" : fill}
+                        stroke="var(--brand-primary)"
+                        strokeWidth="1.5"
+                        strokeLinejoin="round"
+                    />
+                </svg>
+            )
         }
-        return stars
+        return <div style={{ display: 'flex', gap: '2px' }}>{stars}</div>
     }
 
-    if (loading) {
-        return (
-            <div className="work-page">
-                <div className="container">
-                    <div className="work-page-loading">
-                        <LoadingSpinner />
-                        <p>Cargando obra...</p>
-                    </div>
-                </div>
-            </div>
-        )
-    }
+    if (loading) return <LoadingSpinner />
+    if (error) return <div className="work-page-error"><h2>{error}</h2></div>
+    if (!work) return null
 
-    if (error || !work) {
-        return (
-            <div className="work-page">
-                <div className="container">
-                    <div className="work-page-error">
-                        <h2>{error || 'Obra no encontrada'}</h2>
-                        <button className="btn btn-secondary" onClick={() => navigate(-1)}>
-                            ← Volver
-                        </button>
-                    </div>
-                </div>
-            </div>
-        )
+    const title = work.name || work.title
+    const coverUrl = getHighResImage(work.cover_url || work.image_url)
+    const hasRealBanner = !!work.banner_url
+    const bannerUrl = work.banner_url || coverUrl // Fallback to cover
+    const releaseYear = getReleaseYear(work.release_date || work.first_release_date)
+    const genres = work.genres || []
+    const synopsis = work.summary || work.synopsis || "No hay sinopsis disponible para esta obra."
+    const apiRating = work.igdb_rating || work.anilist_rating || null
+
+    // Extract creators (companies for game, studios for anime)
+    let creators = []
+    if (mediaType === 'game' && work.developers) {
+        creators = work.developers
+    } else if (mediaType === 'game' && work.involved_companies) {
+        // Fallback if data came straight from raw IGDB format instead of our DB
+        creators = work.involved_companies.filter(c => c.developer).map(c => c.company.name)
+        if (creators.length === 0) creators = work.involved_companies.map(c => c.company.name)
+    } else if (mediaType === 'anime' && work.studios) {
+        // If it's an array of strings (from our DB/API mapping) use it directly
+        // If it's an array of objects (e.g. from an older API response shape), map it
+        creators = work.studios.map(s => typeof s === 'string' ? s : s.name).filter(Boolean)
     }
+    const creatorText = creators.slice(0, 2).join(', ')
 
     return (
-        <div className="work-page">
-            {/* Hero Header */}
-            <div className="work-hero">
-                <div className="work-hero-backdrop">
-                    {work.cover_url && (
-                        <img
-                            src={getHighResImage(work.cover_url)}
-                            alt=""
-                            className="work-hero-backdrop-img"
-                        />
+        <div className="work-page-cinematic">
+            
+            {/* 1. Backdrop */}
+            <div className={`work-backdrop ${hasRealBanner ? 'has-banner' : ''}`}>
+                {bannerUrl && (
+                    <img src={bannerUrl} alt="backdrop" className="work-backdrop-img" />
+                )}
+                <div className="work-backdrop-overlay"></div>
+            </div>
+
+            {/* 2. Hero Section */}
+            <div className="work-hero-cinematic">
+                <div className="work-poster-wrapper">
+                    {coverUrl ? (
+                        <img src={coverUrl} alt={title} className="work-poster-img" />
+                    ) : (
+                        <div className="work-poster-img" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-tertiary)' }}>
+                            <span style={{ fontSize: '3rem', opacity: 0.5 }}>{mediaType === 'game' ? '🎮' : '📺'}</span>
+                        </div>
                     )}
-                    <div className="work-hero-backdrop-overlay"></div>
                 </div>
 
-                <div className="container">
-                    <div className="work-hero-content">
-                        <div className="work-cover">
-                            {work.cover_url ? (
-                                <img
-                                    src={getHighResImage(work.cover_url)}
-                                    alt={work.name}
-                                    className="work-cover-img"
-                                />
-                            ) : (
-                                <div className="work-cover-placeholder">
-                                    {mediaType === 'game' ? <img src="/icons/videogame.png" alt="🎮" style={{ width: '60px', height: '60px', opacity: 0.5 }} /> : <img src="/icons/anime.png" alt="📺" style={{ width: '60px', height: '60px', opacity: 0.5 }} />}
-                                </div>
-                            )}
+                <div className="work-hero-info">
+                    <div className="work-title-row">
+                        <h1 className="work-title-cinematic">
+                            {title}
+                            {releaseYear && <span className="work-year-cinematic" style={{ marginLeft: '12px' }}>{releaseYear}</span>}
+                        </h1>
+                    </div>
+
+                    {creatorText && (
+                        <div className="work-creator">
+                            {creatorText}
                         </div>
+                    )}
 
-                        <div className="work-info">
-                            <div className="work-meta-badges">
-                                <span className="work-type-badge">
-                                    {mediaType === 'game' ? <><img src="/icons/videogame.png" alt="🎮" style={{ width: '16px', height: '16px', verticalAlign: 'middle', marginRight: '4px' }} /> Juego</> : <><img src="/icons/anime.png" alt="📺" style={{ width: '16px', height: '16px', verticalAlign: 'middle', marginRight: '4px' }} /> Anime</>}
-                                </span>
-                                {getReleaseYear(work.release_date) && (
-                                    <span className="work-year-badge">
-                                        {getReleaseYear(work.release_date)}
-                                    </span>
+                    <div className={`work-interaction-panel ${userReview ? 'logged' : ''}`}>
+                        {userReview ? (
+                            <>
+                                <button className="interaction-btn btn-edit" onClick={() => setShowReviewModal(true)}>
+                                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                    Editar Entrada
+                                </button>
+                                {userReview.rating && (
+                                    <div className="user-rating-display">
+                                        <span className="user-rating-label">Tu nota</span>
+                                        {renderRatingStars(userReview.rating)}
+                                    </div>
                                 )}
-                            </div>
+                            </>
+                        ) : (
+                            <button className="interaction-btn" onClick={() => setShowReviewModal(true)}>
+                                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2"><path d="M12 5v14M5 12h14"></path></svg>
+                                Registrar / Reseñar
+                            </button>
+                        )}
+                    </div>
+                </div>
+            </div>
 
-                            <h1 className="work-title">{work.name}</h1>
-
-                            {/* Platforms/Genres */}
-                            <div className="work-tags-row">
-                                {work.platforms && work.platforms.slice(0, 4).map((p, i) => (
-                                    <span key={i} className="work-platform-tag">{p}</span>
-                                ))}
-                                {work.genres && work.genres.slice(0, 3).map((g, i) => (
-                                    <span key={i} className="work-genre-tag">{g}</span>
-                                ))}
-                            </div>
-
-                            {/* Review Stats Badge - Visual Stars */}
-                            <div className="work-rating-badge" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(0,0,0,0.3)', padding: '0.5rem 1rem', borderRadius: 'var(--radius-full)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                                <div className="stars-visual" style={{ fontSize: '1.2rem', display: 'flex', gap: '2px' }}>
-                                    {renderRatingStars(reviewStats.average)}
-                                </div>
-                                <span style={{ fontWeight: 'bold', color: 'white' }}>{reviewStats.average || '0.0'}</span>
-                                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>({reviewStats.count})</span>
-                            </div>
-
-                            {/* Action Buttons */}
-                            <div className="work-actions">
-                                {userReview ? (
-                                    <button
-                                        className="btn btn-secondary"
-                                        disabled
-                                        style={{ opacity: 0.8, cursor: 'default' }}
-                                    >
-                                        <img src="/icons/check.png" alt="✅" style={{ width: '16px', height: '16px', verticalAlign: 'middle', marginRight: '6px' }} /> Opinión enviada
-                                    </button>
-                                ) : (
-                                    <button
-                                        className="btn btn-primary"
-                                        onClick={() => setShowReviewModal(true)}
-                                    >
-                                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" style={{ marginRight: '6px' }}><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
-                                        {userReview ? 'Editar Diario' : 'Añadir al Diario'}
-                                    </button>
-                                )}
-                                <Link to="/create-tierlist" className="btn btn-secondary">
-                                    ➕ A Tierlist
-                                </Link>
-                                <Link
-                                    to="/debates/create"
-                                    state={{ preselectedMedia: { ...work, media_type: mediaType } }}
-                                    className="btn btn-secondary"
-                                >
-                                    <img src="/icons/dialog.png" alt="💬" style={{ width: '16px', height: '16px', verticalAlign: 'middle', marginRight: '6px' }} /> Debatir
-                                </Link>
-                            </div>
+            {/* 3. Stats Bar */}
+            <div className="work-stats-bar">
+                <div className="stats-bar-inner">
+                    <div className="stat-item">
+                        <span className="stat-label">Tipo</span>
+                        <span className="stat-value highlight">{mediaType === 'game' ? 'Videojuego' : 'Anime'}</span>
+                    </div>
+                    {/* Placeholder for real stats in the future */}
+                    <div className="stat-item">
+                        <span className="stat-label">Valoración Media</span>
+                        <span className="stat-value">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="var(--brand-primary)"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
+                            {reviewStats.average > 0 ? reviewStats.average : '-.-'}
+                        </span>
+                    </div>
+                    <div className="stat-item">
+                        <span className="stat-label">Miembros</span>
+                        <div className="stat-value members-avatars">
+                            {reviewStats.recentMembers?.length > 0 ? (
+                                <>
+                                    <div className="members-avatars-list">
+                                        {reviewStats.recentMembers.map((member, i) => (
+                                            <div 
+                                                key={i} 
+                                                className="member-avatar-circle" 
+                                                style={{ zIndex: 10 - i }}
+                                                title={member.username}
+                                            >
+                                                {member.avatar ? (
+                                                    <img src={member.avatar} alt={member.username} />
+                                                ) : (
+                                                    <div className="avatar-placeholder">{member.username.charAt(0).toUpperCase()}</div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                    {reviewStats.count > 5 && (
+                                        <span className="members-more-dots">...</span>
+                                    )}
+                                </>
+                            ) : (
+                                <span>0</span>
+                            )}
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* Content Sections */}
-            <div className="container">
-                <div className="work-sections">
+            {/* 4. Split Body */}
+            <div className="work-content-split">
+                <div className="work-main-col">
+                    <div>
+                        <h3 className="work-section-title">Sinopsis</h3>
+                        <p className="work-synopsis">{synopsis}</p>
+                    </div>
 
-                    {/* Synopsis Section */}
-                    {work.summary && (
-                        <section className="work-section">
-                            <button
-                                className="work-section-header"
-                                onClick={() => toggleSection('synopsis')}
-                            >
-                                <h2>📖 Sinopsis</h2>
-                                <span className={`work-section-toggle ${expandedSections.synopsis ? 'expanded' : ''}`}>
-                                    ▼
-                                </span>
-                            </button>
-                            {expandedSections.synopsis && (
-                                <div className="work-section-content">
-                                    <p className="work-synopsis">{work.summary}</p>
+                    {/* We can embed the debates here */}
+                    {debates.length > 0 && (
+                        <div>
+                            <h3 className="work-section-title">Debates Recientes</h3>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                {debates.slice(0, 3).map(debate => (
+                                    <Link key={debate.id} to={`/debate/${debate.id}`} style={{ padding: '1rem', background: 'var(--bg-card)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 'var(--radius-md)', textDecoration: 'none', color: 'inherit' }}>
+                                        <div style={{ fontWeight: '500', marginBottom: '0.25rem' }}>{debate.title}</div>
+                                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{debate.posts_count} respuestas</div>
+                                    </Link>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                <div className="work-sidebar">
+                    {/* Meta info */}
+                    <div>
+                        <h3 className="work-section-title">Detalles</h3>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                            {genres.length > 0 && (
+                                <div className="meta-block">
+                                    <span className="meta-label">Géneros</span>
+                                    <div className="meta-tags">
+                                        {genres.map((g, i) => <span key={i} className="meta-tag">{g}</span>)}
+                                    </div>
                                 </div>
                             )}
-                        </section>
-                    )}
 
-                    {/* Tierlists Section */}
-                    <section className="work-section">
-                        <button
-                            className="work-section-header"
-                            onClick={() => toggleSection('tierlists')}
-                        >
-                            <h2><img src="/icons/medal.png" alt="🏆" style={{ width: '20px', height: '20px', verticalAlign: 'middle', marginRight: '8px' }} /> Tierlists ({tierlistData.tierlists.length})</h2>
-                            <span className={`work-section-toggle ${expandedSections.tierlists ? 'expanded' : ''}`}>
-                                ▼
-                            </span>
-                        </button>
-                        {expandedSections.tierlists && (
-                            <div className="work-section-content">
-                                {tierlistData.tierlists.length === 0 ? (
-                                    <div className="work-empty-state">
-                                        <p>Esta obra aún no aparece en ninguna tierlist pública.</p>
-                                        <Link to="/create-tierlist" className="btn btn-sm btn-primary">
-                                            ¡Sé el primero!
-                                        </Link>
+                            {mediaType === 'game' && work.platforms && (
+                                <div className="meta-block">
+                                    <span className="meta-label">Plataformas</span>
+                                    <div className="meta-tags">
+                                        {work.platforms.map((p, i) => <span key={i} className="meta-tag">{p}</span>)}
                                     </div>
-                                ) : (
-                                    <div className="work-tierlists-grid">
-                                        {tierlistData.tierlists.map(tierlist => (
-                                            <Link
-                                                key={tierlist.id}
-                                                to={`/tierlist/${tierlist.id}`}
-                                                className="work-tierlist-card"
-                                            >
-                                                <div className="work-tierlist-tier" style={{ background: getTierColor(tierlist.tier) }}>
-                                                    {tierlist.tier?.toUpperCase() || '?'}
-                                                </div>
-                                                <div className="work-tierlist-info">
-                                                    <span className="work-tierlist-title">{tierlist.title}</span>
-                                                    <span className="work-tierlist-author">
-                                                        por {tierlist.profiles?.display_name || tierlist.profiles?.username}
-                                                    </span>
-                                                </div>
-                                            </Link>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </section>
-
-                    {/* Debates Section */}
-                    <section className="work-section">
-                        <button
-                            className="work-section-header"
-                            onClick={() => toggleSection('debates')}
-                        >
-                            <h2><img src="/icons/dialog.png" alt="💬" style={{ width: '20px', height: '20px', verticalAlign: 'middle', marginRight: '8px' }} /> Debates ({debates.length})</h2>
-                            <span className={`work-section-toggle ${expandedSections.debates ? 'expanded' : ''}`}>
-                                ▼
-                            </span>
-                        </button>
-                        {expandedSections.debates && (
-                            <div className="work-section-content">
-                                {/* Filters */}
-                                <div className="work-debates-filters">
-                                    <button
-                                        className={`work-filter-btn ${debateFilter === 'recent' ? 'active' : ''}`}
-                                        onClick={() => setDebateFilter('recent')}
-                                    >
-                                        Recientes
-                                    </button>
-                                    <button
-                                        className={`work-filter-btn ${debateFilter === 'popular' ? 'active' : ''}`}
-                                        onClick={() => setDebateFilter('popular')}
-                                    >
-                                        Populares
-                                    </button>
                                 </div>
+                            )}
 
-                                {debates.length === 0 ? (
-                                    <div className="work-empty-state">
-                                        <p>No hay debates sobre esta obra todavía.</p>
-                                        <Link
-                                            to="/debates/create"
-                                            state={{ preselectedMedia: { ...work, media_type: mediaType } }}
-                                            className="btn btn-sm btn-primary"
-                                        >
-                                            ¡Inicia uno!
-                                        </Link>
-                                    </div>
-                                ) : (
-                                    <div className="work-debates-list">
-                                        {debates.map(debate => {
-                                            const debateType = DEBATE_TYPES[debate.debate_type] || DEBATE_TYPES.opinion
-                                            return (
-                                                <Link
-                                                    key={debate.id}
-                                                    to={`/debate/${debate.id}`}
-                                                    className="work-debate-card"
-                                                >
-                                                    <div className="work-debate-header">
-                                                        <span className="work-debate-type">
-                                                            {debateType.emoji}
-                                                        </span>
-                                                        <span className="work-debate-title">{debate.title}</span>
-                                                    </div>
-                                                    <div className="work-debate-meta">
-                                                        <span className="work-debate-author">
-                                                            {debate.profiles?.display_name || debate.profiles?.username}
-                                                        </span>
-                                                        <span className="work-debate-replies">
-                                                            <img src="/icons/dialog.png" alt="💬" style={{ width: '14px', height: '14px', verticalAlign: 'middle', marginRight: '4px', opacity: 0.7 }} /> {debate.posts_count} respuestas
-                                                        </span>
-                                                    </div>
-                                                </Link>
-                                            )
-                                        })}
-                                    </div>
-                                )}
+                            {mediaType === 'anime' && work.status && (
+                                <div className="meta-block">
+                                    <span className="meta-label">Estado</span>
+                                    <span className="meta-value">{work.status}</span>
+                                </div>
+                            )}
+
+                            {mediaType === 'anime' && work.episodes && (
+                                <div className="meta-block">
+                                    <span className="meta-label">Episodios</span>
+                                    <span className="meta-value">{work.episodes}</span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {similarWorks.length > 0 && (
+                        <div>
+                            <h3 className="work-section-title">Similares</h3>
+                            <div className="similar-works-grid">
+                                {similarWorks.slice(0, 4).map(similar => (
+                                    <Link key={similar.id} to={`/${similar.media_type}/${similar.id}`} className="similar-work-card">
+                                        <div 
+                                            className="similar-work-poster"
+                                            style={{ backgroundImage: `url(${getHighResImage(similar.cover_url || similar.image_url)})` }}
+                                        ></div>
+                                    </Link>
+                                ))}
                             </div>
-                        )}
-                    </section>
-
-                    {/* Reviews Section */}
-                    {/* <ReviewList
-                        workId={id}
-                        workType={mediaType}
-                        refreshTrigger={reviewsRefreshTrigger}
-                        showWriteButton={false} // Hidden in list, now in hero
-                        onEditReview={handleEditReview}
-                    /> */}
-
-                    {/* Recommendations Section */}
-                    <section className="work-section">
-                        <button
-                            className="work-section-header"
-                            onClick={() => toggleSection('recommendations')}
-                        >
-                            <h2><img src="/icons/star.png" alt="✨" style={{ width: '20px', height: '20px', verticalAlign: 'middle', marginRight: '8px' }} /> Obras similares ({similarWorks.length})</h2>
-                            <span className={`work-section-toggle ${expandedSections.recommendations ? 'expanded' : ''}`}>
-                                ▼
-                            </span>
-                        </button>
-                        {expandedSections.recommendations && (
-                            <div className="work-section-content">
-                                {similarWorks.length === 0 ? (
-                                    <div className="work-empty-state">
-                                        <p>No se encontraron obras similares aún.</p>
-                                    </div>
-                                ) : (
-                                    <div className="work-similar-grid">
-                                        {similarWorks.map(similar => (
-                                            <Link
-                                                key={similar.id}
-                                                to={`/${similar.media_type}/${similar.id}`}
-                                                className="work-similar-card"
-                                            >
-                                                {similar.cover_url ? (
-                                                    <img
-                                                        src={getHighResImage(similar.cover_url)}
-                                                        alt={similar.name}
-                                                        className="work-similar-cover"
-                                                    />
-                                                ) : (
-                                                    <div className="work-similar-cover-placeholder">
-                                                        {similar.media_type === 'game' ? '🎮' : <img src="/icons/anime.png" alt="📺" style={{ width: '40px', height: '40px', opacity: 0.5 }} />}
-                                                    </div>
-                                                )}
-                                                <div className="work-similar-info">
-                                                    <span className="work-similar-name">{similar.name}</span>
-
-                                                </div>
-                                            </Link>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </section>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -513,8 +371,8 @@ export default function WorkPage({ mediaType }) {
             {showReviewModal && (
                 <LogModal
                     isOpen={showReviewModal}
-                    onClose={handleCloseModal}
-                    work={{ id: parseInt(id), type: mediaType, title: work.name, image: work.cover_image || work.image }}
+                    onClose={() => setShowReviewModal(false)}
+                    work={{ id: parseInt(id), type: mediaType, title: title, image: coverUrl }}
                     existingLog={userReview}
                     onSaveComplete={handleReviewAdded}
                 />

@@ -349,8 +349,19 @@ export async function getSimilarWorks(mediaType, mediaId, genres = [], { limit =
             }
         }
 
-        // 2. If we need more results, fetch from APIs
-        if (tierlistBasedWorks.length < limit) {
+        // 2. Local DB Genre Fallback
+        let genreBasedWorks = []
+        if (tierlistBasedWorks.length < limit && genres && genres.length > 0) {
+            const excludeIds = new Set([parseInt(mediaId), ...tierlistBasedWorks.map(w => w.id)])
+            const genreRecs = await getSimilarByGenre(mediaType, mediaId, genres, 20)
+            genreBasedWorks = genreRecs
+                .filter(w => !excludeIds.has(w.id))
+                .map(w => ({ ...w, source: 'genre', affinity: null }))
+                .slice(0, limit - tierlistBasedWorks.length)
+        }
+        
+        // 3. If we STILL need more results, fetch from APIs
+        if (tierlistBasedWorks.length + genreBasedWorks.length < limit) {
             let apiRecs = []
             let nameBasedRecs = []
 
@@ -361,11 +372,8 @@ export async function getSimilarWorks(mediaType, mediaId, genres = [], { limit =
                 apiRecs = await getSimilarAnime(mediaId, limit)
             }
 
-            // source 2: Name similarity (if we still have quota)
-            // We need to fetch the name first if we don't have it (we usually don't inside this func)
-            // However, this adds a fetch latency. Let's do it only if needed or parallel.
-            // But we don't have the name argument.
-            if (apiRecs.length + tierlistBasedWorks.length < limit) {
+            // source 2: Name similarity
+            if (apiRecs.length + tierlistBasedWorks.length + genreBasedWorks.length < limit) {
                 try {
                     const work = await (mediaType === 'game' ? getGameById(mediaId) : getAnimeById(mediaId))
                     if (work) {
@@ -385,8 +393,9 @@ export async function getSimilarWorks(mediaType, mediaId, genres = [], { limit =
                 }
             }
 
-            // Filter out duplicates (already in tierlistBasedWorks)
-            const existingIds = new Set(tierlistBasedWorks.map(w => w.id))
+            // Filter out duplicates
+            const existingIds = new Set([...tierlistBasedWorks.map(w => w.id), ...genreBasedWorks.map(w => w.id)])
+            existingIds.add(parseInt(mediaId))
 
             // Process API Recs
             const validApiRecs = apiRecs.filter(r => !existingIds.has(r.id)).map(r => ({
@@ -395,19 +404,16 @@ export async function getSimilarWorks(mediaType, mediaId, genres = [], { limit =
                 source: 'official'
             }))
 
-            // Add valid API recs to existing set
             validApiRecs.forEach(r => existingIds.add(r.id));
-            // Also exclude current work ID
-            existingIds.add(parseInt(mediaId))
 
             // Process Name Recs
             const validNameRecs = nameBasedRecs.filter(r => !existingIds.has(r.id))
 
-            // Combine: Tierlist -> Official -> Name
-            return [...tierlistBasedWorks, ...validApiRecs, ...validNameRecs].slice(0, limit)
+            // Combine
+            return [...tierlistBasedWorks, ...genreBasedWorks, ...validApiRecs, ...validNameRecs].slice(0, limit)
         }
 
-        return tierlistBasedWorks
+        return [...tierlistBasedWorks, ...genreBasedWorks].slice(0, limit)
     } catch (error) {
         console.error('getSimilarWorks error:', error)
         return []
@@ -462,8 +468,64 @@ export async function getWorkStats(mediaType, mediaId) {
             .eq('media_type', mediaType)
             .eq('media_id', mediaId)
 
+        // Get members, average rating
+        const { data: entries, error: entriesError } = await supabase
+            .from('library_entries')
+            .select('user_id, rating, created_at')
+            .eq('work_type', mediaType)
+            .eq('work_id', String(mediaId))
+            
+        let membersCount = 0
+        let avgRating = 0
+        let recentMembers = []
+        
+        if (entries && entries.length > 0) {
+            membersCount = entries.length
+            const ratings = entries.filter(e => e.rating != null).map(e => e.rating)
+            if (ratings.length > 0) {
+                const sum = ratings.reduce((acc, curr) => acc + curr, 0)
+                avgRating = sum / ratings.length
+            }
+            
+            // Sort by created_at desc
+            const sortedEntries = [...entries].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+            
+            // Extract up to 5 unique user_ids
+            const recentUserIds = []
+            for (const entry of sortedEntries) {
+                if (entry.user_id && !recentUserIds.includes(entry.user_id)) {
+                    recentUserIds.push(entry.user_id)
+                    if (recentUserIds.length >= 5) break
+                }
+            }
+            
+            // Fetch profiles for these users
+            if (recentUserIds.length > 0) {
+                const { data: profiles } = await supabase
+                    .from('profiles')
+                    .select('id, username, avatar_url')
+                    .in('id', recentUserIds)
+                    
+                if (profiles) {
+                    // Map back to recentMembers maintaining sort order
+                    for (const uid of recentUserIds) {
+                        const profile = profiles.find(p => p.id === uid)
+                        if (profile) {
+                            recentMembers.push({
+                                username: profile.username || 'Usuario',
+                                avatar: profile.avatar_url
+                            })
+                        }
+                    }
+                }
+            }
+        }
+
         return {
-            debatesCount: debatesCount || 0
+            debatesCount: debatesCount || 0,
+            membersCount: membersCount,
+            avgRating: avgRating > 0 ? avgRating.toFixed(1) : 0,
+            recentMembers
         }
     } catch (error) {
         console.error('getWorkStats error:', error)
