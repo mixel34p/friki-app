@@ -175,7 +175,7 @@ function App() {
                 <Placeholder title="Descubrir" />
               </ProtectedRoute>
             } />
-            <Route path="/library/:username?" element={
+            <Route path="/library/:username?" element={<Navigate to="/profile" replace />} />`n            <Route path="/old-library" element={
               <ProtectedRoute>
                 <Placeholder title="Biblioteca" />
               </ProtectedRoute>

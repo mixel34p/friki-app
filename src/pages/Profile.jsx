@@ -9,6 +9,7 @@ import LoadingSpinner from '../components/LoadingSpinner'
 import { useToast } from '../components/Toast'
 import FollowsModal from '../components/FollowsModal'
 import EditProfile from './EditProfile'
+import LibraryGrid from '../components/LibraryGrid'
 
 import './Profile.css'
 import { SocialIcons } from '../components/SocialIcons'
@@ -583,6 +584,7 @@ export default function Profile() {
 
             {/* ─── Área de contenido (se llenará próximamente) ─── */}
             <div className="profile-content">
+                {profile && <LibraryGrid userId={profile.id} />}
             </div>
 
             <FollowsModal

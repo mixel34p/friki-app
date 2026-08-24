@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import GlobalSearchModal from './GlobalSearchModal'
 import { supabase } from '../lib/supabase'
 import './Layout.css'
 
@@ -137,6 +138,18 @@ export default function Layout() {
     }
 
     const [mobileNavOpen, setMobileNavOpen] = useState(false)
+    const [createModalOpen, setCreateModalOpen] = useState(false)
+    const [createModalClosing, setCreateModalClosing] = useState(false)
+    const [searchModalOpen, setSearchModalOpen] = useState(false)
+
+    const closeCreateModal = () => {
+        setCreateModalClosing(true)
+        setTimeout(() => {
+            setCreateModalOpen(false)
+            setCreateModalClosing(false)
+        }, 300)
+    }
+
     const mobileNavRef = useRef(null)
 
     const handleSignOut = async () => {
@@ -197,12 +210,12 @@ export default function Layout() {
                         >
                             Biblioteca
                         </Link>
-                        <Link
-                            to="/create-tierlist"
+                        <button 
                             className="create-btn-pill"
+                            onClick={() => setCreateModalOpen(true)}
                         >
-                            + Nueva lista
-                        </Link>
+                            + Crear
+                        </button>
                     </nav>
 
                     {/* Header Actions */}
@@ -362,11 +375,11 @@ export default function Layout() {
                 <Link to="/discover" className={`bottom-nav-item ${isActive('/discover') ? 'active' : ''}`}>
                     <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
                 </Link>
-                <Link to="/create-tierlist" className="bottom-nav-item bottom-nav-fab">
+                <button onClick={() => setCreateModalOpen(true)} className="bottom-nav-item bottom-nav-fab" style={{ background: 'none', border: 'none', padding: 0 }}>
                     <div className="fab-inner">
                         <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                     </div>
-                </Link>
+                </button>
                 <Link to="/debates" className={`bottom-nav-item ${isActive('/debates') || location.pathname.startsWith('/debate') ? 'active' : ''}`}>
                     <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
                 </Link>
@@ -374,6 +387,40 @@ export default function Layout() {
                     <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
                 </Link>
             </nav>
+
+            {createModalOpen && (
+                <div className={`fullscreen-create-overlay ${createModalClosing ? 'closing' : ''}`} onClick={closeCreateModal}>
+                    <button className="close-fullscreen" onClick={closeCreateModal}>&times;</button>
+                    <div className="fullscreen-create-content" onClick={e => e.stopPropagation()}>
+                        <h2 className="create-glow-title">Crear Nuevo...</h2>
+                        
+                        <button 
+                            className="create-huge-btn" 
+                            onClick={() => { closeCreateModal(); setSearchModalOpen(true); }}
+                        >
+                            <div className="huge-btn-bg game-bg"></div>
+                            <div className="huge-btn-content">
+                                <h3><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" className="icon-gradient"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg> Registrar Obra</h3>
+                                <p>Busca y añade a tu diario</p>
+                            </div>
+                        </button>
+
+                        <Link 
+                            to="/create-tierlist" 
+                            className="create-huge-btn" 
+                            onClick={closeCreateModal}
+                        >
+                            <div className="huge-btn-bg tier-bg"></div>
+                            <div className="huge-btn-content">
+                                <h3><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" className="icon-gradient"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg> Nueva Tierlist</h3>
+                                <p>Rankea tus favoritos</p>
+                            </div>
+                        </Link>
+                    </div>
+                </div>
+            )}
+            
+            <GlobalSearchModal isOpen={searchModalOpen} onClose={() => setSearchModalOpen(false)} />
         </div>
     )
 }

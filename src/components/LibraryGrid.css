@@ -1,0 +1,342 @@
+/* Profile Activity Layout (formerly LibraryGrid) */
+
+.profile-activity-container {
+    width: 100%;
+    margin-top: var(--space-xl);
+    display: flex;
+    gap: 3rem;
+}
+
+.activity-col {
+    display: flex;
+    flex-direction: column;
+}
+
+.activity-reviews {
+    flex: 3;
+}
+
+.activity-diary {
+    flex: 2;
+}
+
+.activity-col-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border-subtle);
+    padding-bottom: 0.5rem;
+}
+
+.activity-col-header h3 {
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    color: var(--text-primary);
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.activity-view-all {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.activity-view-all:hover {
+    color: var(--brand-primary);
+}
+
+.activity-loading {
+    display: flex;
+    justify-content: center;
+    padding: 3rem 0;
+}
+
+.activity-empty {
+    text-align: center;
+    color: var(--text-muted);
+    padding: 2rem 0;
+    font-size: 0.95rem;
+}
+
+.activity-empty-box {
+    background: rgba(255,255,255,0.02);
+    border: 1px dashed var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 2rem;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+/* --- REVIEWS LIST --- */
+.reviews-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.review-card { display: flex; gap: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 1.5rem; } /* remove */ .
+    display: flex;
+    gap: 1.5rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    transition: border-color 0.2s;
+}
+
+.review-card:hover {
+    border-color: var(--border-strong);
+}
+
+.review-poster-link {
+    flex-shrink: 0;
+}
+
+.review-poster {
+    width: 90px;
+    height: 135px;
+    background-size: cover;
+    background-position: center;
+    border-radius: var(--radius-sm);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    transition: transform 0.2s;
+}
+
+.review-poster-link:hover .review-poster {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 15px rgba(0,0,0,0.7);
+}
+
+.review-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.review-header {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.review-title {
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    color: #fff;
+    text-decoration: none;
+    font-weight: 700;
+}
+
+.review-title:hover {
+    color: var(--brand-primary);
+}
+
+.review-year {
+    color: var(--text-muted);
+    font-size: 1.15rem;
+    font-weight: 300;
+}
+
+.activity-stars {
+    display: flex;
+    gap: 2px;
+    margin-bottom: 0.75rem;
+}
+
+.review-text {
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin: 0;
+}
+
+.spoiler-warning { cursor: pointer; transition: background 0.2s; } .spoiler-warning:hover { background: rgba(239, 68, 68, 0.2); } .spoiler-warning {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+/* --- DIARY LIST --- */
+.diary-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.diary-month-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.diary-month-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.diary-month-calendar {
+    position: relative;
+    width: 32px;
+    height: 28px;
+    background: #475569; /* Slate blue like letterboxd */
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 3px; /* Space for rings */
+}
+
+.calendar-rings {
+    position: absolute;
+    top: -5px;
+    left: 0;
+    width: 100%;
+    display: flex;
+    justify-content: space-evenly;
+    padding: 0 4px;
+}
+
+.calendar-rings span {
+    display: block;
+    width: 3px;
+    height: 8px;
+    background: #94a3b8;
+    border-radius: 2px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+
+.calendar-body {
+    font-family: var(--font-display);
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: 1px;
+}
+
+.diary-month-year {
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    color: var(--text-primary);
+    font-weight: 700;
+}
+
+.diary-entries {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.diary-entry {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: rgba(255,255,255,0.02);
+    padding: 0.5rem;
+    border-radius: var(--radius-md);
+    transition: background 0.2s;
+}
+
+.diary-entry:hover {
+    background: rgba(255,255,255,0.05);
+}
+
+.diary-day {
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    color: var(--text-muted);
+    font-weight: bold;
+    width: 25px;
+    text-align: center;
+}
+
+.diary-entry-poster {
+    flex-shrink: 0;
+}
+
+.diary-micro-poster {
+    width: 35px;
+    height: 50px;
+    background-size: cover;
+    background-position: center;
+    border-radius: 4px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+}
+
+.diary-entry-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.25rem;
+}
+
+.diary-entry-title {
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    text-decoration: none;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 150px;
+}
+
+.diary-entry-title:hover {
+    color: var(--brand-primary);
+}
+
+@media (max-width: 960px) {
+    .profile-activity-container {
+        flex-direction: column;
+        gap: 2rem;
+    }
+    
+    .diary-entry-title {
+        max-width: 200px;
+    }
+}
+
+.review-metadata {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.review-finished-date {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.diary-entry-header {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+}
+
+.diary-entry-year {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.review-more-btn {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-weight: bold;
+    margin-left: 4px;
+    font-size: 0.95rem;
+}
+.review-more-btn:hover {
+    color: var(--text-primary);
+}

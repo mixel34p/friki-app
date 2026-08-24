@@ -300,7 +300,7 @@ export default function Onboarding() {
                             </label>
                             
                             <div className="avatar-upload-wrapper">
-                                <label className="avatar-upload" style={{ backgroundImage: avatarPreview ? `url(${avatarPreview})` : 'none', backgroundColor: 'var(--theme)', cursor: 'pointer', display: 'block' }}>
+                                <label className="avatar-upload" style={{ backgroundImage: avatarPreview ? `url(${avatarPreview})` : 'none', backgroundColor: 'var(--brand-primary)', cursor: 'pointer', display: 'block' }}>
                                     <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'avatar')} hidden />
                                     {!avatarPreview && (
                                         <div className="avatar-placeholder">
@@ -451,7 +451,7 @@ export default function Onboarding() {
                         </button>
                     )}
                     
-                    <button className="btn btn-primary" onClick={handleNextStep} disabled={loading} style={{ backgroundColor: 'var(--theme)', borderColor: 'var(--theme)', color: '#000' }}>
+                    <button className="btn btn-primary" onClick={handleNextStep} disabled={loading} style={{ backgroundColor: 'var(--brand-primary)', borderColor: 'var(--brand-primary)', color: '#000' }}>
                         {loading ? <LoadingSpinner size="sm" /> : (step === 3 ? 'Finalizar y Entrar' : 'Siguiente')}
                     </button>
                 </div>
@@ -536,3 +536,4 @@ export default function Onboarding() {
         </div>
     )
 }
+

@@ -9,10 +9,9 @@ import {
     getSimilarWorks,
     getWorkStats
 } from '../lib/workPageService'
-import { getReviewStats, getUserReview } from '../lib/reviewService'
+import { getWorkLog } from '../lib/libraryService'
 import { DEBATE_TYPES } from '../lib/debateService'
-import ReviewList from '../components/reviews/ReviewList'
-import ReviewForm from '../components/reviews/ReviewForm'
+import LogModal from '../components/LogModal'
 import LoadingSpinner from '../components/LoadingSpinner'
 import './WorkPage.css'
 
@@ -76,12 +75,11 @@ export default function WorkPage({ mediaType }) {
             const promises = [
                 getTierlistsWithWork(mediaType, parseInt(id)),
                 getUsersWhoInteractedWithWork(mediaType, parseInt(id), user?.id),
-                getSimilarWorks(mediaType, parseInt(id), workData.genres),
-                getReviewStats(parseInt(id), mediaType)
+                getSimilarWorks(mediaType, parseInt(id), workData.genres)
             ]
 
             if (user) {
-                promises.push(getUserReview(parseInt(id), mediaType, user.id))
+                promises.push(getWorkLog(user.id, parseInt(id), mediaType))
             }
 
             const results = await Promise.all(promises)
@@ -89,10 +87,9 @@ export default function WorkPage({ mediaType }) {
             setTierlistData(results[0])
             setUsers(results[1])
             setSimilarWorks(results[2])
-            setReviewStats(results[3])
 
-            if (user) {
-                setUserReview(results[4])
+            if (user && results[3]) {
+                setUserReview(results[3])
             }
         } catch (err) {
             console.error('Error loading work data:', err)
@@ -109,14 +106,12 @@ export default function WorkPage({ mediaType }) {
         setDebates(debatesData)
     }
 
-    const handleReviewAdded = async () => {
-        // Refresh stats and user status
-        const [newStats, newReview] = await Promise.all([
-            getReviewStats(parseInt(id), mediaType),
-            getUserReview(parseInt(id), mediaType, user.id)
-        ])
-        setReviewStats(newStats)
-        setUserReview(newReview)
+    const handleReviewAdded = async (savedLog) => {
+        if (savedLog === null) {
+            setUserReview(null)
+        } else {
+            setUserReview(savedLog)
+        }
         setReviewsRefreshTrigger(prev => prev + 1)
         setEditingReview(null) // Clear edit state
     }
@@ -293,7 +288,8 @@ export default function WorkPage({ mediaType }) {
                                         className="btn btn-primary"
                                         onClick={() => setShowReviewModal(true)}
                                     >
-                                        <img src="/icons/star.png" alt="⭐" style={{ width: '16px', height: '16px', verticalAlign: 'middle', marginRight: '6px' }} /> Escribir Review
+                                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" style={{ marginRight: '6px' }}><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                                        {userReview ? 'Editar Diario' : 'Añadir al Diario'}
                                     </button>
                                 )}
                                 <Link to="/create-tierlist" className="btn btn-secondary">
@@ -455,13 +451,13 @@ export default function WorkPage({ mediaType }) {
                     </section>
 
                     {/* Reviews Section */}
-                    <ReviewList
+                    {/* <ReviewList
                         workId={id}
                         workType={mediaType}
                         refreshTrigger={reviewsRefreshTrigger}
                         showWriteButton={false} // Hidden in list, now in hero
                         onEditReview={handleEditReview}
-                    />
+                    /> */}
 
                     {/* Recommendations Section */}
                     <section className="work-section">
@@ -513,14 +509,14 @@ export default function WorkPage({ mediaType }) {
                 </div>
             </div>
 
-            {/* Review Modal */}
+            {/* Log Modal */}
             {showReviewModal && (
-                <ReviewForm
-                    workId={id}
-                    workType={mediaType}
+                <LogModal
+                    isOpen={showReviewModal}
                     onClose={handleCloseModal}
-                    onReviewAdded={handleReviewAdded}
-                    initialData={editingReview}
+                    work={{ id: parseInt(id), type: mediaType, title: work.name, image: work.cover_image || work.image }}
+                    existingLog={userReview}
+                    onSaveComplete={handleReviewAdded}
                 />
             )}
         </div>
