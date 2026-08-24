@@ -1,4 +1,4 @@
-﻿/* Profile Activity Layout (formerly LibraryGrid) */
+/* Profile Activity Layout (formerly LibraryGrid) */
 
 .profile-activity-container {
     width: 100%;
@@ -79,14 +79,12 @@
     gap: 1.5rem;
 }
 
-.review-card { display: flex; gap: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 1.5rem; } 
+.review-card {
     display: flex;
     gap: 1.5rem;
-    background: var(--bg-card);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-lg);
-    padding: 1rem 0;
-    transition: border-color 0.2s;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    margin-bottom: 1.5rem;
 }
 
 .review-card:hover {
