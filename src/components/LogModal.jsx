@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { logWork, deleteWorkLog } from '../lib/libraryService'
 import LoadingSpinner from './LoadingSpinner'
@@ -133,19 +133,19 @@ export default function LogModal({ isOpen, onClose, work, existingLog, onSaveCom
     }
 
     return (
-        <div className="log-modal-overlay" onClick={onClose}>
-            <div className="log-modal-compact" onClick={e => e.stopPropagation()}>
+        <div className="log-modal-overlay">
+            <div className="log-modal-compact">
                 
                 <button className="log-close-btn" onClick={onClose}>&times;</button>
                 
                 <div className="log-header-compact">
-                    <div className="log-poster-thumb" style={{ backgroundImage: `url(${work.image})` }}></div>
-                    <div className="log-header-info">
-                        <span className="log-badge">{work.type === 'game' ? 'VIDEOJUEGO' : 'ANIME'}</span>
-                        <h2 className="log-title-compact">{work.title}</h2>
-                        <p className="log-subtitle-compact">
-                            {existingLog ? 'Editar entrada del diario' : 'Añadir al diario'}
-                        </p>
+                    <div className="log-header-bg" style={{ backgroundImage: `url(${work.banner_url || work.image})` }}></div>
+                    <div className="log-header-content">
+                        <div className="log-poster-thumb" style={{ backgroundImage: `url(${work.image})` }}></div>
+                        <div className="log-header-info">
+                            <span className="log-badge">{work.type === 'game' ? 'VIDEOJUEGO' : 'ANIME'}</span>
+                            <h2 className="log-title-compact">{work.title}</h2>
+                        </div>
                     </div>
                 </div>
 

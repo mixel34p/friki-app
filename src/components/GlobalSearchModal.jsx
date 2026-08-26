@@ -72,7 +72,8 @@ export default function GlobalSearchModal({ isOpen, onClose }) {
             id: item.id,
             type: type,
             title: type === 'game' ? item.name : item.title,
-            image: type === 'game' ? item.cover_url : item.image_url
+            image: type === 'game' ? item.cover_url : item.image_url,
+            banner_url: item.banner_url || null
         }
         
         setSelectedWork(work)

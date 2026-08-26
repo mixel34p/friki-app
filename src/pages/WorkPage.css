@@ -497,3 +497,22 @@
 }
 
 
+
+
+.platform-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    padding: 0.6rem;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-sm, 6px);
+    font-size: 1.25rem;
+    cursor: help;
+    transition: color 0.2s, background 0.2s;
+}
+
+.platform-icon:hover {
+    color: var(--accent);
+    background: var(--bg-card);
+}

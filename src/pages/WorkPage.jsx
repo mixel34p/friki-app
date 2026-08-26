@@ -17,6 +17,9 @@ import ReviewLikeButton from '../components/ReviewLikeButton'
 import { BADGES_MAP } from '../lib/badges'
 import '../components/LibraryGrid.css'
 import './WorkPage.css'
+import { FaPlaystation, FaXbox, FaWindows, FaApple, FaAndroid, FaLinux, FaDesktop, FaGamepad } from 'react-icons/fa'
+import { BsNintendoSwitch } from 'react-icons/bs'
+import { SiSega } from 'react-icons/si'
 
 export default function WorkPage({ mediaType }) {
     const { id } = useParams()
@@ -432,14 +435,46 @@ export default function WorkPage({ mediaType }) {
                                 </div>
                             )}
 
-                            {mediaType === 'game' && work.platforms && (
-                                <div className="meta-block">
-                                    <span className="meta-label">Plataformas</span>
-                                    <div className="meta-tags">
-                                        {work.platforms.map((p, i) => <span key={i} className="meta-tag">{p}</span>)}
+                            {mediaType === 'game' && work.platforms && (() => {
+                                const groupedPlatforms = work.platforms.reduce((acc, p) => {
+                                    const pl = p.toLowerCase();
+                                    let key = 'other';
+                                    let Icon = FaGamepad;
+                                    
+                                    if (pl.includes('playstation') || pl.includes('ps vita')) { key = 'playstation'; Icon = FaPlaystation; }
+                                    else if (pl.includes('xbox')) { key = 'xbox'; Icon = FaXbox; }
+                                    else if (pl.includes('windows') || pl.includes('pc')) { key = 'windows'; Icon = FaWindows; }
+                                    else if (pl.includes('mac') || pl.includes('ios') || pl.includes('apple')) { key = 'apple'; Icon = FaApple; }
+                                    else if (pl.includes('android')) { key = 'android'; Icon = FaAndroid; }
+                                    else if (pl.includes('linux')) { key = 'linux'; Icon = FaLinux; }
+                                    else if (pl.includes('nintendo') || pl.includes('game boy') || pl.includes('wii') || pl.includes('ds') || pl.includes('gamecube')) { key = 'nintendo'; Icon = BsNintendoSwitch; }
+                                    else if (pl.includes('dreamcast') || pl.includes('sega') || pl.includes('genesis') || pl.includes('megadrive')) { key = 'sega'; Icon = SiSega; }
+                                    else if (pl.includes('browser') || pl.includes('web')) { key = 'web'; Icon = FaDesktop; }
+                                    else { key = `other-${p}`; }
+                                    
+                                    if (!acc[key]) {
+                                        acc[key] = { Icon, names: [] };
+                                    }
+                                    acc[key].names.push(p);
+                                    return acc;
+                                }, {});
+
+                                return (
+                                    <div className="meta-block">
+                                        <span className="meta-label">Plataformas</span>
+                                        <div className="meta-tags">
+                                            {Object.entries(groupedPlatforms).map(([key, data]) => {
+                                                const { Icon, names } = data;
+                                                return (
+                                                    <span key={key} className="platform-icon" title={names.join(', ')}>
+                                                        <Icon />
+                                                    </span>
+                                                );
+                                            })}
+                                        </div>
                                     </div>
-                                </div>
-                            )}
+                                );
+                            })()}
 
                             {mediaType === 'anime' && work.status && (
                                 <div className="meta-block">
@@ -480,7 +515,7 @@ export default function WorkPage({ mediaType }) {
                 <LogModal
                     isOpen={showReviewModal}
                     onClose={() => setShowReviewModal(false)}
-                    work={{ id: parseInt(id), type: mediaType, title: title, image: coverUrl }}
+                    work={{ id: parseInt(id), type: mediaType, title: title, image: coverUrl, banner_url: bannerUrl }}
                     existingLog={userReview}
                     onSaveComplete={handleReviewAdded}
                 />
