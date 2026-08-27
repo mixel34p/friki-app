@@ -39,7 +39,7 @@ function SortableItem({ game, onRemove }) {
     const style = {
         transform: CSS.Transform.toString(transform),
         transition,
-        opacity: isDragging ? 0.3 : 1, // Make original item very transparent when dragging
+        opacity: isDragging ? 0.3 : 1,
         touchAction: 'none',
         userSelect: 'none',
     }
@@ -61,7 +61,9 @@ function SortableItem({ game, onRemove }) {
                     draggable={false}
                 />
             ) : (
-                <span className="tier-item-emoji"><img src="/icons/videogame.png" alt="🎮" style={{ width: '32px', height: '32px' }} draggable={false} /></span>
+                <span className="tier-item-emoji">
+                    <img src="/icons/videogame.png" alt="🎮" style={{ width: '32px', height: '32px' }} draggable={false} />
+                </span>
             )}
             <div className="tier-item-overlay">
                 <span className="tier-item-title">{game.name}</span>
@@ -99,14 +101,12 @@ export default function CreateTierlist() {
     const [title, setTitle] = useState('')
     const [description, setDescription] = useState('')
     const [visibility, setVisibility] = useState('public')
-    const [mediaType, setMediaType] = useState('game') // 'game' | 'anime'
+    const [mediaType, setMediaType] = useState('game')
     const [parentId, setParentId] = useState(null)
-    const [activeItem, setActiveItem] = useState(null) // For drag preview
+    const [activeItem, setActiveItem] = useState(null)
 
-    // Dynamic Tiers State
     const [tiers, setTiers] = useState({ pool: [] })
 
-    // Load existing tierlist if editing or forking
     useEffect(() => {
         const searchParams = new URLSearchParams(window.location.search)
         const forkId = searchParams.get('fork')
@@ -132,28 +132,22 @@ export default function CreateTierlist() {
             if (error) throw error
 
             if (isFork) {
-                // Forking mode: Copy template, media_type, and items to POOL
                 setTitle(`Mi versión de ${data.title}`)
-                // Don't copy description to encourage unique thoughts
                 setDescription('')
                 setVisibility('public')
                 setActiveTemplate(data.list_type || 'tierlist')
                 setMediaType(data.media_type || 'game')
-                setParentId(tierlistId) // Track parent!
+                setParentId(tierlistId)
 
-                // Load all items into POOL
                 const poolItems = []
 
                 if (data.content && Object.keys(data.content).length > 0) {
-                    // Flatten all content rows into one pool
                     Object.values(data.content).flat().forEach(item => {
-                        // Ensure unique IDs in pool just in case
                         if (!poolItems.some(i => i.id === item.id)) {
                             poolItems.push({ ...item })
                         }
                     })
                 } else {
-                    // Legacy items
                     (data.tierlist_items || []).forEach(item => {
                         const game = {
                             id: item.media_id,
@@ -167,7 +161,6 @@ export default function CreateTierlist() {
                     })
                 }
 
-                // Initial state for Fork: Everything in pool
                 const initialTiers = { pool: poolItems }
                 TEMPLATES[data.list_type || 'tierlist'].rows.forEach(row => {
                     initialTiers[row] = []
@@ -175,7 +168,6 @@ export default function CreateTierlist() {
                 setTiers(initialTiers)
 
             } else {
-                // Regular Edit Mode
                 setTitle(data.title)
                 setDescription(data.description || '')
                 setVisibility(data.visibility)
@@ -186,7 +178,6 @@ export default function CreateTierlist() {
                 if (data.content && Object.keys(data.content).length > 0) {
                     setTiers(data.content)
                 } else {
-                    // Legacy reconstruction
                     const loadedTiers = { pool: [] }
                     TEMPLATES[data.list_type || 'tierlist'].rows.forEach(row => { loadedTiers[row] = [] })
                     const sortedItems = (data.tierlist_items || []).sort((a, b) => a.position - b.position)
@@ -214,10 +205,7 @@ export default function CreateTierlist() {
         }
     }
 
-    // Initialize tiers based on template (only if not loading a fork/edit initially)
     useEffect(() => {
-        // If we are setting up a fresh or template switch, preserve pool but reset others
-        // But be careful not to wipe data just loaded from fork
         if (!id && !tiers.pool?.length && !window.location.search.includes('fork')) {
             const initialTiers = { pool: tiers.pool || [] }
             TEMPLATES[activeTemplate].rows.forEach(row => {
@@ -225,16 +213,6 @@ export default function CreateTierlist() {
             })
             setTiers(initialTiers)
         } else if (!id && !window.location.search.includes('fork')) {
-            // Changing template manually
-            const initialTiers = { pool: tiers.pool || [] }
-            TEMPLATES[activeTemplate].rows.forEach(row => {
-                initialTiers[row] = tiers[row] || [] // Try to keep items if feasible, or move to pool?
-                // Simple approach: Move everything to pool if template changes? 
-                // For now, let's just ensure rows exist.
-                if (!initialTiers[row]) initialTiers[row] = []
-            })
-            // If keys don't match new template, move them to pool?
-            // Complex. Let's assume user knows what they do when switching template mid-creation.
             setTiers(prev => {
                 const newTiers = { pool: prev.pool }
                 TEMPLATES[activeTemplate].rows.forEach(r => newTiers[r] = prev[r] || [])
@@ -243,14 +221,12 @@ export default function CreateTierlist() {
         }
     }, [activeTemplate])
 
-    // Clear search when changing media type
     useEffect(() => {
         setSearchQuery('')
         setSearchResults([])
         setIsSearching(false)
     }, [mediaType])
 
-    // Search State
     const [searchQuery, setSearchQuery] = useState('')
     const [searchResults, setSearchResults] = useState([])
     const [isSearching, setIsSearching] = useState(false)
@@ -266,7 +242,6 @@ export default function CreateTierlist() {
         })
     )
 
-    // Debounced search effect
     useEffect(() => {
         const timeoutId = setTimeout(async () => {
             if (searchQuery.trim().length >= 3) {
@@ -288,7 +263,6 @@ export default function CreateTierlist() {
     }, [searchQuery])
 
     const addToPool = (game) => {
-        // Check if already exists in any tier
         const exists = Object.values(tiers).flat().some(g => g.id === game.id)
         if (exists) return
 
@@ -296,7 +270,6 @@ export default function CreateTierlist() {
             ...prev,
             pool: [...prev.pool, game]
         }))
-        // setSearchQuery('') // Keep search active
     }
 
     const removeFromTier = (gameId) => {
@@ -343,7 +316,6 @@ export default function CreateTierlist() {
 
                 let newIndex
                 if (tiers[overContainer].find(g => g.id.toString() === overId.toString())) {
-                    // Dropped on item
                     const overItemIndex = overItems.findIndex(g => g.id.toString() === overId.toString())
                     const isBelowOverItem =
                         over &&
@@ -374,7 +346,7 @@ export default function CreateTierlist() {
     const handleDragEnd = (event) => {
         const { active, over } = event
 
-        setActiveItem(null) // Clear preview
+        setActiveItem(null)
 
         if (!over) return
 
@@ -382,7 +354,6 @@ export default function CreateTierlist() {
         const overId = over.id.toString()
         const currentRows = [...TEMPLATES[activeTemplate].rows, 'pool']
 
-        // Find active item
         let activeTier = null
         let activeGame = null
         for (const [tier, games] of Object.entries(tiers)) {
@@ -397,7 +368,6 @@ export default function CreateTierlist() {
 
         if (!activeGame || !activeTier) return
 
-        // Dropping on Tier Label
         if (currentRows.includes(overId)) {
             if (activeTier !== overId) {
                 setTiers(prev => ({
@@ -409,7 +379,6 @@ export default function CreateTierlist() {
             return
         }
 
-        // Dropping on another Item
         let overTier = null
         for (const [tier, games] of Object.entries(tiers)) {
             if (!games) continue
@@ -421,7 +390,6 @@ export default function CreateTierlist() {
 
         if (overTier) {
             if (activeTier === overTier) {
-                // Reorder
                 const oldIndex = tiers[overTier].findIndex(g => g.id.toString() === activeId)
                 const newIndex = tiers[overTier].findIndex(g => g.id.toString() === overId)
 
@@ -430,7 +398,6 @@ export default function CreateTierlist() {
                     [overTier]: arrayMove(prev[overTier], oldIndex, newIndex)
                 }))
             } else {
-                // Move to different tier
                 setTiers(prev => ({
                     ...prev,
                     [activeTier]: prev[activeTier].filter(g => g.id.toString() !== activeId),
@@ -456,14 +423,11 @@ export default function CreateTierlist() {
         setError('')
 
         try {
-            // Prepare tiers content for JSON storage
-            // Ensure we clean up any non-serializable stuff if needed, but tiers object should be clean
             const content = { ...tiers }
 
             let tierlistId = id
 
             if (id) {
-                // Update existing tierlist
                 const { error: updateError } = await supabase
                     .from('tierlists')
                     .update({
@@ -471,26 +435,24 @@ export default function CreateTierlist() {
                         description,
                         list_type: activeTemplate,
                         visibility,
-                        content, // Save JSON content
+                        content,
                         updated_at: new Date()
                     })
                     .eq('id', id)
 
                 if (updateError) throw updateError
             } else {
-                // Create new tierlist
                 const { data: newTierlist, error: createError } = await supabase
                     .from('tierlists')
                     .insert({
                         user_id: user.id,
                         title,
                         description,
-
                         list_type: activeTemplate,
                         media_type: mediaType,
                         visibility,
-                        parent_id: parentId, // Save relationship
-                        content // Save JSON content
+                        parent_id: parentId,
+                        content
                     })
                     .select()
                     .single()
@@ -499,12 +461,9 @@ export default function CreateTierlist() {
                 tierlistId = newTierlist.id
             }
 
-            // No need to save items individually anymore!
-
             navigate(`/tierlist/${tierlistId}`)
         } catch (err) {
             console.error('Error saving tierlist:', err)
-            // Show more specific error message from Supabase/Postgres
             const errorMessage = err.message || (typeof err === 'object' ? JSON.stringify(err) : String(err))
             setError(`Error al guardar: ${errorMessage}`)
         } finally {
@@ -518,85 +477,145 @@ export default function CreateTierlist() {
         return finalUrl.replace(/t_[a-z0-9_]+/, 't_cover_big')
     }
 
+    const totalItems = Object.values(tiers).flat().length
+
     return (
-        <div className="create-tierlist">
-            <div className="container">
-                <div className="page-header">
-                    <h1 className="page-title">{id ? 'Editar Lista' : 'Crear Nueva Lista'}</h1>
+        <div className="ctl-page">
 
-                    {/* Media Type Selector */}
-                    {!id && (
-                        <div className="media-selector">
-                            <button
-                                className={`media-btn ${mediaType === 'game' ? 'active' : ''}`}
-                                onClick={() => {
-                                    if (Object.values(tiers).flat().length > 0) {
-                                        if (window.confirm('Cambiar el tipo vaciará la lista actual. ¿Seguro?')) {
+            {/* ═══════════════════════════════
+                STICKY EDITOR BAR
+            ═══════════════════════════════ */}
+            <div className="ctl-editor-bar">
+                <div className="ctl-editor-inner">
+
+                    {/* Back */}
+                    <button className="ctl-back-btn" onClick={() => navigate(-1)} title="Volver">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M19 12H5M12 5l-7 7 7 7" />
+                        </svg>
+                    </button>
+
+                    {/* Title input */}
+                    <input
+                        type="text"
+                        className="ctl-title-input"
+                        placeholder={`Título de ${TEMPLATES[activeTemplate].label.toLowerCase()}...`}
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        maxLength={100}
+                    />
+
+                    {/* Controls */}
+                    <div className="ctl-bar-controls">
+                        {/* Media type */}
+                        {!id && (
+                            <div className="ctl-toggle">
+                                <button
+                                    className={`ctl-toggle-opt ${mediaType === 'game' ? 'active' : ''}`}
+                                    onClick={() => {
+                                        if (Object.values(tiers).flat().length > 0) {
+                                            if (window.confirm('Cambiar el tipo vaciará la lista. ¿Seguro?')) {
+                                                setMediaType('game')
+                                                setTiers({ pool: [] })
+                                            }
+                                        } else {
                                             setMediaType('game')
-                                            setTiers({ pool: [] })
                                         }
-                                    } else {
-                                        setMediaType('game')
-                                    }
-                                }}
-                            >
-                                <img src="/icons/videogame.png" alt="🎮" style={{ width: '16px', height: '16px', marginRight: '6px' }} /> Videojuegos
-                            </button>
-                            <button
-                                className={`media-btn ${mediaType === 'anime' ? 'active' : ''}`}
-                                onClick={() => {
-                                    if (Object.values(tiers).flat().length > 0) {
-                                        if (window.confirm('Cambiar el tipo vaciará la lista actual. ¿Seguro?')) {
+                                    }}
+                                >
+                                    <img src="/icons/videogame.png" alt="" style={{ width: '13px', height: '13px' }} />
+                                    <span>Juegos</span>
+                                </button>
+                                <button
+                                    className={`ctl-toggle-opt ${mediaType === 'anime' ? 'active' : ''}`}
+                                    onClick={() => {
+                                        if (Object.values(tiers).flat().length > 0) {
+                                            if (window.confirm('Cambiar el tipo vaciará la lista. ¿Seguro?')) {
+                                                setMediaType('anime')
+                                                setTiers({ pool: [] })
+                                            }
+                                        } else {
                                             setMediaType('anime')
-                                            setTiers({ pool: [] })
                                         }
-                                    } else {
-                                        setMediaType('anime')
-                                    }
-                                }}
-                            >
-                                <img src="/icons/anime.png" alt="📺" style={{ width: '16px', height: '16px', marginRight: '6px' }} /> Anime
-                            </button>
-                        </div>
-                    )}
+                                    }}
+                                >
+                                    <img src="/icons/anime.png" alt="" style={{ width: '13px', height: '13px' }} />
+                                    <span>Anime</span>
+                                </button>
+                            </div>
+                        )}
 
-                    <div className="template-selector">
-                        {Object.values(TEMPLATES).map(template => (
-                            <button
-                                key={template.id}
-                                className={`template-btn ${activeTemplate === template.id ? 'active' : ''}`}
-                                onClick={() => setActiveTemplate(template.id)}
-                            >
-                                {template.label}
-                            </button>
-                        ))}
+                        {/* Template */}
+                        <div className="ctl-toggle">
+                            {Object.values(TEMPLATES).map(template => (
+                                <button
+                                    key={template.id}
+                                    className={`ctl-toggle-opt ${activeTemplate === template.id ? 'active' : ''}`}
+                                    onClick={() => setActiveTemplate(template.id)}
+                                >
+                                    {template.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Save */}
+                        <button className="ctl-save-btn" onClick={handleSave} disabled={saving}>
+                            {saving ? (
+                                <>
+                                    <div className="ctl-save-spinner" />
+                                    <span>Guardando...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" />
+                                        <polyline points="17 21 17 13 7 13 7 21" />
+                                        <polyline points="7 3 7 8 15 8" />
+                                    </svg>
+                                    <span>Guardar</span>
+                                </>
+                            )}
+                        </button>
                     </div>
                 </div>
+            </div>
 
-                {error && <div className="error-banner">{error}</div>}
+            {/* ═══════════════════════════════
+                DESCRIPTION BAR
+            ═══════════════════════════════ */}
+            <div className="ctl-desc-bar">
+                <div className="ctl-desc-inner">
+                    <input
+                        type="text"
+                        className="ctl-desc-input"
+                        placeholder="Añade una descripción breve (opcional)..."
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        maxLength={200}
+                    />
+                </div>
+            </div>
 
-                <div className="create-layout">
-                    {/* Tierlist Builder */}
-                    <div className="tierlist-builder">
-                        <div className="tierlist-meta-form">
-                            <input
-                                type="text"
-                                className="input tierlist-title-input"
-                                placeholder={`Título de ${TEMPLATES[activeTemplate].label.toLowerCase()}...`}
-                                value={title}
-                                onChange={(e) => setTitle(e.target.value)}
-                                maxLength={100}
-                            />
-                            <input
-                                type="text"
-                                className="input"
-                                placeholder="Descripción breve (opcional)"
-                                value={description}
-                                onChange={(e) => setDescription(e.target.value)}
-                                maxLength={200}
-                            />
-                        </div>
+            {/* Error */}
+            {error && (
+                <div className="ctl-error-bar">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="8" x2="12" y2="12" />
+                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                    </svg>
+                    {error}
+                </div>
+            )}
 
+            {/* ═══════════════════════════════
+                MAIN CONTENT
+            ═══════════════════════════════ */}
+            <div className="ctl-content">
+                <div className="ctl-layout">
+
+                    {/* ── LEFT: Tierlist Builder ── */}
+                    <div className="ctl-builder">
                         <DndContext
                             sensors={sensors}
                             collisionDetection={pointerWithin}
@@ -611,7 +630,8 @@ export default function CreateTierlist() {
                             onDragEnd={handleDragEnd}
                             onDragCancel={() => setActiveItem(null)}
                         >
-                            <div className="tierlist">
+                            {/* Tier rows */}
+                            <div className="ctl-tierlist">
                                 {TEMPLATES[activeTemplate].rows.map(tier => (
                                     <div key={tier} className="tier-row">
                                         <div
@@ -619,7 +639,6 @@ export default function CreateTierlist() {
                                             id={tier}
                                             style={{
                                                 backgroundColor: TEMPLATES[activeTemplate].colors[tier],
-                                                color: 'white',
                                                 fontSize: activeTemplate === 'ranking' ? '1.2rem' : undefined
                                             }}
                                         >
@@ -638,37 +657,46 @@ export default function CreateTierlist() {
                                                     />
                                                 ))}
                                                 {(!tiers[tier] || tiers[tier].length === 0) && (
-                                                    <div className="tier-placeholder">
-                                                        Arrastra juegos aquí
-                                                    </div>
+                                                    <div className="tier-placeholder">Arrastra aquí</div>
                                                 )}
                                             </DroppableTier>
                                         </SortableContext>
                                     </div>
                                 ))}
+                            </div>
 
-                                <div className="tier-row pool-row">
-                                    <div className="tier-label tier-pool">📦</div>
-                                    <SortableContext
-                                        items={tiers.pool?.map(g => g.id.toString()) || []}
-                                        strategy={rectSortingStrategy}
-                                    >
-                                        <DroppableTier id="pool">
-                                            {tiers.pool?.map(game => (
-                                                <SortableItem
-                                                    key={game.id}
-                                                    game={game}
-                                                    onRemove={removeFromTier}
-                                                />
-                                            ))}
-                                            {(!tiers.pool || tiers.pool.length === 0) && (
-                                                <div className="tier-placeholder">
-                                                    Juegos añadidos aparecerán aquí
-                                                </div>
-                                            )}
-                                        </DroppableTier>
-                                    </SortableContext>
+                            {/* Pool — separated */}
+                            <div className="ctl-pool">
+                                <div className="ctl-pool-header">
+                                    <span className="ctl-pool-label">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <rect x="3" y="3" width="18" height="18" rx="2" /><path d="M9 9h6M9 12h6M9 15h4" />
+                                        </svg>
+                                        Sin clasificar
+                                    </span>
+                                    {tiers.pool?.length > 0 && (
+                                        <span className="ctl-pool-count">{tiers.pool.length}</span>
+                                    )}
                                 </div>
+                                <SortableContext
+                                    items={tiers.pool?.map(g => g.id.toString()) || []}
+                                    strategy={rectSortingStrategy}
+                                >
+                                    <DroppableTier id="pool">
+                                        {tiers.pool?.map(game => (
+                                            <SortableItem
+                                                key={game.id}
+                                                game={game}
+                                                onRemove={removeFromTier}
+                                            />
+                                        ))}
+                                        {(!tiers.pool || tiers.pool.length === 0) && (
+                                            <div className="tier-placeholder">
+                                                Busca y añade elementos — luego arrástralos a los tiers
+                                            </div>
+                                        )}
+                                    </DroppableTier>
+                                </SortableContext>
                             </div>
 
                             <DragOverlay>
@@ -682,7 +710,9 @@ export default function CreateTierlist() {
                                                 draggable={false}
                                             />
                                         ) : (
-                                            <span className="tier-item-emoji"><img src="/icons/videogame.png" alt="🎮" style={{ width: '32px', height: '32px' }} draggable={false} /></span>
+                                            <span className="tier-item-emoji">
+                                                <img src="/icons/videogame.png" alt="🎮" style={{ width: '32px', height: '32px' }} draggable={false} />
+                                            </span>
                                         )}
                                     </div>
                                 ) : null}
@@ -690,85 +720,97 @@ export default function CreateTierlist() {
                         </DndContext>
                     </div>
 
-                    {/* Game Search Panel */}
-                    <div className="game-search-panel">
-                        <h3>Añadir {mediaType === 'anime' ? 'Anime' : 'Juegos'}</h3>
-                        <p className="input-hint">Busca y pulsa + para añadir a la Tierlist</p>
+                    {/* ── RIGHT: Search Panel ── */}
+                    <div className="ctl-search-panel">
+                        <div className="ctl-panel-header">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+                            </svg>
+                            <span>Añadir {mediaType === 'anime' ? 'Anime' : 'Juegos'}</span>
+                            {totalItems > 0 && (
+                                <span className="ctl-panel-count">{totalItems} añadidos</span>
+                            )}
+                        </div>
 
-                        <div className="search-input-wrapper">
+                        <div className="ctl-search-wrap">
+                            <svg className="ctl-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+                            </svg>
                             <input
                                 type="text"
-                                className="input"
-                                placeholder={mediaType === 'anime' ? "Ej: Naruto, One Piece..." : "Ej: Elden Ring..."}
+                                className="ctl-search-input"
+                                placeholder={mediaType === 'anime' ? 'Naruto, One Piece...' : 'Elden Ring, Zelda...'}
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
-                            {isSearching && <div className="search-spinner"></div>}
+                            {isSearching && <div className="ctl-spinner" />}
                         </div>
 
-                        <div className="game-list">
+                        <div className="ctl-results">
                             {searchResults.map(game => {
                                 const isAdded = Object.values(tiers).flat().some(g => g.id === game.id)
                                 return (
                                     <button
                                         key={game.id}
-                                        className={`game-item ${isAdded ? 'disabled' : ''}`}
+                                        className={`ctl-result-item ${isAdded ? 'is-added' : ''}`}
                                         onClick={() => !isAdded && addToPool(game)}
                                         disabled={isAdded}
                                         title={game.name}
                                     >
-                                        {game.image_url || game.cover_url ? (
-                                            <img
-                                                src={getHighResImage(game.image_url || game.cover_url)}
-                                                alt={game.name}
-                                                className="game-thumb"
-                                            />
-                                        ) : (
-                                            <span className="game-emoji">{mediaType === 'game' ? <img src="/icons/videogame.png" alt="🎮" style={{ width: '32px', height: '32px' }} /> : <img src="/icons/anime.png" alt="📺" style={{ width: '32px', height: '32px' }} />}</span>
-                                        )}
-
-                                        <div className="game-item-overlay">
-                                            <span className="game-add-icon">{isAdded ? '✓' : '+'}</span>
+                                        <div className="ctl-result-thumb">
+                                            {(game.image_url || game.cover_url) ? (
+                                                <img
+                                                    src={getHighResImage(game.image_url || game.cover_url)}
+                                                    alt={game.name}
+                                                />
+                                            ) : (
+                                                <div className="ctl-result-fallback">
+                                                    {mediaType === 'game'
+                                                        ? <img src="/icons/videogame.png" alt="" style={{ width: '22px', height: '22px' }} />
+                                                        : <img src="/icons/anime.png" alt="" style={{ width: '22px', height: '22px' }} />
+                                                    }
+                                                </div>
+                                            )}
                                         </div>
-
-                                        <div className="game-info">
-                                            <span className="game-title">{game.name}</span>
-                                            <span className="game-year">{game.release_date?.substring(0, 4)}</span>
+                                        <div className="ctl-result-info">
+                                            <span className="ctl-result-name">{game.name}</span>
+                                            {game.release_date && (
+                                                <span className="ctl-result-year">{game.release_date.substring(0, 4)}</span>
+                                            )}
+                                        </div>
+                                        <div className={`ctl-result-btn ${isAdded ? 'added' : ''}`}>
+                                            {isAdded ? (
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                                    <polyline points="20 6 9 17 4 12" />
+                                                </svg>
+                                            ) : (
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                                    <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+                                                </svg>
+                                            )}
                                         </div>
                                     </button>
                                 )
                             })}
 
                             {!isSearching && searchQuery.length >= 3 && searchResults.length === 0 && (
-                                <div className="no-results">
-                                    <p>No encontrado</p>
+                                <div className="ctl-empty">
+                                    <span className="ctl-empty-icon">🔍</span>
+                                    <p>Sin resultados</p>
                                     <small>Prueba con otro nombre</small>
                                 </div>
                             )}
 
                             {!searchQuery && (
-                                <div className="search-empty-state">
-                                    {mediaType === 'anime' ? '🎬 Empieza a escribir para buscar animes' : '👾 Empieza a escribir para buscar juegos'}
+                                <div className="ctl-empty">
+                                    <span className="ctl-empty-icon">{mediaType === 'anime' ? '🎬' : '👾'}</span>
+                                    <p>Busca para añadir</p>
+                                    <small>Escribe al menos 3 caracteres</small>
                                 </div>
                             )}
                         </div>
                     </div>
-                </div>
 
-                <div className="create-actions">
-                    <button
-                        className="btn btn-secondary"
-                        onClick={() => navigate(-1)}
-                    >
-                        Cancelar
-                    </button>
-                    <button
-                        className="btn btn-primary btn-lg"
-                        onClick={handleSave}
-                        disabled={saving}
-                    >
-                        {saving ? 'Guardando...' : '💾 Guardar Lista'}
-                    </button>
                 </div>
             </div>
         </div>

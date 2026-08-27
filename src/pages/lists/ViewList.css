@@ -1,0 +1,308 @@
+.vl-page {
+    min-height: 100vh;
+    background: var(--bg-primary); 
+    padding: 0 var(--space-md) var(--space-2xl);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.vl-nav-top {
+    width: 100%;
+    max-width: 1100px; /* PC WIDTH INCREASED */
+    margin-bottom: var(--space-sm);
+    display: flex;
+}
+
+.vl-back-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: var(--text-sm);
+    transition: color 0.2s ease;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0 0 12px 0;
+    font-family: inherit;
+}
+
+.vl-back-btn:hover { color: var(--text-primary); }
+
+/* ─── Post Card ────────────────────────────────────────────────────────────── */
+.vl-post-card {
+    width: 100%;
+    max-width: 1100px; /* PC WIDTH INCREASED */
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+    animation: vlFadeUp 0.4s ease both;
+}
+
+/* ─── Header ─── */
+.vl-post-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-lg);
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+
+.vl-post-author {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+}
+
+.vl-post-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: var(--bg-tertiary);
+    border: 2px solid transparent;
+    transition: border-color 0.2s ease;
+}
+
+.vl-post-author:hover .vl-post-avatar {
+    border-color: var(--brand-primary);
+}
+
+.vl-post-author-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.vl-post-author-name-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.vl-post-displayname {
+    color: var(--text-primary);
+    font-weight: 700;
+    font-size: var(--text-base);
+}
+
+.vl-post-badge {
+    width: 14px;
+    height: 14px;
+    object-fit: contain;
+}
+
+.vl-post-author-handle-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.vl-post-username {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+}
+
+.vl-post-dot {
+    color: var(--text-muted);
+    font-size: 10px;
+}
+
+.vl-post-date {
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+}
+
+.vl-post-actions-top {
+    display: flex;
+    gap: 8px;
+}
+
+.vl-icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.vl-icon-btn:hover {
+    background: rgba(255,255,255,0.06);
+    color: var(--text-primary);
+}
+
+.vl-icon-btn-danger:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+/* ─── Body (Title & Tags) ─── */
+.vl-post-body {
+    padding: var(--space-xl) var(--space-xl) 0;
+}
+
+.vl-post-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: var(--space-md);
+}
+
+.vl-post-title {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    line-height: 1.3;
+}
+
+.vl-post-tags-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.vl-post-tags {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.vl-tag {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.vl-tag.type-tierlist  { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+.vl-tag.type-ranking   { background: rgba(234, 179, 8, 0.15);  color: #facc15; }
+.vl-tag.type-grid      { background: rgba(168, 85, 247, 0.15); color: #c084fc; }
+.vl-tag.media-game     { background: rgba(34, 197, 94, 0.15);  color: #4ade80; }
+.vl-tag.media-anime    { background: rgba(239, 68, 68, 0.15);  color: #f87171; }
+
+/* ─── Visual Area ─── */
+.vl-post-visual-wrapper {
+    background: #000;
+    border-top: 1px solid var(--border-subtle);
+    width: 100%;
+    margin-top: var(--space-xl);
+    margin-bottom: 0;
+    padding: var(--space-xl) 0;
+}
+
+.vl-post-visual {
+    width: 100%;
+}
+
+.cl-ranking-name-view {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: var(--text-base);
+    margin-left: 12px;
+}
+
+.vl-empty-state {
+    padding: 4rem;
+    text-align: center;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+/* Engagement moved to top */
+.vl-like-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+    padding: 8px 12px;
+    border-radius: var(--radius-md);
+    transition: all 0.2s;
+}
+
+.vl-like-btn:hover {
+    background: rgba(255,255,255,0.06);
+    color: var(--text-primary);
+}
+
+.vl-like-btn.liked {
+    color: var(--brand-primary);
+}
+
+.vl-like-btn.liked svg {
+    fill: var(--brand-primary);
+    animation: heartBounce 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.vl-like-btn svg {
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.vl-like-btn:active svg {
+    transform: scale(0.8);
+}
+
+@keyframes heartBounce {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.4); }
+    100% { transform: scale(1); }
+}
+
+.vl-post-template-ref a {
+    color: var(--brand-primary);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 6px 12px;
+    background: rgba(20, 184, 166, 0.1);
+    border-radius: var(--radius-full);
+    transition: background 0.2s;
+}
+
+.vl-post-template-ref a:hover {
+    background: rgba(20, 184, 166, 0.2);
+}
+
+/* Loading & Error */
+.vl-loading, .vl-error-state {
+    min-height: 50vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+}
+
+@keyframes vlFadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 768px) {
+    .vl-page { padding: 0; }
+    .vl-post-card { border-radius: 0; border-left: none; border-right: none; box-shadow: none; border-top: none; max-width: 100%; }
+    .vl-nav-top { padding: var(--space-md); margin-bottom: 0; max-width: 100%; }
+}

@@ -577,4 +577,8 @@
 
 .pwb-items::-webkit-scrollbar { display: none; }
 
+span.review-year:empty {
+    display: none;
+}
+
 

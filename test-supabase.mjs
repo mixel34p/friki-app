@@ -1,0 +1,1 @@
+import { createClient } from '@supabase/supabase-js'; import dotenv from 'dotenv'; dotenv.config(); const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY); async function test() { const res = await supabase.from('list_templates').select('*, profiles:user_id(username, avatar_url)').limit(1); console.log(res.error || res.data); } test();

@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { getUserLibrary } from '../lib/libraryService'
+import { getUserLibrary, deleteWorkLog } from '../lib/libraryService'
 import { getWorkById } from '../lib/workPageService'
+import { useAuth } from '../context/AuthContext'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ReviewLikeButton from '../components/ReviewLikeButton'
 import '../components/LibraryGrid.css'
@@ -10,11 +11,39 @@ import './UserReviews.css'
 
 export default function UserReviews() {
     const { username } = useParams()
+    const { user, updateProfile } = useAuth()
     const [loading, setLoading] = useState(true)
     const [profile, setProfile] = useState(null)
     const [reviews, setReviews] = useState([])
     const [revealedSpoilers, setRevealedSpoilers] = useState({})
     const [expandedReviews, setExpandedReviews] = useState({})
+    const [openMenuId, setOpenMenuId] = useState(null)
+
+    const isOwnProfile = user && profile && user.id === profile.id;
+
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (!e.target.closest('.review-menu-container')) {
+                setOpenMenuId(null)
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside)
+        return () => document.removeEventListener('mousedown', handleClickOutside)
+    }, [])
+
+    const handleDelete = async (log) => {
+        if (!window.confirm('¿Seguro que quieres eliminar esta reseña?')) return;
+        try {
+            await deleteWorkLog(log.user_id, log.work_id, log.work_type)
+            setReviews(reviews.filter(r => r.id !== log.id))
+            setOpenMenuId(null)
+            if (profile?.pinned_review_id === log.id) {
+                await updateProfile({ pinned_review_id: null })
+            }
+        } catch (e) {
+            alert('Error al eliminar la reseña')
+        }
+    }
 
     const toggleExpand = (e, id) => {
         e.preventDefault()
@@ -73,7 +102,7 @@ export default function UserReviews() {
                 // Get profile ID from username
                 const { data: userData, error: userError } = await supabase
                     .from('profiles')
-                    .select('id, username, avatar_url')
+                    .select('id, username, avatar_url, pinned_review_id')
                     .eq('username', username)
                     .single()
                 
@@ -97,9 +126,18 @@ export default function UserReviews() {
 
                 const validLogs = populatedLogs.filter(log => log.work)
                 
-                const allReviews = validLogs
+                let allReviews = validLogs
                     .filter(log => log.review_text && log.review_text.trim() !== '')
                     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+
+                if (userData.pinned_review_id) {
+                    const pinnedIdx = allReviews.findIndex(r => r.id === userData.pinned_review_id);
+                    if (pinnedIdx > -1) {
+                        const pinnedReview = allReviews.splice(pinnedIdx, 1)[0];
+                        pinnedReview.isPinned = true;
+                        allReviews.unshift(pinnedReview);
+                    }
+                }
 
                 setReviews(allReviews)
             } catch (error) {
@@ -139,7 +177,69 @@ export default function UserReviews() {
                 ) : (
                     <div className="reviews-list-stack">
                         {reviews.map(log => (
-                            <div key={log.id} className="review-card">
+                            <div key={log.id} className="review-card" style={{ position: 'relative' }}>
+                                {log.isPinned && !isOwnProfile && (
+                                    <div className="review-pin-badge" title="Reseña destacada">
+                                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 17v5"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.68V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3v4.68a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/></svg>
+                                    </div>
+                                )}
+                                {isOwnProfile && (
+                                    <div className="review-menu-container">
+                                        {log.isPinned && (
+                                            <div className="review-menu-pin-badge" title="Reseña destacada">
+                                                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 17v5"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.68V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3v4.68a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/></svg>
+                                            </div>
+                                        )}
+                                        <button 
+                                            onClick={(e) => { e.preventDefault(); setOpenMenuId(openMenuId === log.id ? null : log.id) }}
+                                            style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: '2px', display: 'flex', alignItems: 'center' }}
+                                        >
+                                            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+                                        </button>
+                                        {openMenuId === log.id && (
+                                            <div className="review-dropdown-menu">
+                                                <button 
+                                                    className="review-dropdown-btn"
+                                                    onClick={async (e) => {
+                                                        e.preventDefault();
+                                                        try {
+                                                            await updateProfile({ pinned_review_id: log.isPinned ? null : log.id });
+                                                            const newReviews = [...reviews];
+                                                            const idx = newReviews.findIndex(r => r.id === log.id);
+                                                            if (idx > -1) {
+                                                                if (log.isPinned) {
+                                                                    newReviews[idx].isPinned = false;
+                                                                    setReviews(newReviews);
+                                                                } else {
+                                                                    newReviews.forEach(r => r.isPinned = false);
+                                                                    newReviews[idx].isPinned = true;
+                                                                    const p = newReviews.splice(idx, 1)[0];
+                                                                    newReviews.unshift(p);
+                                                                    setReviews(newReviews);
+                                                                }
+                                                            }
+                                                            setProfile({...profile, pinned_review_id: log.isPinned ? null : log.id});
+                                                            setOpenMenuId(null);
+                                                        } catch (err) {
+                                                            alert('Error al fijar');
+                                                        }
+                                                    }}
+                                                >
+                                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 17v5"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.68V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3v4.68a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/></svg>
+                                                    {log.isPinned ? "Quitar destacada" : "Fijar en perfil"}
+                                                </button>
+                                                <div style={{ height: '1px', background: 'var(--border-subtle)', margin: '4px 0' }}></div>
+                                                <button 
+                                                    className="review-dropdown-btn danger"
+                                                    onClick={(e) => { e.preventDefault(); handleDelete(log); }}
+                                                >
+                                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                                                    Eliminar reseña
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                                 <Link to={`/${log.work_type}/${log.work_id}`} className="review-poster-link">
                                     <div className="review-poster" style={{ backgroundImage: `url(${log.work_type === 'game' ? log.work.cover_url : log.work.image_url})` }}></div>
                                 </Link>

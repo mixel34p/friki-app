@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import GlobalSearchModal from './GlobalSearchModal'
+import { ListsEntryModal } from '../pages/lists/ListsEntry'
 import { supabase } from '../lib/supabase'
 import './Layout.css'
 
@@ -34,10 +35,17 @@ export default function Layout() {
         return () => document.removeEventListener('mousedown', handleClickOutside)
     }, [])
 
-    // Close menus on route change
+    // Close menus on route change and check for modal trigger
     useEffect(() => {
         setMenuOpen(false)
         setNotifOpen(false)
+        setMobileNavOpen(false)
+        
+        const searchParams = new URLSearchParams(location.search)
+        if (searchParams.get('createlist') === 'true') {
+            setListsEntryModalOpen(true)
+            window.history.replaceState({}, '', location.pathname)
+        }
     }, [location])
 
     // Fetch notifications count
@@ -141,6 +149,7 @@ export default function Layout() {
     const [createModalOpen, setCreateModalOpen] = useState(false)
     const [createModalClosing, setCreateModalClosing] = useState(false)
     const [searchModalOpen, setSearchModalOpen] = useState(false)
+    const [listsEntryModalOpen, setListsEntryModalOpen] = useState(false)
 
     const closeCreateModal = () => {
         setCreateModalClosing(true)
@@ -168,11 +177,6 @@ export default function Layout() {
             document.body.style.overflow = ''
         }
     }, [menuOpen])
-
-    // Close mobile nav on route change
-    useEffect(() => {
-        setMobileNavOpen(false)
-    }, [location])
 
     return (
         <div className="layout">
@@ -405,22 +409,25 @@ export default function Layout() {
                             </div>
                         </button>
 
-                        <Link 
-                            to="/create-tierlist" 
+                        <button 
                             className="create-huge-btn" 
-                            onClick={closeCreateModal}
+                            onClick={() => { closeCreateModal(); setListsEntryModalOpen(true); }}
                         >
                             <div className="huge-btn-bg tier-bg"></div>
                             <div className="huge-btn-content">
-                                <h3><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" className="icon-gradient"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg> Nueva Tierlist</h3>
-                                <p>Rankea tus favoritos</p>
+                                <h3><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" className="icon-gradient"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg> Nueva Lista</h3>
+                                <p>Crea tu ranking, tier o grid</p>
                             </div>
-                        </Link>
+                        </button>
                     </div>
                 </div>
             )}
             
             <GlobalSearchModal isOpen={searchModalOpen} onClose={() => setSearchModalOpen(false)} />
+            
+            {listsEntryModalOpen && (
+                <ListsEntryModal onClose={() => setListsEntryModalOpen(false)} standalone={false} />
+            )}
         </div>
     )
 }

@@ -1,0 +1,289 @@
+/* =================================================
+   LISTS ENTRY MODAL — mismo estilo que LogModal
+   ================================================= */
+
+@keyframes leOverlayIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes leSlideUp {
+    from { opacity: 0; transform: translateY(24px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0)    scale(1);    }
+}
+
+/* -- Overlay -- */
+.le-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 11000;
+    background: rgba(0, 0, 0, 0.78);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    animation: leOverlayIn 0.2s ease;
+}
+
+/* -- Panel -- */
+.le-modal {
+    width: 100%;
+    max-width: 520px;
+    background: rgba(22, 22, 26, 0.96);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: var(--radius-2xl);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    position: relative;
+    overflow: hidden;
+    box-shadow:
+        0 40px 80px -20px rgba(0, 0, 0, 0.9),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    animation: leSlideUp 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* -- Close button -- */
+.le-close {
+    position: absolute;
+    top: 1rem;
+    right: 1.25rem;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--border-default);
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+    line-height: 1;
+    width: 2rem;
+    height: 2rem;
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, color 0.2s;
+}
+.le-close:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+}
+
+/* -- Decorative header band (LogModal style) -- */
+.le-header-compact {
+    position: relative;
+    border-bottom: 1px solid var(--border-subtle);
+    overflow: hidden;
+}
+
+.le-header-bg {
+    position: absolute;
+    inset: -30px;
+    background: linear-gradient(135deg, #14b8a6 0%, #080808 100%);
+    filter: blur(25px) saturate(1.8) brightness(0.35);
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.9;
+}
+
+.le-header-content-clean {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 2.25rem 2rem 1.75rem;
+    background: linear-gradient(to top, var(--bg-card) 0%, transparent 100%);
+    align-items: center;
+    text-align: center;
+}
+
+.le-header-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 0;
+    z-index: 2;
+}
+
+.le-badge-top {
+    color: var(--brand-primary);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    margin-bottom: 0.2rem;
+}
+
+.le-title-compact {
+    font-family: var(--font-display);
+    font-size: 1.85rem;
+    color: #fff;
+    margin: 0;
+    line-height: 1.1;
+    font-weight: 800;
+    text-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+
+.le-subtitle-clean {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin: 0;
+    margin-top: 0.2rem;
+}
+
+/* -- Body -- */
+.le-body {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+/* -- Option card -- */
+.le-option {
+    display: flex;
+    align-items: center;
+    gap: 1.1rem;
+    padding: 1.1rem 1.25rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: var(--radius-xl);
+    cursor: pointer;
+    transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    text-align: left;
+    width: 100%;
+}
+
+.le-option:hover {
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(20, 184, 166, 0.35);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35),
+                0 0 0 1px rgba(20, 184, 166, 0.12);
+}
+
+/* Primary variant */
+.le-option.primary {
+    background: rgba(20, 184, 166, 0.06);
+    border-color: rgba(20, 184, 166, 0.2);
+}
+.le-option.primary:hover {
+    background: rgba(20, 184, 166, 0.1);
+    border-color: rgba(20, 184, 166, 0.45);
+}
+
+/* Icon wrap */
+.le-option-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: var(--radius-lg);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+    transition: all 0.22s ease;
+}
+
+.le-option.primary .le-option-icon {
+    background: rgba(20, 184, 166, 0.12);
+    border-color: rgba(20, 184, 166, 0.25);
+    color: var(--brand-primary);
+}
+
+.le-option:hover .le-option-icon {
+    background: rgba(20, 184, 166, 0.15);
+    border-color: rgba(20, 184, 166, 0.3);
+    color: var(--brand-primary);
+    box-shadow: 0 0 18px rgba(20, 184, 166, 0.2);
+}
+
+/* Text */
+.le-option-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.le-option-title {
+    font-family: var(--font-display);
+    font-size: 0.975rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 2px;
+    letter-spacing: -0.01em;
+}
+
+.le-option-desc {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    line-height: 1.45;
+}
+
+/* Arrow */
+.le-option-arrow {
+    color: var(--text-muted);
+    flex-shrink: 0;
+    transition: transform 0.22s ease, color 0.22s ease;
+}
+.le-option:hover .le-option-arrow {
+    color: var(--brand-primary);
+    transform: translateX(3px);
+}
+
+/* Badge "Recomendado" */
+.le-badge {
+    position: absolute;
+    top: -1px;
+    right: 14px;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--brand-primary);
+    background: rgba(20, 184, 166, 0.12);
+    border: 1px solid rgba(20, 184, 166, 0.25);
+    padding: 2px 8px;
+    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+}
+
+/* Wrap needed for badge positioning */
+.le-option-wrap {
+    position: relative;
+}
+
+/* -- Divider -- */
+.le-divider {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    padding: 0 0.25rem;
+}
+.le-divider::before,
+.le-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.06);
+}
+
+/* -- Responsive -- */
+@media (max-width: 600px) {
+    .le-modal {
+        border-radius: var(--radius-xl);
+        max-height: 95dvh;
+        overflow-y: auto;
+    }
+    .le-header-content-clean { 
+        padding: 1.75rem 1.25rem 1.25rem; 
+    }
+    .le-title-compact {
+        font-size: 1.55rem;
+    }
+}

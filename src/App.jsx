@@ -1,4 +1,4 @@
-﻿import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { ToastProvider } from './components/Toast'
 import Layout from './components/Layout'
@@ -13,8 +13,6 @@ import UpdatePassword from './pages/UpdatePassword'
 import Home from './pages/Home'
 import Profile from './pages/Profile'
 import EditProfile from './pages/EditProfile'
-import CreateTierlist from './pages/CreateTierlist'
-import ViewTierlist from './pages/ViewTierlist'
 import Library from './pages/Library'
 import Discover from './pages/Discover'
 import Debates from './pages/Debates'
@@ -25,12 +23,22 @@ import Connections from './pages/Connections'
 import CompareProfiles from './pages/CompareProfiles'
 import UserReviews from './pages/UserReviews'
 import UserDiary from './pages/UserDiary'
+import UserTierlists from './pages/UserTierlists'
+import UserTemplates from './pages/UserTemplates'
 import WorkReviews from './pages/WorkReviews'
 import WishlistPage from './pages/WishlistPage'
 import Chat from './pages/Chat'
 import './index.css'
 
 import { useLocation } from 'react-router-dom'
+import Onboarding from './pages/Onboarding'
+
+// Lists System imports
+import TemplateGallery from './pages/lists/TemplateGallery'
+import ViewTemplate from './pages/lists/ViewTemplate'
+import TemplateBuilder from './pages/lists/TemplateBuilder'
+import CreateList from './pages/lists/CreateList'
+import ViewList from './pages/lists/ViewList'
 
 // Protected Route component
 function ProtectedRoute({ children, requireProfile = true }) {
@@ -49,12 +57,10 @@ function ProtectedRoute({ children, requireProfile = true }) {
     return <Navigate to="/login" replace />
   }
 
-  // If the route requires a profile and the user doesn't have one, force onboarding
   if (requireProfile && !profile && location.pathname !== '/onboarding') {
     return <Navigate to="/onboarding" replace />
   }
   
-  // If the user already has a profile and tries to access onboarding, send them home
   if (!requireProfile && profile && location.pathname === '/onboarding') {
       return <Navigate to="/home" replace />
   }
@@ -86,12 +92,10 @@ function Placeholder({ title }) {
   return (
     <div className="container" style={{ paddingTop: '100px', textAlign: 'center', height: '100vh' }}>
       <h1 style={{ fontFamily: 'var(--font-display)', marginBottom: '1rem', fontSize: '2.5rem' }}>{title}</h1>
-      <p style={{ color: 'var(--text-muted)' }}>Esta pÃ¡gina estÃ¡ vacÃ­a temporalmente para el rework.</p>
+      <p style={{ color: 'var(--text-muted)' }}>Esta página está vacía temporalmente para el rework.</p>
     </div>
   )
 }
-
-import Onboarding from './pages/Onboarding'
 
 function App() {
   return (
@@ -100,149 +104,62 @@ function App() {
         <BrowserRouter>
         <Routes>
           {/* Public routes */}
-          <Route path="/" element={
-            <PublicOnlyRoute>
-              <Landing />
-            </PublicOnlyRoute>
-          } />
-          <Route path="/login" element={
-            <PublicOnlyRoute>
-              <Login />
-            </PublicOnlyRoute>
-          } />
-          <Route path="/register" element={
-            <PublicOnlyRoute>
-              <Register />
-            </PublicOnlyRoute>
-          } />
-          <Route path="/forgot-password" element={
-            <PublicOnlyRoute>
-              <ForgotPassword />
-            </PublicOnlyRoute>
-          } />
-          <Route path="/confirm-email" element={
-            <PublicOnlyRoute>
-              <ConfirmEmail />
-            </PublicOnlyRoute>
-          } />
-          <Route path="/update-password" element={
-            <UpdatePassword />
-          } />
+          <Route path="/" element={<PublicOnlyRoute><Landing /></PublicOnlyRoute>} />
+          <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
+          <Route path="/register" element={<PublicOnlyRoute><Register /></PublicOnlyRoute>} />
+          <Route path="/forgot-password" element={<PublicOnlyRoute><ForgotPassword /></PublicOnlyRoute>} />
+          <Route path="/confirm-email" element={<PublicOnlyRoute><ConfirmEmail /></PublicOnlyRoute>} />
+          <Route path="/update-password" element={<UpdatePassword />} />
 
           {/* Onboarding Route */}
-          <Route path="/onboarding" element={
-            <ProtectedRoute requireProfile={false}>
-              <Onboarding />
-            </ProtectedRoute>
-          } />
+          <Route path="/onboarding" element={<ProtectedRoute requireProfile={false}><Onboarding /></ProtectedRoute>} />
 
-          {/* Chat Routes - Fullscreen, no header */}
-          <Route path="/chat" element={
-            <ProtectedRoute>
-              <Placeholder title="Chat" />
-            </ProtectedRoute>
-          } />
-          <Route path="/chat/:connectionId" element={
-            <ProtectedRoute>
-              <Placeholder title="Chat" />
-            </ProtectedRoute>
-          } />
+          {/* Chat Routes */}
+          <Route path="/chat" element={<ProtectedRoute><Placeholder title="Chat" /></ProtectedRoute>} />
+          <Route path="/chat/:connectionId" element={<ProtectedRoute><Placeholder title="Chat" /></ProtectedRoute>} />
+          <Route path="/templates/:id/edit" element={<ProtectedRoute><TemplateBuilder /></ProtectedRoute>} />
+
+          {/* Editor Routes (No Layout) */}
+          <Route path="/lists/new" element={<ProtectedRoute><CreateList /></ProtectedRoute>} />
+          <Route path="/lists/:id/edit" element={<ProtectedRoute><CreateList /></ProtectedRoute>} />
 
           {/* Protected routes with Layout */}
           <Route element={<Layout />}>
-            <Route path="/home" element={
-              <ProtectedRoute>
-                <Placeholder title="Inicio (Home)" />
-              </ProtectedRoute>
-            } />
-            <Route path="/profile/:username?" element={
-              <ProtectedRoute>
-                <Profile />
-              </ProtectedRoute>
-            } />
-            <Route path="/profile/:username/reviews" element={
-              <ProtectedRoute>
-                <UserReviews />
-              </ProtectedRoute>
-            } />
-            <Route path="/profile/:username/diary" element={
-              <ProtectedRoute>
-                <UserDiary />
-              </ProtectedRoute>
-            } />
+            <Route path="/home" element={<ProtectedRoute><Placeholder title="Inicio (Home)" /></ProtectedRoute>} />
+            <Route path="/profile/:username?" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+            <Route path="/profile/:username/reviews" element={<ProtectedRoute><UserReviews /></ProtectedRoute>} />
+            <Route path="/profile/:username/diary" element={<ProtectedRoute><UserDiary /></ProtectedRoute>} />
+            <Route path="/profile/:username/tierlists" element={<ProtectedRoute><UserTierlists /></ProtectedRoute>} />
+            <Route path="/profile/:username/templates" element={<ProtectedRoute><UserTemplates /></ProtectedRoute>} />
             <Route path="/edit-profile" element={<Navigate to="/profile?edit=true" replace />} />
-            <Route path="/create-tierlist" element={
-              <ProtectedRoute>
-                <Placeholder title="Crear Tierlist" />
-              </ProtectedRoute>
-            } />
-            <Route path="/tierlist/:id" element={
-              <Placeholder title="Ver Tierlist" />
-            } />
-            <Route path="/edit-tierlist/:id" element={
-              <ProtectedRoute>
-                <Placeholder title="Editar Tierlist" />
-              </ProtectedRoute>
-            } />
-            <Route path="/discover" element={
-              <ProtectedRoute>
-                <Placeholder title="Descubrir" />
-              </ProtectedRoute>
-            } />
-            <Route path="/library/:username?" element={<Navigate to="/profile" replace />} />`n            <Route path="/old-library" element={
-              <ProtectedRoute>
-                <Placeholder title="Biblioteca" />
-              </ProtectedRoute>
-            } />
-            <Route path="/debates" element={
-              <ProtectedRoute>
-                <Placeholder title="Debates" />
-              </ProtectedRoute>
-            } />
-            <Route path="/debate/:id" element={
-              <ProtectedRoute>
-                <Placeholder title="Ver Debate" />
-              </ProtectedRoute>
-            } />
-            <Route path="/debates/create" element={
-              <ProtectedRoute>
-                <Placeholder title="Crear Debate" />
-              </ProtectedRoute>
-            } />
+            
+            {/* OLD TIERLIST REDIRECTS */}
+            <Route path="/create-tierlist" element={<Navigate to="/home?createlist=true" replace />} />
+            <Route path="/tierlist/:id" element={<Navigate to="/lists/:id" replace />} />
+            <Route path="/edit-tierlist/:id" element={<Navigate to="/lists/:id/edit" replace />} />
+            
+            {/* NEW LISTS SYSTEM RUTAS */}
+            <Route path="/templates" element={<TemplateGallery />} />
+            <Route path="/templates/new" element={<Navigate to="/templates?new=1" replace />} />
+            <Route path="/templates/:id" element={<ViewTemplate />} />
+            <Route path="/lists/:id" element={<ViewList />} />
+            
+            <Route path="/discover" element={<ProtectedRoute><Placeholder title="Descubrir" /></ProtectedRoute>} />
+            <Route path="/library/:username?" element={<Navigate to="/profile" replace />} />
+            <Route path="/old-library" element={<ProtectedRoute><Placeholder title="Biblioteca" /></ProtectedRoute>} />
+            <Route path="/debates" element={<ProtectedRoute><Placeholder title="Debates" /></ProtectedRoute>} />
+            <Route path="/debate/:id" element={<ProtectedRoute><Placeholder title="Ver Debate" /></ProtectedRoute>} />
+            <Route path="/debates/create" element={<ProtectedRoute><Placeholder title="Crear Debate" /></ProtectedRoute>} />
 
             {/* Social Discovery Routes */}
-            <Route path="/connections" element={
-              <ProtectedRoute>
-                <Placeholder title="Conexiones" />
-              </ProtectedRoute>
-            } />
-            <Route path="/compare/:userId" element={
-              <ProtectedRoute>
-                <Placeholder title="Comparar Perfiles" />
-              </ProtectedRoute>
-            } />
+            <Route path="/connections" element={<ProtectedRoute><Placeholder title="Conexiones" /></ProtectedRoute>} />
+            <Route path="/compare/:userId" element={<ProtectedRoute><Placeholder title="Comparar Perfiles" /></ProtectedRoute>} />
 
             {/* Work Page Routes */}
-            <Route path="/game/:id" element={
-              <ProtectedRoute>
-                <WorkPage mediaType="game" />
-              </ProtectedRoute>
-            } />
-            <Route path="/anime/:id" element={
-              <ProtectedRoute>
-                <WorkPage mediaType="anime" />
-              </ProtectedRoute>
-            } />
-            <Route path="/game/:id/reviews" element={
-              <ProtectedRoute>
-                <WorkReviews mediaType="game" />
-              </ProtectedRoute>
-            } />
-            <Route path="/anime/:id/reviews" element={
-              <ProtectedRoute>
-                <WorkReviews mediaType="anime" />
-              </ProtectedRoute>
-            } />
+            <Route path="/game/:id" element={<ProtectedRoute><WorkPage mediaType="game" /></ProtectedRoute>} />
+            <Route path="/anime/:id" element={<ProtectedRoute><WorkPage mediaType="anime" /></ProtectedRoute>} />
+            <Route path="/game/:id/reviews" element={<ProtectedRoute><WorkReviews mediaType="game" /></ProtectedRoute>} />
+            <Route path="/anime/:id/reviews" element={<ProtectedRoute><WorkReviews mediaType="anime" /></ProtectedRoute>} />
             <Route path="/profile/:username/wishlist" element={<ProtectedRoute><WishlistPage /></ProtectedRoute>} />
           </Route>
 
@@ -256,6 +173,3 @@ function App() {
 }
 
 export default App
-
-
-

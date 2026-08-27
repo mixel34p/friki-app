@@ -4,14 +4,18 @@ import { getUserLibrary } from '../lib/libraryService'
 import { getWorkById } from '../lib/workPageService'
 import LoadingSpinner from './LoadingSpinner'
 import ReviewLikeButton from './ReviewLikeButton'
+import { useAuth } from '../context/AuthContext'
 import './LibraryGrid.css'
 
-export default function LibraryGrid({ userId, username, wishlist = [] }) {
+export default function LibraryGrid({ profile, userId, username, wishlist = [] }) {
+    const { user, profile: myProfile, updateProfile } = useAuth()
     const [loading, setLoading] = useState(true)
     const [recentReviews, setRecentReviews] = useState([])
     const [diaryMonths, setDiaryMonths] = useState([])
     const [revealedSpoilers, setRevealedSpoilers] = useState({})
     const [expandedReviews, setExpandedReviews] = useState({})
+
+    const isOwnProfile = user?.id === userId;
 
     const toggleExpand = (e, id) => {
         e.preventDefault()
@@ -54,13 +58,24 @@ export default function LibraryGrid({ userId, username, wishlist = [] }) {
                 
                 const validLogs = populatedLogs.filter(log => log.work !== null)
 
-                // 1. Recent Reviews (has review_text)
-                const reviews = validLogs
+                // 1. Reseñas Destacadas
+                const allReviews = validLogs
                     .filter(log => log.review_text && log.review_text.trim() !== '')
-                    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-                    .slice(0, 2)
+                    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+                let displayedReviews = [];
+                const pinnedId = isOwnProfile ? myProfile?.pinned_review_id : profile?.pinned_review_id;
+                const pinnedReview = pinnedId ? allReviews.find(r => r.id === pinnedId) : null;
                 
-                setRecentReviews(reviews)
+                if (pinnedReview) {
+                    displayedReviews.push({ ...pinnedReview, isPinned: true });
+                    const others = allReviews.filter(r => r.id !== pinnedId);
+                    if (others.length > 0) displayedReviews.push(others[0]);
+                } else {
+                    displayedReviews = allReviews.slice(0, 2);
+                }
+                
+                setRecentReviews(displayedReviews)
 
                 // 2. Diary Grouped By Month (using finished_date, fallback to created_at)
                 const monthGroups = {}
@@ -157,7 +172,7 @@ export default function LibraryGrid({ userId, username, wishlist = [] }) {
             {/* LEFT COLUMN: RECENT REVIEWS */}
             <div className="activity-col activity-reviews" style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                 <div className="activity-col-header">
-                    <h3>Reseñas Recientes</h3>
+                    <h3>Reseñas Destacadas</h3>
                     {username && <Link to={`/profile/${username}/reviews`} className="activity-view-all">Ver todas</Link>}
                 </div>
                 
@@ -166,7 +181,12 @@ export default function LibraryGrid({ userId, username, wishlist = [] }) {
                 ) : (
                     <div className="reviews-list">
                         {recentReviews.map(log => (
-                            <div key={log.id} className="review-card">
+                            <div key={log.id} className="review-card" style={{ position: 'relative' }}>
+                                {log.isPinned && (
+                                    <div style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 10, color: 'var(--brand-primary)' }} title="Reseña destacada">
+                                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 17v5"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.68V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3v4.68a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/></svg>
+                                    </div>
+                                )}
                                 <Link to={`/${log.work_type}/${log.work_id}`} className="review-poster-link">
                                     <div className="review-poster" style={{ backgroundImage: `url(${log.work_type === 'game' ? log.work.cover_url : log.work.image_url})` }}></div>
                                 </Link>
