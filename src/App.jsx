@@ -15,9 +15,6 @@ import Profile from './pages/Profile'
 import EditProfile from './pages/EditProfile'
 import Library from './pages/Library'
 import Discover from './pages/Discover'
-import Debates from './pages/Debates'
-import ViewDebate from './pages/ViewDebate'
-import CreateDebate from './pages/CreateDebate'
 import WorkPage from './pages/WorkPage'
 import Connections from './pages/Connections'
 import CompareProfiles from './pages/CompareProfiles'
@@ -39,6 +36,13 @@ import ViewTemplate from './pages/lists/ViewTemplate'
 import TemplateBuilder from './pages/lists/TemplateBuilder'
 import CreateList from './pages/lists/CreateList'
 import ViewList from './pages/lists/ViewList'
+
+// Spaces System imports
+import SpacesExplore from './pages/spaces/SpacesExplore'
+import SpaceLayout from './pages/spaces/SpaceLayout'
+import LiveChat from './pages/spaces/LiveChat'
+import SpaceDebates from './pages/spaces/SpaceDebates'
+import DebateThread from './pages/spaces/DebateThread'
 
 // Protected Route component
 function ProtectedRoute({ children, requireProfile = true }) {
@@ -147,9 +151,14 @@ function App() {
             <Route path="/discover" element={<ProtectedRoute><Placeholder title="Descubrir" /></ProtectedRoute>} />
             <Route path="/library/:username?" element={<Navigate to="/profile" replace />} />
             <Route path="/old-library" element={<ProtectedRoute><Placeholder title="Biblioteca" /></ProtectedRoute>} />
-            <Route path="/debates" element={<ProtectedRoute><Placeholder title="Debates" /></ProtectedRoute>} />
-            <Route path="/debate/:id" element={<ProtectedRoute><Placeholder title="Ver Debate" /></ProtectedRoute>} />
-            <Route path="/debates/create" element={<ProtectedRoute><Placeholder title="Crear Debate" /></ProtectedRoute>} />
+            
+            {/* Spaces System */}
+            <Route path="/spaces" element={<ProtectedRoute><SpacesExplore /></ProtectedRoute>} />
+            <Route path="/spaces/:id" element={<ProtectedRoute><SpaceLayout /></ProtectedRoute>}>
+              <Route path="chat/:channelId" element={<LiveChat />} />
+              <Route path="debates" element={<SpaceDebates />} />
+              <Route path="debates/:debateId" element={<DebateThread />} />
+            </Route>
 
             {/* Social Discovery Routes */}
             <Route path="/connections" element={<ProtectedRoute><Placeholder title="Conexiones" /></ProtectedRoute>} />

@@ -203,10 +203,10 @@ export default function Layout() {
                             Descubrir
                         </Link>
                         <Link
-                            to="/debates"
-                            className={`nav-link ${isActive('/debates') || location.pathname.startsWith('/debate') ? 'active' : ''}`}
+                            to="/spaces"
+                            className={`nav-link ${isActive('/spaces') || location.pathname.startsWith('/spaces') ? 'active' : ''}`}
                         >
-                            Debates
+                            Espacios
                         </Link>
                         <Link
                             to="/library"
@@ -384,9 +384,10 @@ export default function Layout() {
                         <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                     </div>
                 </button>
-                <Link to="/debates" className={`bottom-nav-item ${isActive('/debates') || location.pathname.startsWith('/debate') ? 'active' : ''}`}>
+                <Link to="/spaces" className={`bottom-nav-item ${isActive('/spaces') || location.pathname.startsWith('/spaces') ? 'active' : ''}`}>
                     <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
                 </Link>
+
                 <Link to="/library" className={`bottom-nav-item ${isActive('/library') ? 'active' : ''}`}>
                     <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
                 </Link>
