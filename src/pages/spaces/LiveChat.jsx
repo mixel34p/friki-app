@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams, useOutletContext } from 'react-router-dom';
 import { getChannelMessages, sendMessage, updateMessage, toggleReaction } from '../../lib/spaceService';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import Twemoji from 'react-twemoji';
 import './LiveChat.css';
+import { BADGES_MAP } from '../../lib/badges';
 
 export default function LiveChat() {
     const { channelId } = useParams();
@@ -13,6 +15,7 @@ export default function LiveChat() {
     const [messages, setMessages] = useState([]);
     const [text, setText] = useState('');
     const [activeDropdown, setActiveDropdown] = useState(null);
+    const [dropdownCoords, setDropdownCoords] = useState(null);
     const [replyingTo, setReplyingTo] = useState(null);
     const [editingMessageId, setEditingMessageId] = useState(null);
     const [editingText, setEditingText] = useState('');
@@ -178,14 +181,14 @@ export default function LiveChat() {
                     .from('space_messages')
                     .select(`
                         *,
-                        user:profiles (username, display_name, avatar_url),
+                        user:profiles (username, display_name, avatar_url, featured_badge),
                         reactions:space_message_reactions (
                             id, emoji, user_id,
-                            user:profiles (username, display_name, avatar_url)
+                            user:profiles (username, display_name, avatar_url, featured_badge)
                         ),
                         reply_to:space_messages (
                             id, content,
-                            user:profiles (username, display_name, avatar_url)
+                            user:profiles (username, display_name, avatar_url, featured_badge)
                         )
                     `)
                     .eq('id', payload.new.id)
@@ -225,7 +228,7 @@ export default function LiveChat() {
                 if (payload.eventType === 'INSERT') {
                     const { data: reaction } = await supabase
                         .from('space_message_reactions')
-                        .select('id, emoji, user_id, user:profiles(username, display_name, avatar_url)')
+                        .select('id, emoji, user_id, user:profiles(username, display_name, avatar_url, featured_badge)')
                         .eq('id', payload.new.id)
                         .single();
                     if (reaction) {
@@ -419,7 +422,16 @@ export default function LiveChat() {
                                         <div className="chat-message-content">
                                             {!msg.isConsecutive && (
                                                 <div className="chat-message-header">
-                                                    <span className="chat-username">{msg.user?.display_name || msg.user?.username || 'Usuario'}</span>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                        <span className="chat-username">{msg.user?.display_name || msg.user?.username || 'Usuario'}</span>
+                                                        {msg.user?.featured_badge && BADGES_MAP[msg.user.featured_badge] && (
+                                                            <span style={{ color: BADGES_MAP[msg.user.featured_badge].color, display: 'inline-flex', alignItems: 'center' }} title={BADGES_MAP[msg.user.featured_badge].title}>
+                                                                <div style={{ width: '16px', height: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                                    {BADGES_MAP[msg.user.featured_badge].icon}
+                                                                </div>
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                     <span className="chat-timestamp">{timeString}</span>
                                                 </div>
                                             )}
@@ -533,12 +545,24 @@ export default function LiveChat() {
                                         </button>
                                         
                                         <div style={{ position: 'relative' }}>
-                                            <button className="chat-action-btn" title="Más opciones" onClick={() => setActiveDropdown(activeDropdown === msg.id ? null : msg.id)}>
+                                            <button className="chat-action-btn" title="Más opciones" onClick={(e) => {
+                                                if (activeDropdown === msg.id) {
+                                                    setActiveDropdown(null);
+                                                    setDropdownCoords(null);
+                                                } else {
+                                                    const rect = e.currentTarget.getBoundingClientRect();
+                                                    setDropdownCoords({
+                                                        bottom: window.innerHeight - rect.top + 4,
+                                                        right: window.innerWidth - rect.right
+                                                    });
+                                                    setActiveDropdown(msg.id);
+                                                }
+                                            }}>
                                                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
                                             </button>
                                             
-                                            {activeDropdown === msg.id && (
-                                                <div className="chat-dropdown">
+                                            {activeDropdown === msg.id && createPortal(
+                                                <div className="chat-dropdown" style={{ position: 'fixed', bottom: dropdownCoords?.bottom, right: dropdownCoords?.right, zIndex: 99999 }}>
                                                     <div className="chat-dropdown-reactions">
                                                         <button className="chat-dropdown-reaction-btn" onClick={() => handleToggleReaction(msg.id, '🔥')}>🔥</button>
                                                         <button className="chat-dropdown-reaction-btn" onClick={() => handleToggleReaction(msg.id, '❤️')}>❤️</button>
@@ -583,7 +607,8 @@ export default function LiveChat() {
                                                             </button>
                                                         </>
                                                     )}
-                                                </div>
+                                                </div>,
+                                                document.body
                                             )}
                                         </div>
                                     </div>

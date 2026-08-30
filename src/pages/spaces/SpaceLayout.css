@@ -209,3 +209,145 @@
   background-color: rgba(239, 68, 68, 0.1);
   color: #ef4444;
 }
+
+
+
+/* DISCORD-LIKE BANNER AND HEADER STYLES */
+.space-header-container {
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.space-header-container.has-banner {
+  min-height: 135px;
+  border-bottom: none;
+}
+
+.space-banner-bg {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-size: cover;
+  background-position: center;
+  z-index: 0;
+}
+
+.space-banner-bg::after {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 40%, rgba(0,0,0,0.1) 80%, rgba(0,0,0,0.4) 100%);
+  z-index: 1;
+}
+
+.space-header {
+  display: flex;
+  align-items: flex-start;
+  position: relative;
+  z-index: 60;
+  cursor: pointer;
+  padding: 16px;
+  transition: background-color var(--transition-fast);
+}
+
+.space-header-container:not(.has-banner) .space-header {
+  align-items: center;
+}
+
+.space-header:hover {
+  background-color: var(--bg-hover);
+}
+
+.space-header-container.has-banner .space-header:hover {
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
+.space-header-content {
+  display: flex;
+  align-items: center;
+  flex-grow: 1;
+  min-width: 0;
+  gap: 4px;
+}
+
+.space-verified-badge {
+  flex-shrink: 0;
+  display: block;
+}
+
+.space-header h2 {
+  margin: 0;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.space-header-container.has-banner h2 {
+  color: white;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.9);
+}
+
+.space-header-icon {
+  flex-shrink: 0;
+  color: var(--text-primary);
+  margin-left: 2px;
+}
+
+.space-header-container.has-banner .space-header-icon {
+  color: white;
+  filter: drop-shadow(0 1px 4px rgba(0,0,0,0.9));
+}
+
+.space-dropdown-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+
+.space-header-dropdown {
+  position: absolute;
+  top: calc(100% - 4px);
+  left: 12px;
+  width: calc(100% - 24px);
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  z-index: 50;
+  overflow: hidden;
+}
+
+.space-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.space-header-add-user {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-primary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.space-header-add-user:hover {
+  background: var(--bg-hover);
+}
+
+.space-header-container.has-banner .space-header-add-user {
+  color: white;
+  filter: drop-shadow(0 1px 4px rgba(0,0,0,0.9));
+}
+
+.space-header-container.has-banner .space-header-add-user:hover {
+  background: rgba(255,255,255,0.15);
+}

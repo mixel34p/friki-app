@@ -38,6 +38,7 @@
 .chat-messages-area {
     overflow-y: hidden;
     position: relative;
+    z-index: 20;
     display: flex;
     flex-direction: column;
     height: 100%;
@@ -121,7 +122,7 @@
 .chat-avatar {
     width: 44px;
     height: 44px;
-    border-radius: 50%;
+    border-radius: 12px;
     object-fit: cover;
     background-color: var(--bg-tertiary);
     cursor: pointer;
@@ -247,7 +248,7 @@
     border-radius: 8px;
     box-shadow: 0 8px 24px rgba(0,0,0,0.6);
     min-width: 180px;
-    z-index: 30;
+    z-index: 100;
     display: flex;
     flex-direction: column;
     padding: 8px;
@@ -441,7 +442,7 @@
 .chat-reply-tiny-avatar {
     width: 16px;
     height: 16px;
-    border-radius: 50%;
+    border-radius: 4px;
     object-fit: cover;
     display: inline-block;
     vertical-align: middle;
@@ -516,7 +517,7 @@
 .chat-reaction-mini-avatar {
     width: 14px;
     height: 14px;
-    border-radius: 50%;
+    border-radius: 4px;
     object-fit: cover;
     margin-left: -4px;
     border: 1.5px solid var(--bg-tertiary); /* background color of the chat row / pill */

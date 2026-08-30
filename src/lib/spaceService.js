@@ -5,7 +5,7 @@ export async function getSpaces() {
         .from('spaces')
         .select(`
             *,
-            owner:profiles!spaces_owner_id_fkey (username, display_name, avatar_url),
+            owner:profiles!spaces_owner_id_fkey (username, display_name, avatar_url, featured_badge),
             space_members (count)
         `)
         .order('created_at', { ascending: false });
@@ -18,7 +18,7 @@ export async function getSpaceById(id) {
         .from('spaces')
         .select(`
             *,
-            owner:profiles!spaces_owner_id_fkey (username, display_name, avatar_url)
+            owner:profiles!spaces_owner_id_fkey (username, display_name, avatar_url, featured_badge)
         `)
         .eq('id', id)
         .single();
@@ -92,7 +92,7 @@ export async function getSpaceMembers(spaceId) {
         .from('space_members')
         .select(`
             *,
-            user:profiles!space_members_user_id_fkey (username, display_name, avatar_url)
+            user:profiles!space_members_user_id_fkey (username, display_name, avatar_url, featured_badge)
         `)
         .eq('space_id', spaceId);
     if (error) throw error;
@@ -134,14 +134,14 @@ export async function getChannelMessages(channelId, limit = 50) {
         .from('space_messages')
         .select(`
             *,
-            user:profiles (username, display_name, avatar_url),
+            user:profiles (username, display_name, avatar_url, featured_badge),
             reactions:space_message_reactions (
                 id, emoji, user_id,
-                user:profiles (username, display_name, avatar_url)
+                user:profiles (username, display_name, avatar_url, featured_badge)
             ),
             reply_to:space_messages (
                 id, content,
-                user:profiles (username, display_name, avatar_url)
+                user:profiles (username, display_name, avatar_url, featured_badge)
             )
         `)
         .eq('channel_id', channelId)
@@ -162,14 +162,14 @@ export async function sendMessage(channelId, userId, content, replyToId = null) 
         .insert([payload])
         .select(`
             *,
-            user:profiles (username, display_name, avatar_url),
+            user:profiles (username, display_name, avatar_url, featured_badge),
             reactions:space_message_reactions (
                 id, emoji, user_id,
-                user:profiles (username, display_name, avatar_url)
+                user:profiles (username, display_name, avatar_url, featured_badge)
             ),
             reply_to:space_messages (
                 id, content,
-                user:profiles (username, display_name, avatar_url)
+                user:profiles (username, display_name, avatar_url, featured_badge)
             )
         `)
         .single();
@@ -217,7 +217,7 @@ export async function toggleReaction(messageId, userId, emoji) {
             .insert([{ message_id: messageId, user_id: userId, emoji }])
             .select(`
                 *,
-                user:profiles (username, display_name, avatar_url)
+                user:profiles (username, display_name, avatar_url, featured_badge)
             `)
             .single();
         if (error) throw error;
@@ -231,7 +231,7 @@ export async function getSpaceDebates(spaceId) {
         .from('space_debates')
         .select(`
             *,
-            user:profiles!space_debates_user_id_fkey (username, display_name, avatar_url)
+            user:profiles!space_debates_user_id_fkey (username, display_name, avatar_url, featured_badge)
         `)
         .eq('space_id', spaceId)
         .order('created_at', { ascending: false });
@@ -244,7 +244,7 @@ export async function getDebateById(debateId) {
         .from('space_debates')
         .select(`
             *,
-            user:profiles!space_debates_user_id_fkey (username, display_name, avatar_url)
+            user:profiles!space_debates_user_id_fkey (username, display_name, avatar_url, featured_badge)
         `)
         .eq('id', debateId)
         .single();
@@ -267,7 +267,7 @@ export async function getDebateReplies(debateId) {
         .from('space_debate_replies')
         .select(`
             *,
-            user:profiles!space_debate_replies_user_id_fkey (username, display_name, avatar_url)
+            user:profiles!space_debate_replies_user_id_fkey (username, display_name, avatar_url, featured_badge)
         `)
         .eq('debate_id', debateId)
         .order('created_at', { ascending: true });
@@ -281,7 +281,7 @@ export async function addDebateReply(debateId, userId, content) {
         .insert([{ debate_id: debateId, user_id: userId, content }])
         .select(`
             *,
-            user:profiles!space_debate_replies_user_id_fkey (username, display_name, avatar_url)
+            user:profiles!space_debate_replies_user_id_fkey (username, display_name, avatar_url, featured_badge)
         `)
         .single();
     if (error) throw error;

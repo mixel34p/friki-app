@@ -224,40 +224,34 @@ export default function SpaceLayout() {
   return (
     <div className="space-layout" style={customStyles}>
       <div className="space-sidebar">
-        {space?.is_verified && space?.banner_url && (
-          <div className="space-banner" style={{
-            height: '100px',
-            backgroundImage: `url(${space.banner_url})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            borderBottom: '1px solid var(--border-subtle)'
-          }} />
-        )}
-        <div className="space-header" style={{ display: 'flex', alignItems: 'center', position: 'relative', zIndex: 60, cursor: 'pointer', padding: '16px 20px', backgroundColor: isHeaderMenuOpen ? 'var(--bg-hover)' : 'transparent', transition: 'background-color var(--transition-fast)' }} onClick={() => setIsHeaderMenuOpen(!isHeaderMenuOpen)}>
-          <div style={{ display: 'flex', alignItems: 'center', flexGrow: 1, minWidth: 0 }}>
-            <h2 style={{ margin: 0, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{space?.name || 'Espacio'}</h2>
-            {space?.is_verified && (
-              <span title="Comunidad Verificada" style={{ display: 'inline-flex', alignItems: 'center', marginLeft: '6px', color: '#1d9bf0', flexShrink: 0 }}>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M22.5 12.5l-2.43 2.8.57 3.65-3.6.86-2.07 3.14-3.47-1.5-3.47 1.5-2.07-3.14-3.6-.86.57-3.65L.5 12.5l2.43-2.8-.57-3.65 3.6-.86 2.07-3.14 3.47 1.5 3.47-1.5 2.07 3.14 3.6.86-.57 3.65 2.43 2.8zM10.1 17.6l7.7-7.7-1.4-1.4-6.3 6.3-3-3-1.4 1.4 4.4 4.4z"/>
-                  </svg>
-              </span>
-            )}
-          </div>
-          <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginLeft: '8px' }}>
-            {isHeaderMenuOpen ? <polyline points="18 15 12 9 6 15"></polyline> : <polyline points="6 9 12 15 18 9"></polyline>}
-          </svg>
+        <div className={`space-header-container ${space?.banner_url ? 'has-banner' : ''}`}>
+          {space?.banner_url && (
+            <div 
+              className="space-banner-bg" 
+              style={{ backgroundImage: `url(${space.banner_url})` }}
+            />
+          )}
           
-          {isHeaderMenuOpen && (
-            <>
-              <div style={{ position: 'fixed', inset: 0, zIndex: 40 }} onClick={(e) => { e.stopPropagation(); setIsHeaderMenuOpen(false); }} />
-              <div className="space-header-dropdown" style={{
-                position: 'absolute', top: 'calc(100% - 4px)', left: '12px', width: 'calc(100% - 24px)', 
-                backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', 
-                boxShadow: 'var(--shadow-lg)', zIndex: 50, overflow: 'hidden'
-              }}>
+          <div className="space-header" onClick={() => setIsHeaderMenuOpen(!isHeaderMenuOpen)}>
+            <div className="space-header-content">
+              {space?.is_verified && (
+                <svg className="space-verified-badge" title="Comunidad Verificada" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24">
+                  <path fill="#1d9bf0" d="M22.5 12.5l-2.43 2.8.57 3.65-3.6.86-2.07 3.14-3.47-1.5-3.47 1.5-2.07-3.14-3.6-.86.57-3.65L.5 12.5l2.43-2.8-.57-3.65 3.6-.86 2.07-3.14 3.47 1.5 3.47-1.5 2.07 3.14 3.6.86-.57 3.65 2.43 2.8z" />
+                  <path fill="#ffffff" d="M10.1 17.6l7.7-7.7-1.4-1.4-6.3 6.3-3-3-1.4 1.4 4.4 4.4z" />
+                </svg>
+              )}
+              <h2>{space?.name || 'Espacio'}</h2>
+              <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round" className="space-header-icon">
+                {isHeaderMenuOpen ? <polyline points="18 15 12 9 6 15"></polyline> : <polyline points="6 9 12 15 18 9"></polyline>}
+              </svg>
+            </div>
+            
+            {isHeaderMenuOpen && (
+              <>
+                <div className="space-dropdown-overlay" onClick={(e) => { e.stopPropagation(); setIsHeaderMenuOpen(false); }} />
+                <div className="space-header-dropdown" onClick={e => e.stopPropagation()}>
                 {isAdmin ? (
-                  <div className="space-header-dropdown-item" onClick={(e) => { e.stopPropagation(); openSettings(); }} style={{ padding: '12px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.95rem', fontWeight: 500, color: 'var(--text-primary)', transition: 'background-color var(--transition-fast)' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                  <div className="space-header-dropdown-item" onClick={(e) => { e.stopPropagation(); openSettings(); setIsHeaderMenuOpen(false); }} style={{ padding: '12px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.95rem', fontWeight: 500, color: 'var(--text-primary)', transition: 'background-color var(--transition-fast)' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
                     Configuración
                   </div>
@@ -267,9 +261,10 @@ export default function SpaceLayout() {
                     Abandonar servidor
                   </div>
                 )}
-              </div>
-            </>
-          )}
+                </div>
+              </>
+            )}
+          </div>
         </div>
         <div className="space-channels">
           {defaultChannel && (
