@@ -193,10 +193,13 @@ export default function SpacesExplore() {
         <div className="spaces-hero-content">
           <h1>Descubre Comunidades</h1>
           <p>Únete a espacios creados por fans, chatea en tiempo real y participa en los foros de debate.</p>
-          <div className="spaces-hero-actions">
+          <div className="spaces-hero-actions" style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
             <button className="btn-primary" onClick={() => setIsModalOpen(true)}>
               + Crear nuevo espacio
             </button>
+            <Link to="/spaces" className="btn-secondary" style={{ backgroundColor: 'rgba(0,0,0,0.6)', color: 'white', border: '1px solid rgba(255,255,255,0.2)' }}>
+              Ver Mis Comunidades
+            </Link>
           </div>
         </div>
       </div>

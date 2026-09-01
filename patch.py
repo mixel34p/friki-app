@@ -1,4 +1,4 @@
-﻿import re
+import re
 
 with open('src/pages/lists/CreateList.jsx', 'r', encoding='utf-8') as f:
     content = f.read()

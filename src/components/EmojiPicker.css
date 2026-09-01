@@ -1,0 +1,223 @@
+.emoji-picker-container {
+    position: fixed;
+    bottom: 80px;
+    right: 20px;
+    width: 360px;
+    height: 400px;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    z-index: 100;
+    overflow: hidden;
+    color: var(--text-primary);
+    font-family: inherit;
+}
+
+.emoji-picker-header {
+    padding: 12px;
+    border-bottom: 1px solid var(--border-subtle);
+    background-color: var(--bg-tertiary);
+}
+
+.emoji-picker-tabs {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 12px;
+}
+
+.ep-tab {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.ep-tab:hover {
+    color: var(--text-secondary);
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.ep-tab.active {
+    color: var(--text-primary);
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.emoji-picker-search {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background-color: var(--bg-primary);
+    border-radius: 4px;
+    padding: 6px 8px;
+}
+
+.emoji-picker-search svg {
+    color: var(--text-muted);
+    margin-right: 8px;
+}
+
+.emoji-picker-search input {
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    width: 100%;
+    outline: none;
+    font-size: 0.85rem;
+}
+
+.emoji-picker-body {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+.emoji-picker-sidebar {
+    width: 48px;
+    background-color: var(--bg-tertiary);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 0;
+    gap: 12px;
+    overflow-y: auto;
+}
+
+.emoji-picker-sidebar::-webkit-scrollbar {
+    display: none;
+}
+
+.ep-cat-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-center: center;
+    background-color: var(--bg-primary);
+    cursor: pointer;
+    color: var(--text-secondary);
+    overflow: hidden;
+    position: relative;
+}
+
+.ep-cat-icon:hover {
+    background-color: var(--bg-hover);
+}
+
+.ep-cat-icon.active {
+    background-color: var(--brand-primary);
+    color: white;
+}
+
+.ep-cat-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.ep-cat-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: bold;
+}
+
+.emoji-picker-content {
+    flex: 1;
+    padding: 8px 12px;
+    overflow-y: auto;
+    background-color: var(--bg-secondary);
+}
+
+.emoji-picker-content::-webkit-scrollbar {
+    width: 6px;
+}
+.emoji-picker-content::-webkit-scrollbar-thumb {
+    background-color: var(--border-subtle);
+    border-radius: 3px;
+}
+
+.emoji-group {
+    margin-bottom: 16px;
+}
+
+.emoji-group-title {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin: 0 0 8px 0;
+    text-transform: uppercase;
+    font-weight: 700;
+}
+
+.emoji-grid-picker {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+    gap: 4px;
+}
+
+.emoji-item {
+    width: 40px;
+    height: 40px;
+    padding: 4px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.emoji-item:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.emoji-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.emoji-picker-footer {
+    height: 52px;
+    background-color: var(--bg-tertiary);
+    border-top: 1px solid var(--border-subtle);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+}
+
+.ep-footer-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.ep-footer-img {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+}
+
+.ep-footer-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.ep-footer-text strong {
+    font-size: 0.9rem;
+    line-height: 1.2;
+}
+
+.ep-footer-text span {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}

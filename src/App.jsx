@@ -39,6 +39,7 @@ import ViewList from './pages/lists/ViewList'
 
 // Spaces System imports
 import SpacesExplore from './pages/spaces/SpacesExplore'
+import MySpaces from './pages/spaces/MySpaces'
 import SpaceLayout from './pages/spaces/SpaceLayout'
 import LiveChat from './pages/spaces/LiveChat'
 import SpaceDebates from './pages/spaces/SpaceDebates'
@@ -153,7 +154,8 @@ function App() {
             <Route path="/old-library" element={<ProtectedRoute><Placeholder title="Biblioteca" /></ProtectedRoute>} />
             
             {/* Spaces System */}
-            <Route path="/spaces" element={<ProtectedRoute><SpacesExplore /></ProtectedRoute>} />
+            <Route path="/spaces" element={<ProtectedRoute><MySpaces /></ProtectedRoute>} />
+            <Route path="/spaces/explore" element={<ProtectedRoute><SpacesExplore /></ProtectedRoute>} />
             <Route path="/spaces/:id" element={<ProtectedRoute><SpaceLayout /></ProtectedRoute>}>
               <Route path="chat/:channelId" element={<LiveChat />} />
               <Route path="debates" element={<SpaceDebates />} />

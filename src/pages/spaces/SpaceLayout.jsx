@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, useParams, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { getSpaceChannels, createSpaceChannel, getSpaceById, updateSpaceChannel, deleteSpaceChannel, leaveSpace, updateSpace } from '../../lib/spaceService';
+import { getSpaceChannels, createSpaceChannel, getSpaceById, updateSpaceChannel, deleteSpaceChannel, leaveSpace, updateSpace, checkMembership, joinSpace, getSpaceEmojis, createCustomEmoji, deleteCustomEmoji, updateCustomEmoji } from '../../lib/spaceService';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 import './SpaceLayout.css';
@@ -17,6 +17,9 @@ export default function SpaceLayout() {
   const { user } = useAuth();
   const [channels, setChannels] = useState([]);
   const [space, setSpace] = useState(null);
+  const [isMember, setIsMember] = useState(false);
+  const [isCheckingMembership, setIsCheckingMembership] = useState(true);
+  const [isJoining, setIsJoining] = useState(false);
   const [editingChannel, setEditingChannel] = useState(null);
   const [isCreatingChannel, setIsCreatingChannel] = useState(false);
   const [channelToDelete, setChannelToDelete] = useState(null);
@@ -33,6 +36,75 @@ export default function SpaceLayout() {
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [bannerFile, setBannerFile] = useState(null);
   const [bannerPreview, setBannerPreview] = useState(null);
+  const [emojis, setEmojis] = useState([]);
+  const [newEmojiName, setNewEmojiName] = useState('');
+  const [newEmojiUrl, setNewEmojiUrl] = useState('');
+  const [isAddingEmoji, setIsAddingEmoji] = useState(false);
+  const [editingEmojiId, setEditingEmojiId] = useState(null);
+  const [editingEmojiName, setEditingEmojiName] = useState('');
+  const [showAddEmojiModal, setShowAddEmojiModal] = useState(false);
+  
+  useEffect(() => {
+      if (activeSettingsSection === 'emojis') {
+          loadEmojis();
+      }
+  }, [activeSettingsSection]);
+
+  const loadEmojis = async () => {
+      try {
+          const data = await getSpaceEmojis(spaceId);
+          setEmojis(data);
+      } catch (err) {
+          console.error(err);
+      }
+  };
+
+  const handleAddEmoji = async (e) => {
+      e.preventDefault();
+      if (!newEmojiName || !newEmojiUrl) return;
+      if (emojis.length >= 50) {
+          alert('Límite de 50 emojis alcanzado.');
+          return;
+      }
+      setIsAddingEmoji(true);
+      try {
+          await createCustomEmoji(spaceId, newEmojiName, newEmojiUrl);
+          setNewEmojiName('');
+          setNewEmojiUrl('');
+          loadEmojis();
+      } catch (err) {
+          console.error(err);
+          alert('Error al añadir emoji. Asegúrate de que el nombre no exista ya.');
+      } finally {
+          setIsAddingEmoji(false);
+      }
+  };
+
+  const handleDeleteEmoji = async (id) => {
+      if (!window.confirm('¿Seguro que quieres borrar este emoji?')) return;
+      try {
+          await deleteCustomEmoji(id);
+          loadEmojis();
+      } catch (err) {
+          console.error(err);
+          alert('Error al borrar emoji');
+      }
+  };
+
+  const handleEditEmojiSubmit = async (id) => {
+      if (!editingEmojiName.trim()) {
+          setEditingEmojiId(null);
+          return;
+      }
+      try {
+          await updateCustomEmoji(id, editingEmojiName);
+          setEditingEmojiId(null);
+          loadEmojis();
+      } catch (err) {
+          console.error(err);
+          alert('Error al actualizar el nombre del emoji. Quizás ya exista.');
+      }
+  };
   
   const handleFileChange = (e, type) => {
     const file = e.target.files?.[0];
@@ -53,6 +125,7 @@ export default function SpaceLayout() {
   const SETTINGS_TABS = [
     { id: 'info', label: 'General', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg> },
     { id: 'appearance', label: 'Apariencia', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg> },
+    ...(space?.is_verified ? [{ id: 'emojis', label: 'Emojis', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg> }] : []),
     { id: 'danger', label: 'Peligro', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg> }
   ];
 
@@ -72,6 +145,22 @@ export default function SpaceLayout() {
 
   const loadSpaceData = async () => {
     try {
+      setIsCheckingMembership(true);
+      const spaceData = await getSpaceById(spaceId).catch(e => {
+        console.error('Error space:', e);
+        return null;
+      });
+      setSpace(spaceData);
+
+      let memberCheck = false;
+      if (user && spaceId) {
+        memberCheck = await checkMembership(spaceId, user.id);
+      }
+      setIsMember(memberCheck);
+      setIsCheckingMembership(false);
+
+      if (!memberCheck) return; // Stop loading channels if not a member
+
       const channelsData = await getSpaceChannels(spaceId).catch(e => {
         console.error('Error channels:', e);
         window.alert("Error fetching channels: " + e.message);
@@ -79,31 +168,36 @@ export default function SpaceLayout() {
       });
       setChannels(channelsData);
       
-      const spaceData = await getSpaceById(spaceId).catch(e => {
-        console.error('Error space:', e);
-        return null;
-      });
-      setSpace(spaceData);
-
-      // Auto-redirect to the first text channel or forum if on the root space URL
+      // Auto-redirect to the first text channel if on the root space URL
       if (location.pathname === `/spaces/${spaceId}`) {
         const safeChan = Array.isArray(channelsData) ? channelsData : [];
-        const defaultChan = safeChan.find(c => c.is_default);
-        const textChans = safeChan.filter(c => !c.is_default);
+        const textChans = safeChan.filter(c => c.type !== 'foro' && c.type !== 'forum' && c.type !== 'debates');
         
         if (textChans.length > 0) {
             navigate(`/spaces/${spaceId}/chat/${textChans[0].id}`, { replace: true });
-        } else if (defaultChan) {
+        } else {
             navigate(`/spaces/${spaceId}/debates`, { replace: true });
         }
       }
-
     } catch (error) {
-      console.error('Error loading space data:', error);
+      console.error('Error loading space data', error);
+      setIsCheckingMembership(false);
     }
   };
 
-  
+  const handleJoinSpace = async () => {
+    if (!user) return navigate('/login');
+    try {
+      setIsJoining(true);
+      await joinSpace(spaceId, user.id);
+      setIsMember(true);
+      loadSpaceData(); // reload channels and redirect
+    } catch (e) {
+      console.error('Error joining space:', e);
+    } finally {
+      setIsJoining(false);
+    }
+  };
 
   const handleEditChannelSubmit = async (e) => {
     e.preventDefault();
@@ -213,8 +307,8 @@ export default function SpaceLayout() {
   };
 
   const safeChannels = Array.isArray(channels) ? channels : [];
-  const defaultChannel = safeChannels.find(c => c.type === 'foro') || safeChannels[0];
-  const chatChannels = safeChannels.filter(c => c.id !== defaultChannel?.id);
+  const defaultChannel = safeChannels.find(c => c.type === 'foro' || c.type === 'forum' || c.type === 'debates');
+  const chatChannels = safeChannels.filter(c => c.id !== defaultChannel?.id && c.type === 'chat');
 
   const customStyles = space?.theme_color ? { 
     '--brand-primary': space.theme_color,
@@ -274,12 +368,25 @@ export default function SpaceLayout() {
             </NavLink>
           )}
           
-          <div className="channel-category">CANALES DE TEXTO</div>
+          <div className="channel-category" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ lineHeight: 1 }}>CANALES DE TEXTO</span>
+            {isAdmin && (
+              <button 
+                onClick={(e) => { e.preventDefault(); setIsCreatingChannel(true); }}
+                style={{ background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer', display: 'flex', alignItems: 'center', opacity: 0.7, padding: '0', lineHeight: 1 }}
+                onMouseOver={(e) => e.currentTarget.style.opacity = '1'}
+                onMouseOut={(e) => e.currentTarget.style.opacity = '0.7'}
+                title="Crear Canal"
+              >
+                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              </button>
+            )}
+          </div>
           
           {chatChannels.map(channel => (
             <NavLink key={channel.id} to={`/spaces/${spaceId}/chat/${channel.id}`} className={({isActive}) => `channel-link ${isActive ? 'active' : ''}`}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
-                <svg className="channel-icon" viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="9" x2="20" y2="9"></line><line x1="4" y1="15" x2="20" y2="15"></line><line x1="10" y1="3" x2="8" y2="21"></line><line x1="16" y1="3" x2="14" y2="21"></line></svg>
+              <div style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}>
+                <svg className="channel-icon" viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
                 <span className="channel-name">{channel.name}</span>
               </div>
               
@@ -300,17 +407,30 @@ export default function SpaceLayout() {
               )}
             </NavLink>
           ))}
-          
-          {isAdmin && (
-            <button className="create-channel-btn" onClick={() => setIsCreatingChannel(true)}>
-              <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-              Crear Canal
-            </button>
-          )}
         </div>
       </div>
       <div className="space-main">
-        <Outlet context={{ channels, space }} />
+        {isCheckingMembership ? (
+           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+             <div className="animate-pulse" style={{ color: 'var(--text-muted)' }}>Comprobando acceso...</div>
+           </div>
+        ) : !isMember ? (
+           <div className="space-welcome-gate" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: '2rem', textAlign: 'center' }}>
+             <img src={space?.avatar_url || '/default-avatar.png'} alt={space?.name} style={{ width: '120px', height: '120px', borderRadius: '50%', marginBottom: '1rem', objectFit: 'cover', boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }} />
+             <h1 style={{ fontSize: '2.5rem', marginBottom: '1rem', color: 'var(--text-primary)' }}>EstÃ¡s invitado a {space?.name}</h1>
+             <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', maxWidth: '600px', marginBottom: '2.5rem', lineHeight: '1.6' }}>{space?.description}</p>
+             <button 
+                className="btn-primary" 
+                style={{ padding: '1rem 2rem', fontSize: '1.1rem', borderRadius: '30px', fontWeight: 'bold' }}
+                onClick={handleJoinSpace}
+                disabled={isJoining}
+             >
+                {isJoining ? 'UniÃ©ndose...' : 'Unirse para participar'}
+             </button>
+           </div>
+        ) : (
+           <Outlet context={{ channels, space }} />
+        )}
       </div>
 
       {editingChannel && (
@@ -347,8 +467,58 @@ export default function SpaceLayout() {
       )}
 
       {isSettingsModalOpen && (
-        <div className="ep-overlay" onClick={() => setIsSettingsModalOpen(false)}>
-            <div className="ep-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px' }}>
+        <div className="ep-overlay">
+            {showAddEmojiModal && (
+                <div className="ep-modal" style={{ position: 'absolute', zIndex: 100, maxWidth: '400px', width: '90%' }}>
+                    <div className="ep-modal-header">
+                        <h2 className="ep-modal-title">Añadir Emoji</h2>
+                        <button className="ep-close-btn" onClick={() => setShowAddEmojiModal(false)} type="button">
+                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </button>
+                    </div>
+                    <div className="ep-modal-body" style={{ padding: '20px' }}>
+                        <div className="ep-field">
+                            <label className="ep-label">URL de la imagen</label>
+                            <input 
+                                type="text" 
+                                placeholder="https://..." 
+                                className="ep-input" 
+                                value={newEmojiUrl} 
+                                onChange={e => setNewEmojiUrl(e.target.value)} 
+                            />
+                        </div>
+                        <div className="ep-field" style={{ marginTop: '16px' }}>
+                            <label className="ep-label">Nombre</label>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{ color: 'var(--text-muted)' }}>:</span>
+                                <input 
+                                    type="text" 
+                                    placeholder="nombre" 
+                                    className="ep-input" 
+                                    value={newEmojiName} 
+                                    onChange={e => setNewEmojiName(e.target.value)} 
+                                    pattern="[a-zA-Z0-9_]+" 
+                                />
+                                <span style={{ color: 'var(--text-muted)' }}>:</span>
+                            </div>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '24px' }}>
+                            <button 
+                                type="button" 
+                                className="btn btn-primary" 
+                                onClick={async (e) => {
+                                    await handleAddEmoji(e);
+                                    if (newEmojiName && newEmojiUrl) setShowAddEmojiModal(false);
+                                }}
+                                disabled={isAddingEmoji || !newEmojiName || !newEmojiUrl}
+                            >
+                                Guardar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            <div className="ep-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px', display: showAddEmojiModal ? 'none' : 'flex' }}>
                 <div className="ep-modal-header">
                     <h1 className="ep-modal-title">Ajustes de la Comunidad</h1>
                     <button className="ep-close-btn" onClick={() => setIsSettingsModalOpen(false)} type="button">
@@ -454,26 +624,80 @@ export default function SpaceLayout() {
                                                 value={THEME_COLORS.includes(settingsSpace.theme_color) ? '#ffffff' : (settingsSpace.theme_color || '#ffffff')} 
                                                 onChange={e => setSettingsSpace({...settingsSpace, theme_color: e.target.value})}
                                                 style={{
-                                                    opacity: 0,
-                                                    position: 'absolute',
-                                                    inset: 0,
-                                                    width: '100%',
-                                                    height: '100%',
-                                                    cursor: 'pointer'
+                                                    position: 'absolute', opacity: 0, width: '100%', height: '100%', cursor: 'pointer'
                                                 }}
                                             />
-                                            <div className={`ep-color-btn ${!THEME_COLORS.includes(settingsSpace.theme_color) ? 'selected' : ''}`}
-                                                 style={{ 
-                                                    backgroundColor: !THEME_COLORS.includes(settingsSpace.theme_color) ? settingsSpace.theme_color : 'transparent',
-                                                    border: `2px dashed ${!THEME_COLORS.includes(settingsSpace.theme_color) ? 'transparent' : 'var(--border-subtle)'}`
-                                                 }}>
-                                                {!THEME_COLORS.includes(settingsSpace.theme_color) ? '' : '+'}
+                                            <div className="ep-color-btn custom" style={{ 
+                                                backgroundColor: THEME_COLORS.includes(settingsSpace.theme_color) ? 'transparent' : settingsSpace.theme_color,
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px dashed var(--border-subtle)'
+                                            }}>
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path><path d="M2 12h20"></path></svg>
                                             </div>
                                         </div>
                                     </div>
                                     <p style={{ marginTop: '12px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                                         Este color personalizará la cabecera y los elementos de tu comunidad.
                                     </p>
+                                </div>
+                            </>
+                        )}
+                        
+                                 {activeSettingsSection === 'emojis' && (
+                            <>
+                                <div className="ep-field">
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                                        <h3 style={{ margin: '0', fontSize: '1rem', color: 'var(--text-primary)' }}>Emojis Personalizados ({emojis.length}/50)</h3>
+                                    </div>
+                                    
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '12px' }}>
+                                        {emojis.map(emoji => (
+                                            <div key={emoji.id} style={{ background: 'var(--bg-secondary)', borderRadius: '8px', padding: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative', border: '1px solid var(--border-subtle)' }}>
+                                                <img src={emoji.image_url} alt={emoji.name} style={{ width: '48px', height: '48px', objectFit: 'contain', marginBottom: '8px' }} />
+                                                
+                                                {editingEmojiId === emoji.id ? (
+                                                    <input 
+                                                        type="text" 
+                                                        className="ep-input" 
+                                                        style={{ padding: '2px 4px', fontSize: '0.75rem', textAlign: 'center' }}
+                                                        value={editingEmojiName}
+                                                        onChange={e => setEditingEmojiName(e.target.value)}
+                                                        autoFocus
+                                                        onBlur={() => handleEditEmojiSubmit(emoji.id)}
+                                                        onKeyDown={e => {
+                                                            if (e.key === 'Enter') handleEditEmojiSubmit(emoji.id);
+                                                            if (e.key === 'Escape') setEditingEmojiId(null);
+                                                        }}
+                                                    />
+                                                ) : (
+                                                    <span 
+                                                        onClick={() => { setEditingEmojiId(emoji.id); setEditingEmojiName(emoji.name); }}
+                                                        style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', wordBreak: 'break-all', textAlign: 'center', cursor: 'pointer' }}
+                                                        title="Clic para editar"
+                                                    >
+                                                        :{emoji.name}:
+                                                    </span>
+                                                )}
+
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => handleDeleteEmoji(emoji.id)}
+                                                    style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: 'none', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                                                >
+                                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                                </button>
+                                            </div>
+                                        ))}
+                                        
+                                        {emojis.length < 50 && (
+                                            <div 
+                                                onClick={() => setShowAddEmojiModal(true)}
+                                                style={{ background: 'var(--bg-tertiary)', borderRadius: '8px', padding: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '1px dashed var(--border-subtle)', cursor: 'pointer', minHeight: '100px' }}
+                                            >
+                                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '8px' }}>Añadir</span>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </>
                         )}

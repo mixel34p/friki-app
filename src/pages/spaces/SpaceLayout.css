@@ -215,7 +215,7 @@
 /* DISCORD-LIKE BANNER AND HEADER STYLES */
 .space-header-container {
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   flex-shrink: 0;
   border-bottom: 1px solid var(--border-subtle);
 }

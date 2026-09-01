@@ -288,3 +288,59 @@ export async function addDebateReply(debateId, userId, content) {
     return data;
 }
 
+
+// Emojis Custom
+export async function getCustomEmojis() {
+    const { data, error } = await supabase
+        .from('custom_emojis')
+        .select('*')
+        .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+}
+
+export async function getSpaceEmojis(spaceId) {
+    const { data, error } = await supabase
+        .from('custom_emojis')
+        .select('*')
+        .eq('space_id', spaceId)
+        .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+}
+
+export async function createCustomEmoji(spaceId, name, imageUrl) {
+    const { data, error } = await supabase
+        .from('custom_emojis')
+        .insert([{ space_id: spaceId, name: name.trim().toLowerCase(), image_url: imageUrl }])
+        .select()
+        .single();
+    if (error) throw error;
+    return data;
+}
+
+export async function deleteCustomEmoji(id) {
+    const { error } = await supabase
+        .from('custom_emojis')
+        .delete()
+        .eq('id', id);
+    if (error) throw error;
+    return true;
+}
+
+export async function updateCustomEmoji(id, name) {
+    const { data, error } = await supabase
+        .from('custom_emojis')
+        .update({ name: name.trim().toLowerCase() })
+        .eq('id', id)
+        .select()
+        .single();
+    if (error) throw error;
+    return data;
+}
+
+export async function getUserSpaces(userId) {
+    const { data, error } = await supabase.from('space_members').select('space:spaces(*)').eq('user_id', userId);
+    if (error) throw error;
+    return data.map(m => m.space);
+}
