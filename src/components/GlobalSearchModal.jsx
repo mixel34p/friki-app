@@ -7,7 +7,7 @@ import LoadingSpinner from './LoadingSpinner'
 import LogModal from './LogModal'
 import './GlobalSearchModal.css'
 
-export default function GlobalSearchModal({ isOpen, onClose }) {
+export default function GlobalSearchModal({ isOpen, onClose, onSelect }) {
     const { user } = useAuth()
     const [query, setQuery] = useState('')
     const [debouncedQuery, setDebouncedQuery] = useState('')
@@ -74,6 +74,12 @@ export default function GlobalSearchModal({ isOpen, onClose }) {
             title: type === 'game' ? item.name : item.title,
             image: type === 'game' ? item.cover_url : item.image_url,
             banner_url: item.banner_url || null
+        }
+        
+        if (onSelect) {
+            onSelect(work);
+            handleClose();
+            return;
         }
         
         setSelectedWork(work)

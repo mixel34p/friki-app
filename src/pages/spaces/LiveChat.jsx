@@ -79,7 +79,7 @@ const htmlToText = (html) => {
 
 export default function LiveChat() {
     const { channelId } = useParams();
-    const { user } = useAuth();
+    const { user, profile } = useAuth();
     const { channels, space } = useOutletContext();
     const [messages, setMessages] = useState([]);
     const [text, setText] = useState('');
@@ -634,7 +634,7 @@ export default function LiveChat() {
             const optimisticMsg = {
                 id: tempId,
                 user_id: user.id,
-                user: user,
+                user: profile || user,
                 content: currentText,
                 created_at: new Date().toISOString(),
                 reply_to_id: replyingTo?.id,
@@ -1209,13 +1209,29 @@ export default function LiveChat() {
                                     onSelectGif={async (url) => {
                                         setIsEmojiPickerOpen(false);
                                         if (!channel?.id || !user) return;
+                                        
+                                        const gifContent = `![image](${url})`;
+                                        const tempId = 'temp-' + Date.now();
+                                        const optimisticMsg = {
+                                            id: tempId,
+                                            user_id: user.id,
+                                            user: profile || user,
+                                            content: gifContent,
+                                            created_at: new Date().toISOString(),
+                                            _optimistic: true
+                                        };
+                                        
+                                        setMessages(prev => [...prev, optimisticMsg]);
+                                        setTimeout(() => {
+                                            endRef.current?.scrollIntoView({ behavior: 'smooth' });
+                                        }, 50);
+
                                         try {
-                                            await sendMessage(channel.id, user.id, `![image](${url})`);
-                                            setTimeout(() => {
-                                                endRef.current?.scrollIntoView({ behavior: 'smooth' });
-                                            }, 100);
+                                            const newMsg = await sendMessage(channel.id, user.id, gifContent);
+                                            setMessages(prev => prev.map(m => m.id === tempId ? newMsg : m));
                                         } catch (e) {
                                             console.error("Error sending gif", e);
+                                            setMessages(prev => prev.filter(m => m.id !== tempId));
                                         }
                                     }}
                                     onSelect={(emoji) => {

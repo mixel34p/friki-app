@@ -175,6 +175,8 @@ export default function EmojiPicker({ onSelect, onSelectGif, onClose, style, dis
         })();
     }, [user]);
 
+    const [gifError, setGifError] = useState(false);
+
     // ── Fetch GIFs ──
     useEffect(() => {
         if (mainTab !== 'gif') return;
@@ -183,24 +185,31 @@ export default function EmojiPicker({ onSelect, onSelectGif, onClose, style, dis
         if (!q) {
             setGifs(recentGifs);
             setLoadingGifs(false);
+            setGifError(false);
             return;
         }
 
         let active = true;
+        setLoadingGifs(true);
+        setGifError(false);
+
         const fetchGifs = async () => {
-            setLoadingGifs(true);
             try {
-                // Usando public beta key de Giphy para desarrollo
-                const apiKey = 'GlVGYHqc3SyCEGqme3ZqONHq9W12C7sD';
+                // Se leerá desde el archivo .env
+                const apiKey = import.meta.env.VITE_GIPHY_API_KEY || 'GlVGYHqc3SyCEGqme3ZqONHq9W12C7sD';
                 const endpoint = `https://api.giphy.com/v1/gifs/search?api_key=${apiKey}&q=${encodeURIComponent(q)}&limit=30`;
                 
                 const res = await fetch(endpoint);
+                if (res.status === 401 || res.status === 403 || res.status === 429) {
+                    if (active) setGifError(true);
+                    throw new Error('API Key unauthorized or rate limited');
+                }
                 const data = await res.json();
                 if (active && data.data) {
                     setGifs(data.data.map(g => ({
                         id: g.id,
                         preview: g.images.fixed_height_small.url,
-                        url: g.images.original.url
+                        url: g.images.downsized_medium?.url || g.images.downsized?.url || g.images.fixed_height.url
                     })));
                 }
             } catch (e) {
@@ -443,7 +452,10 @@ export default function EmojiPicker({ onSelect, onSelectGif, onClose, style, dis
                             </div>
                         ) : (
                             <div className="ep-no-results" style={{ marginTop: '20px', color: 'var(--text-muted)', fontSize: '0.9rem', textAlign: 'center' }}>
-                                {!search.trim() ? "No tienes GIFs recientes" : `Sin resultados para "${search}"`}
+                                {gifError 
+                                    ? "⚠️ Error conectando con Giphy. Si acabas de poner la API Key, reinicia el servidor (npm run dev)."
+                                    : (!search.trim() ? "No tienes GIFs recientes" : `Sin resultados para "${search}"`)
+                                }
                             </div>
                         )}
                     </div>

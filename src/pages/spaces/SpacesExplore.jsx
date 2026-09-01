@@ -4,6 +4,7 @@ import { getSpaces, createSpace, createSpaceChannel } from '../../lib/spaceServi
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import ImageCropperModal from '../../components/ImageCropperModal';
+import GlobalSearchModal from '../../components/GlobalSearchModal';
 import './SpacesExplore.css';
 
 export default function SpacesExplore() {
@@ -14,8 +15,9 @@ export default function SpacesExplore() {
   const navigate = useNavigate();
 
   // Space Data
-  const [newSpace, setNewSpace] = useState({ name: '', description: '', theme_color: '#14b8a6' });
+  const [newSpace, setNewSpace] = useState({ name: '', description: '', theme_color: '#14b8a6', related_works: [] });
   const [createdSpaceId, setCreatedSpaceId] = useState(null);
+  const [searchModalOpen, setSearchModalOpen] = useState(false);
   
   // Image Upload State
   const fileInputRef = useRef(null);
@@ -47,7 +49,7 @@ export default function SpacesExplore() {
   const resetModal = () => {
     setIsModalOpen(false);
     setStep(1);
-    setNewSpace({ name: '', description: '', theme_color: '#14b8a6' });
+    setNewSpace({ name: '', description: '', theme_color: '#14b8a6', related_works: [] });
     setCreatedSpaceId(null);
     setAvatarFile(null);
     setAvatarPreview(null);
@@ -91,6 +93,9 @@ export default function SpacesExplore() {
   const handleStep1Submit = async (e) => {
     e.preventDefault();
     if (!user) return alert('Debes iniciar sesión para crear un espacio.');
+    if (!newSpace.related_works || newSpace.related_works.length === 0) {
+      return alert('Debes asociar al menos 1 obra (juego, anime o manga) a tu comunidad.');
+    }
     
     setIsSubmitting(true);
     try {
@@ -104,7 +109,8 @@ export default function SpacesExplore() {
         description: newSpace.description,
         avatar_url,
         owner_id: user.id,
-        theme_color: newSpace.theme_color
+        theme_color: newSpace.theme_color,
+        related_works: newSpace.related_works
       });
       
       setCreatedSpaceId(space.id);
@@ -348,9 +354,9 @@ export default function SpacesExplore() {
                     />
                   </div>
                   
-                  <div className="form-group">
-                    <label>Color de la comunidad</label>
-                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  <div className="input-group">
+                    <label className="input-label">Color del Tema</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                       <input 
                         type="color" 
                         value={newSpace.theme_color} 
@@ -368,6 +374,39 @@ export default function SpacesExplore() {
                       <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
                         Elige un color que represente a tu comunidad.
                       </span>
+                    </div>
+                  </div>
+
+                  <div className="input-group">
+                    <label className="input-label">Obras relacionadas (Mínimo 1)</label>
+                    <div className="related-works-container" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                      {newSpace.related_works.map((work, idx) => (
+                        <div key={idx} style={{ 
+                          display: 'flex', alignItems: 'center', gap: '6px', 
+                          background: 'var(--bg-tertiary)', padding: '4px 8px', 
+                          borderRadius: '16px', border: '1px solid var(--border-default)',
+                          fontSize: '0.85rem'
+                        }}>
+                          {work.image && <img src={work.image} alt="" style={{ width: '20px', height: '20px', borderRadius: '4px', objectFit: 'cover' }} />}
+                          <span>{work.title}</span>
+                          <button type="button" onClick={() => setNewSpace({...newSpace, related_works: newSpace.related_works.filter((_, i) => i !== idx)})} style={{ background: 'none', border: 'none', color: 'var(--error)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                          </button>
+                        </div>
+                      ))}
+                      <button 
+                        type="button" 
+                        onClick={() => setSearchModalOpen(true)}
+                        style={{ 
+                          display: 'flex', alignItems: 'center', gap: '4px', 
+                          background: 'var(--brand-primary)', color: '#000', 
+                          padding: '4px 12px', borderRadius: '16px', 
+                          border: 'none', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 'bold'
+                        }}
+                      >
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        Añadir Obra
+                      </button>
                     </div>
                   </div>
                   
@@ -444,6 +483,17 @@ export default function SpacesExplore() {
             aspect={1}
             onCropComplete={handleCropComplete}
             onCancel={() => setCropModal({ isOpen: false, src: null })}
+        />
+      )}
+      {searchModalOpen && (
+        <GlobalSearchModal 
+          isOpen={searchModalOpen} 
+          onClose={() => setSearchModalOpen(false)} 
+          onSelect={(work) => {
+            if (!newSpace.related_works.some(w => w.id === work.id)) {
+              setNewSpace({ ...newSpace, related_works: [...newSpace.related_works, work] });
+            }
+          }}
         />
       )}
     </div>

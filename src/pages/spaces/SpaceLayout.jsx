@@ -3,6 +3,7 @@ import { Outlet, useParams, NavLink, useNavigate, useLocation } from 'react-rout
 import { getSpaceChannels, createSpaceChannel, getSpaceById, updateSpaceChannel, deleteSpaceChannel, leaveSpace, updateSpace, checkMembership, joinSpace, getSpaceEmojis, createCustomEmoji, deleteCustomEmoji, updateCustomEmoji } from '../../lib/spaceService';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
+import GlobalSearchModal from '../../components/GlobalSearchModal';
 import './SpaceLayout.css';
 import '../EditProfile.css';
 
@@ -23,6 +24,7 @@ export default function SpaceLayout() {
   const [editingChannel, setEditingChannel] = useState(null);
   const [isCreatingChannel, setIsCreatingChannel] = useState(false);
   const [channelToDelete, setChannelToDelete] = useState(null);
+  const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [newChannelName, setNewChannelName] = useState('');
   const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
@@ -125,6 +127,7 @@ export default function SpaceLayout() {
   const SETTINGS_TABS = [
     { id: 'info', label: 'General', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg> },
     { id: 'appearance', label: 'Apariencia', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg> },
+    { id: 'works', label: 'Obras', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path></svg> },
     ...(space?.is_verified ? [{ id: 'emojis', label: 'Emojis', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg> }] : []),
     { id: 'danger', label: 'Peligro', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg> }
   ];
@@ -244,7 +247,8 @@ export default function SpaceLayout() {
     setSettingsSpace({
       name: space?.name || '',
       description: space?.description || '',
-      theme_color: space?.theme_color || '#14b8a6'
+      theme_color: space?.theme_color || '#14b8a6',
+      related_works: space?.related_works || []
     });
     setAvatarPreview(space?.avatar_url || null);
     setAvatarFile(null);
@@ -314,6 +318,83 @@ export default function SpaceLayout() {
     '--brand-primary': space.theme_color,
     '--brand-primary-hover': space.theme_color + 'cc' 
   } : {};
+
+  if (isCheckingMembership) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 'calc(100vh - 64px)', marginTop: 'calc(-1 * var(--space-xl))', width: '100%', background: 'var(--bg-primary)' }}>
+        <div className="animate-pulse" style={{ color: 'var(--text-muted)' }}>Comprobando acceso...</div>
+      </div>
+    );
+  }
+
+  if (!isMember) {
+    return (
+      <div className="space-welcome-gate" style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 'calc(100vh - 64px)', marginTop: 'calc(-1 * var(--space-xl))', width: '100%', overflow: 'hidden', background: 'var(--bg-primary)' }}>
+        
+        {/* BIG BANNER BACKGROUND */}
+        {space?.banner_url && (
+          <div style={{ 
+            position: 'absolute', 
+            top: 0, left: 0, width: '100%', height: '55%', 
+            backgroundImage: `url(${space.banner_url})`, 
+            backgroundSize: 'cover', 
+            backgroundPosition: 'center',
+            zIndex: 0
+          }}>
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, var(--bg-primary) 100%)' }} />
+          </div>
+        )}
+
+        {/* CONTENT */}
+        <div style={{ position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '2rem', width: '100%', maxWidth: '650px' }}>
+          
+          <img 
+            src={space?.avatar_url || '/default-avatar.png'} 
+            alt={space?.name} 
+            style={{ 
+              width: '140px', height: '140px', 
+              borderRadius: '50%', 
+              marginBottom: '1.5rem', 
+              objectFit: 'cover', 
+              boxShadow: '0 12px 40px rgba(0,0,0,0.5)', 
+              border: `4px solid ${space?.theme_color || 'var(--bg-modifier-hover)'}`,
+              background: 'var(--bg-secondary)'
+            }} 
+          />
+          
+          <h1 style={{ fontSize: '3.2rem', marginBottom: '1rem', color: 'var(--text-primary)', textShadow: space?.banner_url ? '0 2px 16px rgba(0,0,0,0.8)' : 'none', fontWeight: 800, letterSpacing: '-1px' }}>
+            Estás invitado a {space?.name}
+          </h1>
+          
+          <p style={{ fontSize: '1.2rem', color: space?.banner_url ? '#ffffff' : 'var(--text-secondary)', marginBottom: '3rem', lineHeight: '1.6', textShadow: space?.banner_url ? '0 2px 8px rgba(0,0,0,0.9)' : 'none', opacity: 0.9 }}>
+            {space?.description}
+          </p>
+          
+          <button 
+             className="btn-primary" 
+             style={{ 
+               padding: '1.2rem 4rem', 
+               fontSize: '1.2rem', 
+               borderRadius: '40px', 
+               fontWeight: 'bold', 
+               boxShadow: `0 8px 24px ${space?.theme_color ? space.theme_color + '66' : 'rgba(20, 184, 166, 0.4)'}`,
+               background: space?.theme_color || 'var(--brand-primary)',
+               color: '#fff',
+               border: 'none',
+               cursor: 'pointer',
+               transition: 'transform 0.2s, box-shadow 0.2s'
+             }}
+             onMouseOver={(e) => { e.currentTarget.style.transform = 'scale(1.05)'; }}
+             onMouseOut={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+             onClick={handleJoinSpace}
+             disabled={isJoining}
+          >
+             {isJoining ? 'Uniéndose...' : 'Aceptar invitación'}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-layout" style={customStyles}>
@@ -410,27 +491,7 @@ export default function SpaceLayout() {
         </div>
       </div>
       <div className="space-main">
-        {isCheckingMembership ? (
-           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-             <div className="animate-pulse" style={{ color: 'var(--text-muted)' }}>Comprobando acceso...</div>
-           </div>
-        ) : !isMember ? (
-           <div className="space-welcome-gate" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: '2rem', textAlign: 'center' }}>
-             <img src={space?.avatar_url || '/default-avatar.png'} alt={space?.name} style={{ width: '120px', height: '120px', borderRadius: '50%', marginBottom: '1rem', objectFit: 'cover', boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }} />
-             <h1 style={{ fontSize: '2.5rem', marginBottom: '1rem', color: 'var(--text-primary)' }}>EstÃ¡s invitado a {space?.name}</h1>
-             <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', maxWidth: '600px', marginBottom: '2.5rem', lineHeight: '1.6' }}>{space?.description}</p>
-             <button 
-                className="btn-primary" 
-                style={{ padding: '1rem 2rem', fontSize: '1.1rem', borderRadius: '30px', fontWeight: 'bold' }}
-                onClick={handleJoinSpace}
-                disabled={isJoining}
-             >
-                {isJoining ? 'UniÃ©ndose...' : 'Unirse para participar'}
-             </button>
-           </div>
-        ) : (
-           <Outlet context={{ channels, space }} />
-        )}
+        <Outlet context={{ channels, space }} />
       </div>
 
       {editingChannel && (
@@ -641,6 +702,66 @@ export default function SpaceLayout() {
                                 </div>
                             </>
                         )}
+
+                        {activeSettingsSection === 'works' && (
+                            <>
+                                <div className="ep-field">
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                                        <label className="ep-label" style={{ marginBottom: 0 }}>Obras relacionadas</label>
+                                        <button 
+                                            type="button" 
+                                            onClick={() => setSearchModalOpen(true)}
+                                            style={{ 
+                                              display: 'flex', alignItems: 'center', gap: '4px', 
+                                              background: 'var(--brand-primary)', color: '#000', 
+                                              padding: '6px 12px', borderRadius: '16px', 
+                                              border: 'none', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 'bold'
+                                            }}
+                                        >
+                                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                            Añadir Obra
+                                        </button>
+                                    </div>
+                                    
+                                    {(!settingsSpace.related_works || settingsSpace.related_works.length === 0) ? (
+                                        <div style={{ padding: '24px', textAlign: 'center', background: 'var(--bg-tertiary)', borderRadius: '8px', color: 'var(--text-muted)' }}>
+                                            No hay obras asociadas a esta comunidad.
+                                        </div>
+                                    ) : (
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                                            {settingsSpace.related_works.map((work, idx) => (
+                                                <div key={idx} style={{ 
+                                                    display: 'flex', alignItems: 'center', gap: '8px', 
+                                                    background: 'var(--bg-tertiary)', padding: '6px 12px', 
+                                                    borderRadius: '8px', border: '1px solid var(--border-default)',
+                                                    fontSize: '0.9rem'
+                                                }}>
+                                                    {work.image && <img src={work.image} alt={work.title} style={{ width: '24px', height: '24px', borderRadius: '4px', objectFit: 'cover' }} />}
+                                                    <span>{work.title}</span>
+                                                    <button 
+                                                        type="button" 
+                                                        onClick={() => {
+                                                            if (settingsSpace.related_works.length <= 1) {
+                                                                alert('Debe haber al menos 1 obra asociada.');
+                                                                return;
+                                                            }
+                                                            setSettingsSpace({
+                                                                ...settingsSpace,
+                                                                related_works: settingsSpace.related_works.filter((_, i) => i !== idx)
+                                                            });
+                                                        }} 
+                                                        style={{ background: 'none', border: 'none', color: 'var(--error)', cursor: 'pointer', padding: '4px' }}
+                                                        title="Eliminar obra"
+                                                    >
+                                                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </>
+                        )}
                         
                                  {activeSettingsSection === 'emojis' && (
                             <>
@@ -789,6 +910,20 @@ export default function SpaceLayout() {
             </div>
           </div>
         </div>
+      )}
+
+      {searchModalOpen && (
+        <GlobalSearchModal 
+          isOpen={searchModalOpen} 
+          onClose={() => setSearchModalOpen(false)} 
+          onSelect={(work) => {
+            if (!settingsSpace.related_works) {
+              setSettingsSpace({ ...settingsSpace, related_works: [work] });
+            } else if (!settingsSpace.related_works.some(w => w.id === work.id)) {
+              setSettingsSpace({ ...settingsSpace, related_works: [...settingsSpace.related_works, work] });
+            }
+          }}
+        />
       )}
 
     </div>

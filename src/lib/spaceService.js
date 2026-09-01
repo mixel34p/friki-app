@@ -26,10 +26,10 @@ export async function getSpaceById(id) {
     return data;
 }
 
-export async function createSpace({ name, description, avatar_url, banner_url, owner_id, theme_color }) {
+export async function createSpace({ name, description, avatar_url, banner_url, owner_id, theme_color, related_works = [] }) {
     const { data, error } = await supabase
         .from('spaces')
-        .insert([{ name, description, avatar_url, banner_url, owner_id, theme_color }])
+        .insert([{ name, description, avatar_url, banner_url, owner_id, theme_color, related_works }])
         .select()
         .single();
     if (error) throw error;
