@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams, useOutletContext } from 'react-router-dom';
 import { getChannelMessages, sendMessage, updateMessage, toggleReaction } from '../../lib/spaceService';
@@ -10,6 +10,28 @@ import EmojiPicker from '../../components/EmojiPicker';
 import './LiveChat.css';
 import './LiveChatGrid.css';
 import { BADGES_MAP } from '../../lib/badges';
+
+function toCodePoint(unicodeSurrogates, sep) {
+  let r = [], c = 0, p = 0, i = 0;
+  
+  // Twemoji strips FE0F unless there's a ZWJ
+  if (unicodeSurrogates.indexOf(String.fromCharCode(0x200D)) < 0) {
+      unicodeSurrogates = unicodeSurrogates.replace(/\uFE0F/g, '');
+  }
+  
+  while (i < unicodeSurrogates.length) {
+    c = unicodeSurrogates.charCodeAt(i++);
+    if (p) {
+      r.push((0x10000 + ((p - 0xD800) << 10) + (c - 0xDC00)).toString(16));
+      p = 0;
+    } else if (0xD800 <= c && c <= 0xDBFF) {
+      p = c;
+    } else {
+      r.push(c.toString(16));
+    }
+  }
+  return r.join(sep || '-');
+}
 
 const localImageCache = {};
 
@@ -45,7 +67,7 @@ const LinkEmbed = ({ url }) => {
 
 const htmlToText = (html) => {
     if (!html) return '';
-    let t = html.replace(/<img[^>]*alt="(:[a-zA-Z0-9_]+:)"[^>]*>/g, '$1');
+    let t = html.replace(/<img[^>]*alt="([^"]+)"[^>]*>/g, '$1');
     t = t.replace(/<br\s*[\/]?>/gi, '\n');
     t = t.replace(/<div>/gi, '\n');
     t = t.replace(/<\/div>/gi, '');
@@ -62,10 +84,14 @@ export default function LiveChat() {
     const [messages, setMessages] = useState([]);
     const [text, setText] = useState('');
     const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+    const [hasOpenedMainPicker, setHasOpenedMainPicker] = useState(false);
     const [activeDropdown, setActiveDropdown] = useState(null);
     const [dropdownCoords, setDropdownCoords] = useState(null);
     const [replyingTo, setReplyingTo] = useState(null);
     const [editingMessageId, setEditingMessageId] = useState(null);
+    const [reactionPickerMsgId, setReactionPickerMsgId] = useState(null);
+    const [hasOpenedReactionPicker, setHasOpenedReactionPicker] = useState(false);
+    const [reactionPickerStyle, setReactionPickerStyle] = useState(null);
     const [editingText, setEditingText] = useState('');
     const [imageFiles, setImageFiles] = useState([]);
     const [uploadingImage, setUploadingImage] = useState(false);
@@ -87,6 +113,24 @@ export default function LiveChat() {
         };
         loadEmojis();
     }, []);
+
+    const [quickReactions, setQuickReactions] = useState(['🔥', '❤️', '👍']);
+
+    const updateQuickReactions = useCallback(() => {
+        try {
+            const saved = JSON.parse(localStorage.getItem('friki_recent_emojis') || '[]');
+            if (saved.length > 0) {
+                const topSaved = saved.map(e => e.isStandard ? e.char : `:${e.name}:`);
+                const defaults = ['🔥', '❤️', '👍'];
+                const mixed = [...new Set([...topSaved, ...defaults])].slice(0, 3);
+                setQuickReactions(mixed);
+            }
+        } catch(e){}
+    }, []);
+
+    useEffect(() => {
+        updateQuickReactions();
+    }, [updateQuickReactions]);
 
     const [showMaxUploadsModal, setShowMaxUploadsModal] = useState(false);
     const [isClosingMaxUploadsModal, setIsClosingMaxUploadsModal] = useState(false);
@@ -241,7 +285,9 @@ export default function LiveChat() {
 
         return (
             <>
-                {textContent}
+                <Twemoji options={{ className: 'twemoji chat-emoji', folder: 'svg', ext: '.svg' }}>
+                    {textContent}
+                </Twemoji>
                 {imageGrid}
             </>
         );
@@ -394,6 +440,42 @@ export default function LiveChat() {
         } catch (e) {
             console.error("Error toggling reaction", e);
         }
+    };
+
+    const openReactionPicker = (e, msgId) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        const pickerHeight = 460;
+        const pickerWidth = 360;
+        const padding = 10;
+        
+        // Base smart position
+        let style = { 
+            position: 'fixed',
+            bottom: 'auto',
+            top: 'auto',
+            left: 'auto',
+            right: 'auto'
+        };
+        
+        // Vertical: If not enough space below, open above
+        if (rect.bottom + padding + pickerHeight > window.innerHeight) {
+            style.bottom = window.innerHeight - rect.top + padding;
+        } else {
+            style.top = rect.bottom + padding;
+        }
+
+        // Horizontal: If not enough space to the right, align to right edge
+        if (rect.left + pickerWidth > window.innerWidth) {
+            style.right = window.innerWidth - rect.right;
+        } else {
+            style.left = rect.left;
+        }
+        
+        setReactionPickerStyle(style);
+        setReactionPickerMsgId(msgId);
+        setHasOpenedReactionPicker(true);
+        setActiveDropdown(null);
+        setIsEmojiPickerOpen(false);
     };
 
     useEffect(() => {
@@ -711,7 +793,7 @@ export default function LiveChat() {
     };
 
     return (
-        <Twemoji className="live-chat-container" options={{ className: 'chat-emoji', folder: 'svg', ext: '.svg' }}>
+        <div className="live-chat-container">
             <div className="chat-top-bar">
                 <svg className="chat-top-icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
                 <span className="chat-top-title">{channel?.name || 'general'}</span>
@@ -857,6 +939,10 @@ export default function LiveChat() {
                                                     const displayUsers = data.users.slice(0, 3);
                                                     const extraUsers = data.users.length - 3;
                                                     
+                                                    const isCustom = emoji.startsWith(':') && emoji.endsWith(':');
+                                                    const customEmojiName = isCustom ? emoji.slice(1, -1) : null;
+                                                    const customEmojiUrl = isCustom ? globalEmojisMap[customEmojiName] : null;
+
                                                     return (
                                                         <button 
                                                             key={emoji} 
@@ -864,7 +950,15 @@ export default function LiveChat() {
                                                             onClick={() => handleToggleReaction(msg.id, emoji)}
                                                             title={data.users.map(u => u.display_name || u.username).join(', ')}
                                                         >
-                                                            <span className="chat-reaction-emoji">{emoji}</span>
+                                                            {isCustom ? (
+                                                                customEmojiUrl ? (
+                                                                    <img src={customEmojiUrl} alt={emoji} className="chat-reaction-emoji-img" style={{width: '16px', height: '16px', marginRight: '4px', display: 'inline-block', verticalAlign: 'middle', objectFit: 'contain'}} />
+                                                                ) : (
+                                                                    <span style={{marginRight: '4px', fontSize: '12px', fontWeight: 'bold'}}>{customEmojiName.substring(0, 2).toUpperCase()}</span>
+                                                                )
+                                                            ) : (
+                                                                <img src={`https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/svg/${toCodePoint(emoji)}.svg`} alt={emoji} className="chat-reaction-emoji-img" style={{width: '16px', height: '16px', marginRight: '4px', display: 'inline-block', verticalAlign: 'middle'}} />
+                                                            )}
                                                             <span className="chat-reaction-count">{data.count}</span>
                                                             
                                                             {displayUsers.length > 0 && (
@@ -907,13 +1001,29 @@ export default function LiveChat() {
                                     
                                     {/* Action Menu (Hover) */}
                                     <div className={`chat-message-actions ${activeDropdown === msg.id ? 'active' : ''}`}>
-                                        <button className="chat-action-btn emoji-btn" title="Reaccionar con 🔥" onClick={() => handleToggleReaction(msg.id, '🔥')}>🔥</button>
-                                        <button className="chat-action-btn emoji-btn" title="Reaccionar con ❤️" onClick={() => handleToggleReaction(msg.id, '❤️')}>❤️</button>
-                                        <button className="chat-action-btn emoji-btn" title="Reaccionar con 👍" onClick={() => handleToggleReaction(msg.id, '👍')}>👍</button>
+                                        {quickReactions.map(emoji => {
+                                            const isCustom = emoji.startsWith(':') && emoji.endsWith(':');
+                                            const customEmojiName = isCustom ? emoji.slice(1, -1) : null;
+                                            const customEmojiUrl = isCustom ? globalEmojisMap[customEmojiName] : null;
+                                            
+                                            return (
+                                                <button key={emoji} className="chat-action-btn emoji-btn" title={`Reaccionar con ${emoji}`} onClick={() => handleToggleReaction(msg.id, emoji)}>
+                                                    {isCustom ? (
+                                                        customEmojiUrl ? (
+                                                            <img src={customEmojiUrl} alt={emoji} style={{width: '20px', height: '20px', display: 'flex', objectFit: 'contain'}} />
+                                                        ) : (
+                                                            <span style={{fontSize: '11px', fontWeight: 'bold'}}>{customEmojiName.substring(0, 2).toUpperCase()}</span>
+                                                        )
+                                                    ) : (
+                                                        <img src={`https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/svg/${toCodePoint(emoji)}.svg`} alt={emoji} style={{width: '20px', height: '20px', display: 'flex'}} />
+                                                    )}
+                                                </button>
+                                            );
+                                        })}
                                         
                                         <div className="chat-action-divider" />
                                         
-                                        <button className="chat-action-btn" title="Añadir reacción">
+                                        <button className="chat-action-btn" title="Añadir reacción" onClick={(e) => openReactionPicker(e, msg.id)}>
                                             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
                                         </button>
                                         
@@ -950,12 +1060,28 @@ export default function LiveChat() {
                                             {activeDropdown === msg.id && createPortal(
                                                 <div className="chat-dropdown" style={{ position: 'fixed', bottom: dropdownCoords?.bottom, right: dropdownCoords?.right, zIndex: 99999 }}>
                                                     <div className="chat-dropdown-reactions">
-                                                        <button className="chat-dropdown-reaction-btn" onClick={() => handleToggleReaction(msg.id, '🔥')}>🔥</button>
-                                                        <button className="chat-dropdown-reaction-btn" onClick={() => handleToggleReaction(msg.id, '❤️')}>❤️</button>
-                                                        <button className="chat-dropdown-reaction-btn" onClick={() => handleToggleReaction(msg.id, '👍')}>👍</button>
+                                                        {quickReactions.map(emoji => {
+                                                            const isCustom = emoji.startsWith(':') && emoji.endsWith(':');
+                                                            const customEmojiName = isCustom ? emoji.slice(1, -1) : null;
+                                                            const customEmojiUrl = isCustom ? globalEmojisMap[customEmojiName] : null;
+
+                                                            return (
+                                                                <button key={emoji} className="chat-dropdown-reaction-btn" onClick={() => handleToggleReaction(msg.id, emoji)} title={`Reaccionar con ${emoji}`}>
+                                                                    {isCustom ? (
+                                                                        customEmojiUrl ? (
+                                                                            <img src={customEmojiUrl} alt={emoji} style={{width: '20px', height: '20px', display: 'inline-block', objectFit: 'contain'}} />
+                                                                        ) : (
+                                                                            <span style={{fontSize: '11px', fontWeight: 'bold'}}>{customEmojiName.substring(0, 2).toUpperCase()}</span>
+                                                                        )
+                                                                    ) : (
+                                                                        emoji
+                                                                    )}
+                                                                </button>
+                                                            );
+                                                        })}
                                                     </div>
                                                     
-                                                    <button className="chat-dropdown-item">
+                                                    <button className="chat-dropdown-item" onClick={(e) => openReactionPicker(e, msg.id)}>
                                                         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
                                                         Añadir reacción
                                                     </button>
@@ -1046,12 +1172,18 @@ export default function LiveChat() {
                             ref={textareaRef}
                             className="chat-input-field rich-text-input"
                             data-placeholder={`Enviar mensaje a #${channel?.name || 'general'}`}
-                            onInput={handleInput}
-                            onBlur={() => {
+                            onInput={(e) => {
+                                handleInput(e);
                                 const sel = window.getSelection();
-                                if (sel.rangeCount > 0) {
-                                    setSavedRange(sel.getRangeAt(0));
-                                }
+                                if (sel.rangeCount > 0) setSavedRange(sel.getRangeAt(0));
+                            }}
+                            onKeyUp={() => {
+                                const sel = window.getSelection();
+                                if (sel.rangeCount > 0) setSavedRange(sel.getRangeAt(0));
+                            }}
+                            onMouseUp={() => {
+                                const sel = window.getSelection();
+                                if (sel.rangeCount > 0) setSavedRange(sel.getRangeAt(0));
                             }}
                             onKeyDown={handleKeyDown}
                             onPaste={handlePaste}
@@ -1063,11 +1195,29 @@ export default function LiveChat() {
                             </div>
                         )}
                         <div style={{ position: 'relative' }}>
-                            <button type="button" className="chat-emoji-btn" title="Añadir emoji" onClick={() => setIsEmojiPickerOpen(prev => !prev)}>
+                            <button type="button" className="chat-emoji-btn" title="Añadir emoji" onClick={() => {
+                                setHasOpenedMainPicker(true);
+                                setIsEmojiPickerOpen(prev => !prev);
+                                setReactionPickerMsgId(null);
+                            }}>
                                 <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
                             </button>
-                            {isEmojiPickerOpen && (
+                            {hasOpenedMainPicker && createPortal(
                                 <EmojiPicker 
+                                    style={{ display: isEmojiPickerOpen ? 'flex' : 'none' }}
+                                    isOpen={isEmojiPickerOpen}
+                                    onSelectGif={async (url) => {
+                                        setIsEmojiPickerOpen(false);
+                                        if (!channel?.id || !user) return;
+                                        try {
+                                            await sendMessage(channel.id, user.id, `![image](${url})`);
+                                            setTimeout(() => {
+                                                endRef.current?.scrollIntoView({ behavior: 'smooth' });
+                                            }, 100);
+                                        } catch (e) {
+                                            console.error("Error sending gif", e);
+                                        }
+                                    }}
                                     onSelect={(emoji) => {
                                         if (textareaRef.current) {
                                             textareaRef.current.focus();
@@ -1091,8 +1241,10 @@ export default function LiveChat() {
                                             }
                                         } else {
                                             // Standard Emoji
+                                            const code = toCodePoint(emoji);
+                                            const twemojiUrl = `https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/svg/${code}.svg`;
                                             if (textareaRef.current) {
-                                                document.execCommand('insertText', false, emoji);
+                                                document.execCommand('insertHTML', false, `<img src="${twemojiUrl}" alt="${emoji}" class="inline-emoji twemoji-input" style="width: 22px; height: 22px; object-fit: contain; vertical-align: middle; margin: -3px 2px 0 2px; display: inline-block;" />&nbsp;`);
                                             } else {
                                                 setText(prev => prev + emoji);
                                             }
@@ -1102,9 +1254,11 @@ export default function LiveChat() {
                                             setText(htmlToText(textareaRef.current.innerHTML));
                                         }
                                         setIsEmojiPickerOpen(false);
+                                        updateQuickReactions();
                                     }} 
                                     onClose={() => setIsEmojiPickerOpen(false)} 
-                                />
+                                />,
+                                document.body
                             )}
                         </div>
                     </div>
@@ -1193,6 +1347,24 @@ export default function LiveChat() {
                 </div>
             )}
 
+            {/* Reaction Emoji Picker */}
+            {hasOpenedReactionPicker && createPortal(
+                <EmojiPicker 
+                    style={{ ...reactionPickerStyle, zIndex: 100000, display: reactionPickerMsgId ? 'flex' : 'none' }}
+                    disableMediaTabs={true}
+                    isOpen={!!reactionPickerMsgId}
+                    onSelect={(emoji) => {
+                        if (reactionPickerMsgId) {
+                            handleToggleReaction(reactionPickerMsgId, emoji);
+                            setReactionPickerMsgId(null);
+                            updateQuickReactions();
+                        }
+                    }} 
+                    onClose={() => setReactionPickerMsgId(null)} 
+                />,
+                document.body
+            )}
+
             {showMaxUploadsModal && (
                 <div className={`lightbox-overlay ${isClosingMaxUploadsModal ? 'closing' : ''}`} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <div className={`lightbox-content ${isClosingMaxUploadsModal ? 'closing' : ''}`} style={{ backgroundColor: 'var(--bg-card)', borderRadius: '12px', padding: '24px', width: '90%', maxWidth: '400px', boxShadow: '0 8px 32px rgba(0,0,0,0.5)', position: 'relative' }}>
@@ -1219,9 +1391,6 @@ export default function LiveChat() {
                     </div>
                 </div>
             )}
-        </Twemoji>
+        </div>
     );
 }
-
-
-
