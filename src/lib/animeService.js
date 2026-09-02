@@ -201,6 +201,8 @@ export async function getSimilarAnime(id, limit = 10) {
                     extraLarge
                   }
                   bannerImage
+                  averageScore
+                  genres
                 }
               }
             }
@@ -229,7 +231,8 @@ export async function getSimilarAnime(id, limit = 10) {
             image_url: n.mediaRecommendation.coverImage?.extraLarge,
             cover_url: n.mediaRecommendation.coverImage?.extraLarge,
             banner_url: n.mediaRecommendation.bannerImage || null,
-            genres: [], 
+            genres: n.mediaRecommendation.genres || [],
+            anilist_score: n.mediaRecommendation.averageScore || null,
             media_type: 'anime'
         }))
         

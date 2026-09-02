@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback, memo } from 'react'
 import { searchGames } from '../lib/gameService'
 import { searchAnime } from '../lib/animeService'
 import { getWorkLog } from '../lib/libraryService'
@@ -6,6 +6,38 @@ import { useAuth } from '../context/AuthContext'
 import LoadingSpinner from './LoadingSpinner'
 import LogModal from './LogModal'
 import './GlobalSearchModal.css'
+
+const ResultGrid = memo(({ results, type, pendingSelection, onSelect, onResultClick }) => {
+    return (
+        <div className="spotlight-grid">
+            {results.map(item => {
+                const title = type === 'game' ? item.name : item.title
+                const image = type === 'game' ? item.cover_url : item.image_url
+                const year = type === 'game' ? (item.first_release_date ? new Date(item.first_release_date * 1000).getFullYear() : '') : item.year
+                const isSelected = onSelect && pendingSelection.some(w => w.id === item.id);
+                
+                return (
+                    <div key={item.id} className={`spotlight-card ${isSelected ? 'selected' : ''}`} onClick={() => onResultClick(item)}>
+                        <div className="spotlight-card-img">
+                            {image ? (
+                                <img src={image} alt={title} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : (
+                                <span className="no-img-text">{title.substring(0, 2)}</span>
+                            )}
+                            <div className="spotlight-card-overlay">
+                                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                            </div>
+                        </div>
+                        <div className="spotlight-card-info">
+                            <h4>{title}</h4>
+                            {year && <span>{year}</span>}
+                        </div>
+                    </div>
+                )
+            })}
+        </div>
+    )
+})
 
 export default function GlobalSearchModal({ isOpen, onClose, onSelect }) {
     const { user } = useAuth()
@@ -21,6 +53,9 @@ export default function GlobalSearchModal({ isOpen, onClose, onSelect }) {
     const [existingLog, setExistingLog] = useState(null)
     const [logModalOpen, setLogModalOpen] = useState(false)
     
+    // Multi-select state
+    const [pendingSelection, setPendingSelection] = useState([])
+    
     const inputRef = useRef(null)
 
     useEffect(() => {
@@ -29,6 +64,7 @@ export default function GlobalSearchModal({ isOpen, onClose, onSelect }) {
             setResults([])
             setSelectedWork(null)
             setLogModalOpen(false)
+            setPendingSelection([])
             setTimeout(() => inputRef.current?.focus(), 100)
         }
     }, [isOpen])
@@ -67,7 +103,7 @@ export default function GlobalSearchModal({ isOpen, onClose, onSelect }) {
         fetchResults()
     }, [debouncedQuery, type])
 
-    const handleResultClick = async (item) => {
+    const handleResultClick = useCallback(async (item) => {
         const work = {
             id: item.id,
             type: type,
@@ -77,8 +113,11 @@ export default function GlobalSearchModal({ isOpen, onClose, onSelect }) {
         }
         
         if (onSelect) {
-            onSelect(work);
-            handleClose();
+            setPendingSelection(prev => {
+                const exists = prev.find(w => w.id === work.id);
+                if (exists) return prev.filter(w => w.id !== work.id);
+                return [...prev, work];
+            });
             return;
         }
         
@@ -90,7 +129,7 @@ export default function GlobalSearchModal({ isOpen, onClose, onSelect }) {
         }
         
         setLogModalOpen(true)
-    }
+    }, [type, onSelect, user]);
 
     const handleClose = () => {
         setIsClosing(true)
@@ -119,7 +158,7 @@ export default function GlobalSearchModal({ isOpen, onClose, onSelect }) {
                                 ref={inputRef}
                                 type="text" 
                                 className="spotlight-input" 
-                                placeholder={`¿Qué ${type === 'game' ? 'juego' : 'anime'} quieres registrar?`}
+                                placeholder={onSelect ? `¿Qué ${type === 'game' ? 'juegos' : 'animes'} quieres buscar?` : `¿Qué ${type === 'game' ? 'juego' : 'anime'} quieres registrar?`}
                                 value={query}
                                 onChange={(e) => setQuery(e.target.value)}
                             />
@@ -136,31 +175,30 @@ export default function GlobalSearchModal({ isOpen, onClose, onSelect }) {
                         )}
                         
                         {!loading && results.length > 0 && (
-                            <div className="spotlight-grid">
-                                {results.map(item => {
-                                    const title = type === 'game' ? item.name : item.title
-                                    const image = type === 'game' ? item.cover_url : item.image_url
-                                    const year = type === 'game' ? (item.first_release_date ? new Date(item.first_release_date * 1000).getFullYear() : '') : item.year
-                                    
-                                    return (
-                                        <div key={item.id} className="spotlight-card" onClick={() => handleResultClick(item)}>
-                                            <div className="spotlight-card-img" style={{ backgroundImage: `url(${image})` }}>
-                                                {!image && <span className="no-img-text">{title.substring(0, 2)}</span>}
-                                                <div className="spotlight-card-overlay">
-                                                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                                                </div>
-                                            </div>
-                                            <div className="spotlight-card-info">
-                                                <h4>{title}</h4>
-                                                {year && <span>{year}</span>}
-                                            </div>
-                                        </div>
-                                    )
-                                })}
-                            </div>
+                            <ResultGrid 
+                                results={results} 
+                                type={type} 
+                                pendingSelection={pendingSelection} 
+                                onSelect={onSelect} 
+                                onResultClick={handleResultClick} 
+                            />
                         )}
                     </div>
                 </div>
+
+                {onSelect && pendingSelection.length > 0 && (
+                    <div className="spotlight-footer-external" onClick={e => e.stopPropagation()} style={{ marginTop: '2rem', animation: 'fadeInSpotlight 0.3s ease forwards' }}>
+                        <button 
+                            className="spotlight-save-btn" 
+                            onClick={() => {
+                                onSelect(pendingSelection);
+                                handleClose();
+                            }}
+                        >
+                            Guardar {pendingSelection.length} {pendingSelection.length === 1 ? 'obra' : 'obras'}
+                        </button>
+                    </div>
+                )}
             </div>
             
             {logModalOpen && selectedWork && (

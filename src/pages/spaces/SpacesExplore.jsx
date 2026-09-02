@@ -505,9 +505,10 @@ export default function SpacesExplore() {
         <GlobalSearchModal 
           isOpen={searchModalOpen} 
           onClose={() => setSearchModalOpen(false)} 
-          onSelect={(work) => {
-            if (!newSpace.related_works.some(w => w.id === work.id)) {
-              setNewSpace({ ...newSpace, related_works: [...newSpace.related_works, work] });
+          onSelect={(works) => {
+            const newWorks = works.filter(w => !newSpace.related_works.some(existing => existing.id === w.id));
+            if (newWorks.length > 0) {
+              setNewSpace({ ...newSpace, related_works: [...newSpace.related_works, ...newWorks] });
             }
           }}
         />

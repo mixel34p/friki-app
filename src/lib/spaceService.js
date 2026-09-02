@@ -344,3 +344,31 @@ export async function getUserSpaces(userId) {
     if (error) throw error;
     return data.map(m => m.space);
 }
+
+export async function getSpacesByWork(workId) {
+    const { data, error } = await supabase
+        .from('spaces')
+        .select(`
+            *,
+            owner:profiles!spaces_owner_id_fkey (username, display_name, avatar_url, featured_badge)
+        `)
+        .contains('related_works', `[{"id": ${workId}}]`)
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error("Error fetching spaces by work:", error);
+        return [];
+    }
+    
+    // Fetch members count for each space to populate member_count if needed
+    for (const space of data) {
+        const { count } = await supabase
+            .from('space_members')
+            .select('*', { count: 'exact', head: true })
+            .eq('space_id', space.id);
+            
+        space.member_count = count || 0;
+    }
+    
+    return data;
+}

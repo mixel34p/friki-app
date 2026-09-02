@@ -10,12 +10,14 @@ import {
     getWorkStats
 } from '../lib/workPageService'
 import { getWorkLog, getWorkReviews } from '../lib/libraryService'
+import { getSpacesByWork } from '../lib/spaceService'
 import { DEBATE_TYPES } from '../lib/debateService'
 import LogModal from '../components/LogModal'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ReviewLikeButton from '../components/ReviewLikeButton'
 import { BADGES_MAP } from '../lib/badges'
 import '../components/LibraryGrid.css'
+import './spaces/SpacesExplore.css'
 import './WorkPage.css'
 import { FaPlaystation, FaXbox, FaWindows, FaApple, FaAndroid, FaLinux, FaDesktop, FaGamepad } from 'react-icons/fa'
 import { BsNintendoSwitch } from 'react-icons/bs'
@@ -30,6 +32,7 @@ export default function WorkPage({ mediaType }) {
     // Data states
     const [work, setWork] = useState(null)
     const [debates, setDebates] = useState([])
+    const [relatedSpaces, setRelatedSpaces] = useState([])
     const [similarWorks, setSimilarWorks] = useState([])
     const [recentReviews, setRecentReviews] = useState([])
     const [revealedSpoilers, setRevealedSpoilers] = useState({})
@@ -51,8 +54,14 @@ export default function WorkPage({ mediaType }) {
             loadDebates()
             loadStats()
             loadReviews()
+            loadRelatedSpaces()
         }
     }, [work, reviewsRefreshTrigger])
+
+    const loadRelatedSpaces = async () => {
+        const spacesData = await getSpacesByWork(parseInt(id))
+        setRelatedSpaces(spacesData || [])
+    }
 
     const loadReviews = async () => {
         const { data } = await getWorkReviews(id, mediaType, 1, 3)
@@ -496,12 +505,16 @@ export default function WorkPage({ mediaType }) {
                         <div>
                             <h3 className="work-section-title">Similares</h3>
                             <div className="similar-works-grid">
-                                {similarWorks.slice(0, 4).map(similar => (
+                                {similarWorks.slice(0, 6).map(similar => (
                                     <Link key={similar.id} to={`/${similar.media_type}/${similar.id}`} className="similar-work-card">
                                         <div 
                                             className="similar-work-poster"
                                             style={{ backgroundImage: `url(${getHighResImage(similar.cover_url || similar.image_url)})` }}
-                                        ></div>
+                                        >
+                                            <div className="similar-work-overlay">
+                                                <span className="similar-work-title">{similar.name || similar.title}</span>
+                                            </div>
+                                        </div>
                                     </Link>
                                 ))}
                             </div>
@@ -509,6 +522,52 @@ export default function WorkPage({ mediaType }) {
                     )}
                 </div>
             </div>
+
+            {relatedSpaces.length > 0 && (
+                <div style={{ maxWidth: '1200px', margin: '0 auto 3rem auto', padding: '0 1.5rem' }}>
+                    <h3 className="work-section-title" style={{ marginBottom: '1.5rem', borderBottom: '1px solid var(--border-default)', paddingBottom: '0.5rem' }}>
+                        ESPACIOS RELACIONADOS
+                    </h3>
+                    <div className="spaces-list" style={{ maxWidth: '100%', margin: '0' }}>
+                        {relatedSpaces.map(space => (
+                            <div key={space.id} className="space-card-list-item">
+                                <div className="space-card-avatar">
+                                    {space.avatar_url ? (
+                                        <img src={space.avatar_url} alt={space.name} />
+                                    ) : (
+                                        <div className="space-avatar-placeholder">
+                                            {space.name.charAt(0).toUpperCase()}
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="space-card-body">
+                                    <div className="space-card-header">
+                                        <h3 className="space-name">
+                                            {space.name}
+                                            {space.is_verified && (
+                                                <span className="verified-badge" title="Comunidad Verificada" style={{ color: '#1d9bf0' }}>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                                                        <path d="M22.5 12.5l-2.43 2.8.57 3.65-3.6.86-2.07 3.14-3.47-1.5-3.47 1.5-2.07-3.14-3.6-.86.57-3.65L.5 12.5l2.43-2.8-.57-3.65 3.6-.86 2.07-3.14 3.47 1.5 3.47-1.5 2.07 3.14 3.6.86-.57 3.65 2.43 2.8zM10.1 17.6l7.7-7.7-1.4-1.4-6.3 6.3-3-3-1.4 1.4 4.4 4.4z"/>
+                                                    </svg>
+                                                </span>
+                                            )}
+                                        </h3>
+                                        <span className="space-members">
+                                            {space.member_count} {space.member_count === 1 ? 'miembro' : 'miembros'}
+                                        </span>
+                                    </div>
+                                    <p className="space-desc">{space.description || 'Sin descripción.'}</p>
+                                </div>
+                                <div className="space-card-actions">
+                                    <Link to={`/spaces/${space.id}`} className="btn-enter">
+                                        Entrar a la comunidad
+                                    </Link>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Log Modal */}
             {showReviewModal && (

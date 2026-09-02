@@ -10,8 +10,8 @@
  */
 
 import { supabase } from './supabase'
-import { getGameById, getSimilarGames, searchGames } from './gameService'
-import { getAnimeById, getSimilarAnime, searchAnime } from './animeService'
+import { getGameById, getSimilarGames } from './gameService'
+import { getAnimeById, getSimilarAnime } from './animeService'
 
 // ═══════════════════════════════════════════════════════
 // GET WORK BY ID
@@ -284,136 +284,59 @@ export async function getUsersWhoInteractedWithWork(mediaType, mediaId, currentU
  */
 export async function getSimilarWorks(mediaType, mediaId, genres = [], { limit = 8 } = {}) {
     try {
-        // Strategy: 
-        // 1. Find other works that appear in tierlists alongside this one (Community Affinity)
-        // 2. Fetch official similar games/anime from external APIs (IGDB/Jikan)
-        // 3. Merge results
+        const results = []
+        const seenIds = new Set([parseInt(mediaId)])
 
-        let tierlistBasedWorks = []
+        // ── STEP 1: Official API recommendations (most accurate source) ──────
+        // IGDB similar_games / AniList recommendations are curated by the platform
+        // itself and are far more reliable than co-occurrence in user tierlists.
+        let apiRecs = []
+        if (mediaType === 'game') {
+            apiRecs = await getSimilarGames(mediaId, limit)
+        } else {
+            apiRecs = await getSimilarAnime(mediaId, limit)
+        }
 
-        // 1. Get similar works from tierlists
-        const { data: tierlists } = await supabase
-            .rpc('get_tierlists_containing_media', {
-                media_id_input: mediaId,
-                media_type_input: mediaType,
-                limit_count: 50
-            })
-
-        if (tierlists && tierlists.length > 0) {
-            // Count co-occurrences
-            const workCounts = {}
-            for (const list of tierlists) {
-                if (!list.content) continue
-
-                const idsInList = new Set()
-                Object.values(list.content).forEach(tierItems => {
-                    if (Array.isArray(tierItems)) {
-                        tierItems.forEach(item => {
-                            if (item.id && item.id !== mediaId) {
-                                idsInList.add(item.id)
-                            }
-                        })
-                    }
-                })
-
-                idsInList.forEach(id => {
-                    workCounts[id] = (workCounts[id] || 0) + 1
-                })
-            }
-
-            const sortedWorkIds = Object.entries(workCounts)
-                .sort((a, b) => b[1] - a[1])
-                .slice(0, limit)
-                .map(([id]) => parseInt(id))
-
-            if (sortedWorkIds.length > 0) {
-                const table = mediaType === 'game' ? 'games' : 'anime'
-                const nameColumn = mediaType === 'game' ? 'name' : 'title'
-                const imageColumn = mediaType === 'game' ? 'cover_url' : 'image_url'
-
-                const { data: works } = await supabase
-                    .from(table)
-                    .select(`id, ${nameColumn}, ${imageColumn}, genres`)
-                    .in('id', sortedWorkIds)
-
-                const maxCount = Math.max(...Object.values(workCounts))
-                tierlistBasedWorks = (works || []).map(work => ({
-                    id: work.id,
-                    name: work[nameColumn],
-                    cover_url: work[imageColumn],
-                    genres: work.genres || [],
-                    media_type: mediaType,
-                    affinity: Math.round((workCounts[work.id] / maxCount) * 100),
-                    source: 'community'
-                }))
+        for (const rec of apiRecs) {
+            if (!seenIds.has(rec.id)) {
+                seenIds.add(rec.id)
+                results.push({ ...rec, source: 'official' })
             }
         }
 
-        // 2. Local DB Genre Fallback
-        let genreBasedWorks = []
-        if (tierlistBasedWorks.length < limit && genres && genres.length > 0) {
-            const excludeIds = new Set([parseInt(mediaId), ...tierlistBasedWorks.map(w => w.id)])
-            const genreRecs = await getSimilarByGenre(mediaType, mediaId, genres, 20)
-            genreBasedWorks = genreRecs
-                .filter(w => !excludeIds.has(w.id))
-                .map(w => ({ ...w, source: 'genre', affinity: null }))
-                .slice(0, limit - tierlistBasedWorks.length)
-        }
-        
-        // 3. If we STILL need more results, fetch from APIs
-        if (tierlistBasedWorks.length + genreBasedWorks.length < limit) {
-            let apiRecs = []
-            let nameBasedRecs = []
-
-            // source 1: Recommendations API (IGDB similar_games / Mal recommendations)
-            if (mediaType === 'game') {
-                apiRecs = await getSimilarGames(mediaId, limit)
-            } else {
-                apiRecs = await getSimilarAnime(mediaId, limit)
-            }
-
-            // source 2: Name similarity
-            if (apiRecs.length + tierlistBasedWorks.length + genreBasedWorks.length < limit) {
-                try {
-                    const work = await (mediaType === 'game' ? getGameById(mediaId) : getAnimeById(mediaId))
-                    if (work) {
-                        const nameToSearch = mediaType === 'game' ? work.name : work.title
-                        if (nameToSearch) {
-                            // Extract meaningful part? "Super Mario Bros" -> "Super Mario" ? 
-                            // For now basic search.
-                            const searchResults = mediaType === 'game'
-                                ? await searchGames(nameToSearch, 10)
-                                : await searchAnime(nameToSearch, 10)
-
-                            nameBasedRecs = searchResults.map(r => ({ ...r, source: 'name_similarity', affinity: null }))
-                        }
-                    }
-                } catch (e) {
-                    console.error('Name search error:', e)
+        // ── STEP 2: Genre fallback (sorted by rating, only if we need more) ──
+        // Only kick in when the API didn't give us enough results.
+        // We order by rating DESC so the best works of the same genre appear first,
+        // avoiding random/obscure results.
+        if (results.length < limit && genres && genres.length > 0) {
+            const needed = limit - results.length
+            const genreRecs = await getSimilarByGenre(mediaType, mediaId, genres, needed * 3, seenIds)
+            for (const rec of genreRecs) {
+                if (results.length >= limit) break
+                if (!seenIds.has(rec.id)) {
+                    seenIds.add(rec.id)
+                    results.push({ ...rec, source: 'genre' })
                 }
             }
-
-            // Filter out duplicates
-            const existingIds = new Set([...tierlistBasedWorks.map(w => w.id), ...genreBasedWorks.map(w => w.id)])
-            existingIds.add(parseInt(mediaId))
-
-            // Process API Recs
-            const validApiRecs = apiRecs.filter(r => !existingIds.has(r.id)).map(r => ({
-                ...r,
-                affinity: null,
-                source: 'official'
-            }))
-
-            validApiRecs.forEach(r => existingIds.add(r.id));
-
-            // Process Name Recs
-            const validNameRecs = nameBasedRecs.filter(r => !existingIds.has(r.id))
-
-            // Combine
-            return [...tierlistBasedWorks, ...genreBasedWorks, ...validApiRecs, ...validNameRecs].slice(0, limit)
         }
 
-        return [...tierlistBasedWorks, ...genreBasedWorks].slice(0, limit)
+        // ── STEP 3: Community tierlists co-occurrence (last resort) ──────────
+        // Tierlists group *any* works together (a user might put Dragon Ball and
+        // Tetris in the same list), so this signal is very noisy. We only use it
+        // as an absolute last resort when both better sources failed.
+        if (results.length < limit) {
+            const needed = limit - results.length
+            const communityRecs = await getSimilarFromTierlists(mediaType, mediaId, needed * 2, seenIds)
+            for (const rec of communityRecs) {
+                if (results.length >= limit) break
+                if (!seenIds.has(rec.id)) {
+                    seenIds.add(rec.id)
+                    results.push({ ...rec, source: 'community' })
+                }
+            }
+        }
+
+        return results.slice(0, limit)
     } catch (error) {
         console.error('getSimilarWorks error:', error)
         return []
@@ -423,7 +346,7 @@ export async function getSimilarWorks(mediaType, mediaId, genres = [], { limit =
 /**
  * Fallback: Get similar works by genre
  */
-async function getSimilarByGenre(mediaType, excludeId, genres, limit) {
+async function getSimilarByGenre(mediaType, excludeId, genres, limit, seenIds = new Set()) {
     if (!genres || genres.length === 0) return []
 
     try {
@@ -431,23 +354,98 @@ async function getSimilarByGenre(mediaType, excludeId, genres, limit) {
         const nameColumn = mediaType === 'game' ? 'name' : 'title'
         const imageColumn = mediaType === 'game' ? 'cover_url' : 'image_url'
 
+        // Order by rating DESC so the best works of the genre appear first
         const { data } = await supabase
             .from(table)
-            .select(`id, ${nameColumn}, ${imageColumn}, genres`)
+            .select(`id, ${nameColumn}, ${imageColumn}, genres, rating`)
             .neq('id', excludeId)
             .overlaps('genres', genres)
+            .not('rating', 'is', null)
+            .order('rating', { ascending: false })
             .limit(limit)
 
-        return (data || []).map(work => ({
-            id: work.id,
-            name: work[nameColumn],
-            cover_url: work[imageColumn],
-            genres: work.genres || [],
-            media_type: mediaType,
-            affinity: null
-        }))
+        return (data || [])
+            .filter(work => !seenIds.has(work.id))
+            .map(work => ({
+                id: work.id,
+                name: work[nameColumn],
+                title: work[nameColumn],
+                cover_url: work[imageColumn],
+                image_url: work[imageColumn],
+                genres: work.genres || [],
+                rating: work.rating,
+                media_type: mediaType,
+            }))
     } catch (error) {
         console.error('getSimilarByGenre error:', error)
+        return []
+    }
+}
+
+/**
+ * Last-resort fallback: works that appear in the same tierlists.
+ * Very noisy (any works can share a tierlist), so only use when API + genre fail.
+ */
+async function getSimilarFromTierlists(mediaType, mediaId, limit, seenIds = new Set()) {
+    try {
+        const { data: tierlists } = await supabase
+            .rpc('get_tierlists_containing_media', {
+                media_id_input: mediaId,
+                media_type_input: mediaType,
+                limit_count: 30
+            })
+
+        if (!tierlists || tierlists.length === 0) return []
+
+        // Count co-occurrences (works that appear most frequently across lists)
+        const workCounts = {}
+        for (const list of tierlists) {
+            if (!list.content) continue
+            const idsInList = new Set()
+            Object.values(list.content).forEach(tierItems => {
+                if (Array.isArray(tierItems)) {
+                    tierItems.forEach(item => {
+                        if (item.id && !seenIds.has(item.id) && item.id !== mediaId) {
+                            idsInList.add(item.id)
+                        }
+                    })
+                }
+            })
+            idsInList.forEach(id => {
+                workCounts[id] = (workCounts[id] || 0) + 1
+            })
+        }
+
+        const sortedIds = Object.entries(workCounts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, limit)
+            .map(([id]) => parseInt(id))
+
+        if (sortedIds.length === 0) return []
+
+        const table = mediaType === 'game' ? 'games' : 'anime'
+        const nameColumn = mediaType === 'game' ? 'name' : 'title'
+        const imageColumn = mediaType === 'game' ? 'cover_url' : 'image_url'
+
+        const { data: works } = await supabase
+            .from(table)
+            .select(`id, ${nameColumn}, ${imageColumn}, genres, rating`)
+            .in('id', sortedIds)
+
+        const maxCount = Math.max(...Object.values(workCounts), 1)
+        return (works || []).map(work => ({
+            id: work.id,
+            name: work[nameColumn],
+            title: work[nameColumn],
+            cover_url: work[imageColumn],
+            image_url: work[imageColumn],
+            genres: work.genres || [],
+            rating: work.rating,
+            media_type: mediaType,
+            affinity: Math.round((workCounts[work.id] / maxCount) * 100),
+        }))
+    } catch (error) {
+        console.error('getSimilarFromTierlists error:', error)
         return []
     }
 }

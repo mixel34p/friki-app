@@ -899,11 +899,11 @@ export default function SpaceLayout() {
         <GlobalSearchModal 
           isOpen={searchModalOpen} 
           onClose={() => setSearchModalOpen(false)} 
-          onSelect={(work) => {
-            if (!settingsSpace.related_works) {
-              setSettingsSpace({ ...settingsSpace, related_works: [work] });
-            } else if (!settingsSpace.related_works.some(w => w.id === work.id)) {
-              setSettingsSpace({ ...settingsSpace, related_works: [...settingsSpace.related_works, work] });
+          onSelect={(works) => {
+            const current = settingsSpace.related_works || [];
+            const newWorks = works.filter(w => !current.some(existing => existing.id === w.id));
+            if (newWorks.length > 0) {
+              setSettingsSpace({ ...settingsSpace, related_works: [...current, ...newWorks] });
             }
           }}
         />
