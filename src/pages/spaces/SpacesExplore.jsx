@@ -90,9 +90,18 @@ export default function SpacesExplore() {
   };
 
   // ── Step 1: Create Space ──
+  // ── Step 1: Info ──
   const handleStep1Submit = async (e) => {
     e.preventDefault();
     if (!user) return alert('Debes iniciar sesión para crear un espacio.');
+    if (!newSpace.name.trim()) return alert('El nombre es obligatorio.');
+    
+    setStep(2);
+  };
+
+  // ── Step 2: Works ──
+  const handleStep2Submit = async (e) => {
+    e.preventDefault();
     if (!newSpace.related_works || newSpace.related_works.length === 0) {
       return alert('Debes asociar al menos 1 obra (juego, anime o manga) a tu comunidad.');
     }
@@ -115,16 +124,16 @@ export default function SpacesExplore() {
       
       setCreatedSpaceId(space.id);
       loadSpaces();
-      setStep(2);
+      setStep(3);
     } catch (error) {
-      console.error('Error in step 1:', error);
+      console.error('Error in step 2:', error);
       alert(`Error: ${error.message || JSON.stringify(error)}`);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // ── Step 2: Extra Channels ──
+  // ── Step 3: Extra Channels ──
   const handleAddChannelField = () => {
     setExtraChannels([...extraChannels, { name: '', type: 'chat' }]);
   };
@@ -141,11 +150,10 @@ export default function SpacesExplore() {
     setExtraChannels(updated);
   };
 
-  const handleStep2Submit = async (e) => {
+  const handleStep3Submit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      // Filtrar canales vacíos
       const validChannels = extraChannels.filter(c => c.name.trim() !== '');
       for (const ch of validChannels) {
         await createSpaceChannel({ space_id: createdSpaceId, name: ch.name.trim(), type: ch.type });
@@ -377,45 +385,12 @@ export default function SpacesExplore() {
                     </div>
                   </div>
 
-                  <div className="input-group">
-                    <label className="input-label">Obras relacionadas (Mínimo 1)</label>
-                    <div className="related-works-container" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
-                      {newSpace.related_works.map((work, idx) => (
-                        <div key={idx} style={{ 
-                          display: 'flex', alignItems: 'center', gap: '6px', 
-                          background: 'var(--bg-tertiary)', padding: '4px 8px', 
-                          borderRadius: '16px', border: '1px solid var(--border-default)',
-                          fontSize: '0.85rem'
-                        }}>
-                          {work.image && <img src={work.image} alt="" style={{ width: '20px', height: '20px', borderRadius: '4px', objectFit: 'cover' }} />}
-                          <span>{work.title}</span>
-                          <button type="button" onClick={() => setNewSpace({...newSpace, related_works: newSpace.related_works.filter((_, i) => i !== idx)})} style={{ background: 'none', border: 'none', color: 'var(--error)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                          </button>
-                        </div>
-                      ))}
-                      <button 
-                        type="button" 
-                        onClick={() => setSearchModalOpen(true)}
-                        style={{ 
-                          display: 'flex', alignItems: 'center', gap: '4px', 
-                          background: 'var(--brand-primary)', color: '#000', 
-                          padding: '4px 12px', borderRadius: '16px', 
-                          border: 'none', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 'bold'
-                        }}
-                      >
-                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                        Añadir Obra
-                      </button>
-                    </div>
-                  </div>
-                  
                   <div className="modal-actions">
                     <button type="button" className="btn-secondary" onClick={resetModal} disabled={isSubmitting}>
                       Cancelar
                     </button>
                     <button type="submit" className="btn-primary" disabled={isSubmitting}>
-                      {isSubmitting ? 'Creando...' : 'Siguiente Paso'}
+                      Siguiente Paso
                     </button>
                   </div>
                 </form>
@@ -424,12 +399,53 @@ export default function SpacesExplore() {
 
             {step === 2 && (
               <>
+                <h2>Obras Relacionadas</h2>
+                <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+                  Añade al menos una obra (juego, anime, manga) sobre la que trate tu comunidad. Esto ayudará a otros usuarios a encontrarla.
+                </p>
+                <form onSubmit={handleStep2Submit}>
+                  <div className="ep-favorites-grid" style={{ marginBottom: '1.5rem' }}>
+                    {newSpace.related_works.map((work, idx) => (
+                      <div key={idx} className="ep-favorite-item">
+                          <img src={work.image} alt={work.title} />
+                          <div 
+                              className="ep-favorite-item-overlay" 
+                              onClick={() => setNewSpace({...newSpace, related_works: newSpace.related_works.filter((_, i) => i !== idx)})}
+                              style={{ cursor: 'pointer' }}
+                          >
+                              <span style={{color: 'var(--error)', fontSize: '0.8rem', fontWeight: 'bold', textAlign: 'center'}}>Eliminar</span>
+                          </div>
+                      </div>
+                    ))}
+                    <button 
+                        type="button" 
+                        className="ep-empty-slot"
+                        onClick={() => setSearchModalOpen(true)}
+                    >
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    </button>
+                  </div>
+
+                  <div className="modal-actions">
+                    <button type="button" className="btn-secondary" onClick={() => setStep(1)} disabled={isSubmitting}>
+                      Atrás
+                    </button>
+                    <button type="submit" className="btn-primary" disabled={isSubmitting}>
+                      {isSubmitting ? 'Creando...' : 'Crear Comunidad'}
+                    </button>
+                  </div>
+                </form>
+              </>
+            )}
+
+            {step === 3 && (
+              <>
                 <h2>Añadir Canales</h2>
                 <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
                     ¡Espacio creado! Hemos generado un canal <strong># General</strong> y un <strong>Foro de Debates</strong> por defecto. ¿Quieres añadir más canales de chat?
                 </p>
                 
-                <form onSubmit={handleStep2Submit}>
+                <form onSubmit={handleStep3Submit}>
                   
                   <div className="channels-list" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1rem' }}>
                     {extraChannels.map((ch, index) => (
