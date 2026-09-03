@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { useParams, useOutletContext } from 'react-router-dom';
+import { useParams, useOutletContext, useNavigate } from 'react-router-dom';
 import { getChannelMessages, sendMessage, updateMessage, toggleReaction } from '../../lib/spaceService';
 import { uploadChatImage } from '../../lib/socialDiscoveryService';
 import { supabase } from '../../lib/supabase';
@@ -98,6 +98,14 @@ export default function LiveChat() {
     const [zoomedImage, setZoomedImage] = useState(null);
     const [lightboxZoom, setLightboxZoom] = useState(false);
     const [isClosingLightbox, setIsClosingLightbox] = useState(false);
+    const [longPressedMsg, setLongPressedMsg] = useState(null);
+    const touchTimerRef = useRef(null);
+    const [emojiSheetHeight, setEmojiSheetHeightState] = useState(220);
+    const emojiSheetHeightRef = useRef(220); // always in sync for non-passive listeners
+    const setEmojiSheetHeight = (h) => { emojiSheetHeightRef.current = h; setEmojiSheetHeightState(h); };
+    const emojiDragStartY = useRef(null);
+    const emojiDragStartHeight = useRef(null);
+    const emojiHandleRef = useRef(null);
     const [savedRange, setSavedRange] = useState(null);
 
     const [globalEmojisMap, setGlobalEmojisMap] = useState({});
@@ -113,6 +121,42 @@ export default function LiveChat() {
         };
         loadEmojis();
     }, []);
+
+    // Non-passive touch listeners for emoji drag handle (React passive by default, prevents preventDefault)
+    useEffect(() => {
+        const el = emojiHandleRef.current;
+        if (!el || !isEmojiPickerOpen) return;
+
+        const onStart = (e) => {
+            emojiDragStartY.current = e.touches[0].clientY;
+            emojiDragStartHeight.current = emojiSheetHeightRef.current;
+        };
+        const onMove = (e) => {
+            e.preventDefault(); // stops browser scroll
+            if (emojiDragStartY.current === null) return;
+            const delta = emojiDragStartY.current - e.touches[0].clientY;
+            const newH = Math.max(180, Math.min(window.innerHeight * 0.82, emojiDragStartHeight.current + delta));
+            setEmojiSheetHeight(newH);
+        };
+        const onEnd = () => {
+            emojiDragStartY.current = null;
+            const mid = window.innerHeight * 0.38;
+            setEmojiSheetHeight(
+                emojiSheetHeightRef.current > mid
+                    ? Math.round(window.innerHeight * 0.70)
+                    : 220
+            );
+        };
+
+        el.addEventListener('touchstart', onStart, { passive: true });
+        el.addEventListener('touchmove', onMove, { passive: false }); // must be non-passive
+        el.addEventListener('touchend', onEnd, { passive: true });
+        return () => {
+            el.removeEventListener('touchstart', onStart);
+            el.removeEventListener('touchmove', onMove);
+            el.removeEventListener('touchend', onEnd);
+        };
+    }, [isEmojiPickerOpen]);
 
     const [quickReactions, setQuickReactions] = useState(['🔥', '❤️', '👍']);
 
@@ -792,9 +836,63 @@ export default function LiveChat() {
         }
     };
 
+    const navigate = useNavigate();
+
+    const handleTouchStart = (msg, e) => {
+        if (window.innerWidth > 768) return; // Only mobile
+        touchTimerRef.current = setTimeout(() => {
+            setLongPressedMsg(msg);
+            touchTimerRef.current = null;
+            // Optionally provide haptic feedback if supported
+            if (navigator.vibrate) navigator.vibrate(50);
+        }, 500); // 500ms long press
+    };
+
+    const handleTouchEnd = () => {
+        if (touchTimerRef.current) {
+            clearTimeout(touchTimerRef.current);
+            touchTimerRef.current = null;
+        }
+    };
+    
+    const handleTouchMove = () => {
+        if (touchTimerRef.current) {
+            clearTimeout(touchTimerRef.current);
+            touchTimerRef.current = null;
+        }
+    };
+
+    const isMobile = () => window.innerWidth <= 768;
+
+    const handleEmojiHandleTouchStart = (e) => {
+        emojiDragStartY.current = e.touches[0].clientY;
+        emojiDragStartHeight.current = emojiSheetHeight;
+    };
+
+    const handleEmojiHandleTouchMove = (e) => {
+        if (emojiDragStartY.current === null) return;
+        const delta = emojiDragStartY.current - e.touches[0].clientY; // positive = drag up
+        const newHeight = Math.max(180, Math.min(window.innerHeight * 0.80, emojiDragStartHeight.current + delta));
+        setEmojiSheetHeight(newHeight);
+    };
+
+    const handleEmojiHandleTouchEnd = () => {
+        emojiDragStartY.current = null;
+        // Snap: if past 40% of screen → expand fully, else compact
+        const mid = window.innerHeight * 0.38;
+        if (emojiSheetHeight > mid) {
+            setEmojiSheetHeight(Math.round(window.innerHeight * 0.70));
+        } else {
+            setEmojiSheetHeight(220);
+        }
+    };
+
     return (
         <div className="live-chat-container">
             <div className="chat-top-bar">
+                <button className="chat-mobile-back" onClick={() => navigate(`/spaces/${space.id}`)} title="Volver a canales">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                </button>
                 <svg className="chat-top-icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
                 <span className="chat-top-title">{channel?.name || 'general'}</span>
             </div>
@@ -849,7 +947,13 @@ export default function LiveChat() {
                                         <span className="chat-date-separator-text">{msg.dateSeparatorText}</span>
                                     </div>
                                 )}
-                                <div id={`msg-${msg.id}`} className={`chat-message-row ${msg.isConsecutive ? 'consecutive' : ''} ${msg.hasReply ? 'has-reply' : ''} ${isReplyToMe ? 'mentioned' : ''}`}>
+                                <div 
+                                    id={`msg-${msg.id}`} 
+                                    className={`chat-message-row ${msg.isConsecutive ? 'consecutive' : ''} ${msg.hasReply ? 'has-reply' : ''} ${isReplyToMe ? 'mentioned' : ''}`}
+                                    onTouchStart={(e) => handleTouchStart(msg, e)}
+                                    onTouchMove={handleTouchMove}
+                                    onTouchEnd={handleTouchEnd}
+                                >
                                     {msg.hasReply && (
                                         <div className="chat-reply-banner" onClick={() => scrollToMessage(msg.reply_to_id)}>
                                             {replyMsg ? (
@@ -1197,78 +1301,51 @@ export default function LiveChat() {
                         <div style={{ position: 'relative' }}>
                             <button type="button" className="chat-emoji-btn" title="Añadir emoji" onClick={() => {
                                 setHasOpenedMainPicker(true);
+                                if (isMobile()) {
+                                    setEmojiSheetHeight(220); // reset to compact on open
+                                }
                                 setIsEmojiPickerOpen(prev => !prev);
                                 setReactionPickerMsgId(null);
                             }}>
                                 <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
                             </button>
-                            {hasOpenedMainPicker && createPortal(
+                            {/* Desktop: render in portal */}
+                            {hasOpenedMainPicker && !isMobile() && createPortal(
                                 <EmojiPicker 
                                     style={{ display: isEmojiPickerOpen ? 'flex' : 'none' }}
                                     isOpen={isEmojiPickerOpen}
                                     onSelectGif={async (url) => {
                                         setIsEmojiPickerOpen(false);
                                         if (!channel?.id || !user) return;
-                                        
                                         const gifContent = `![image](${url})`;
                                         const tempId = 'temp-' + Date.now();
                                         const optimisticMsg = {
-                                            id: tempId,
-                                            user_id: user.id,
-                                            user: profile || user,
-                                            content: gifContent,
-                                            created_at: new Date().toISOString(),
-                                            _optimistic: true
+                                            id: tempId, user_id: user.id, user: profile || user,
+                                            content: gifContent, created_at: new Date().toISOString(), _optimistic: true
                                         };
-                                        
                                         setMessages(prev => [...prev, optimisticMsg]);
-                                        setTimeout(() => {
-                                            endRef.current?.scrollIntoView({ behavior: 'smooth' });
-                                        }, 50);
-
+                                        setTimeout(() => { scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' }); }, 50);
                                         try {
-                                            const newMsg = await sendMessage(channel.id, user.id, gifContent);
-                                            setMessages(prev => prev.map(m => m.id === tempId ? newMsg : m));
-                                        } catch (e) {
-                                            console.error("Error sending gif", e);
-                                            setMessages(prev => prev.filter(m => m.id !== tempId));
-                                        }
+                                            const { data: insertedMsg } = await supabase.from('space_messages').insert({ space_id: space?.id, channel_id: channel.id, user_id: user.id, content: gifContent }).select('*, user:profiles(id,username,avatar_url,role)').single();
+                                            if (insertedMsg) { setMessages(prev => prev.map(m => m.id === tempId ? insertedMsg : m)); }
+                                        } catch (e) { setMessages(prev => prev.filter(m => m.id !== tempId)); }
                                     }}
                                     onSelect={(emoji) => {
-                                        if (textareaRef.current) {
-                                            textareaRef.current.focus();
-                                            if (savedRange) {
-                                                const sel = window.getSelection();
-                                                sel.removeAllRanges();
-                                                sel.addRange(savedRange);
-                                            }
-                                        }
-
-                                        // Is it a custom emoji?
-                                        if (emoji.startsWith(':') && emoji.endsWith(':')) {
-                                            const emojiName = emoji.slice(1, -1);
-                                            const emojiUrl = globalEmojisMap[emojiName];
-                                            if (emojiUrl && textareaRef.current) {
-                                                document.execCommand('insertHTML', false, `<img src="${emojiUrl}" alt="${emoji}" class="inline-emoji" style="width: 22px; height: 22px; object-fit: contain; vertical-align: middle; margin: -3px 2px 0 2px; display: inline-block;" />&nbsp;`);
-                                            } else if (textareaRef.current) {
-                                                document.execCommand('insertText', false, emoji);
-                                            } else {
-                                                setText(prev => prev + emoji);
-                                            }
+                                        const isCustom = emoji.startsWith(':') && emoji.endsWith(':');
+                                        if (isCustom) {
+                                            const name = emoji.slice(1, -1);
+                                            const url = globalEmojisMap[name];
+                                            if (url && textareaRef.current) {
+                                                document.execCommand('insertHTML', false, `<img src="${url}" alt="${emoji}" class="inline-emoji twemoji-input" style="width: 22px; height: 22px; object-fit: contain; vertical-align: middle; margin: -3px 2px 0 2px; display: inline-block;" />&nbsp;`);
+                                            } else if (textareaRef.current) { document.execCommand('insertText', false, emoji); }
+                                            else { setText(prev => prev + emoji); }
                                         } else {
-                                            // Standard Emoji
                                             const code = toCodePoint(emoji);
                                             const twemojiUrl = `https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/svg/${code}.svg`;
-                                            if (textareaRef.current) {
-                                                document.execCommand('insertHTML', false, `<img src="${twemojiUrl}" alt="${emoji}" class="inline-emoji twemoji-input" style="width: 22px; height: 22px; object-fit: contain; vertical-align: middle; margin: -3px 2px 0 2px; display: inline-block;" />&nbsp;`);
-                                            } else {
-                                                setText(prev => prev + emoji);
-                                            }
+                                            if (textareaRef.current) { document.execCommand('insertHTML', false, `<img src="${twemojiUrl}" alt="${emoji}" class="inline-emoji twemoji-input" style="width: 22px; height: 22px; object-fit: contain; vertical-align: middle; margin: -3px 2px 0 2px; display: inline-block;" />&nbsp;`); }
+                                            else { setText(prev => prev + emoji); }
                                         }
-                                        
-                                        if (textareaRef.current) {
-                                            setText(htmlToText(textareaRef.current.innerHTML));
-                                        }
+                                        if (textareaRef.current) { setText(htmlToText(textareaRef.current.innerHTML)); }
                                         setIsEmojiPickerOpen(false);
                                         updateQuickReactions();
                                     }} 
@@ -1281,6 +1358,58 @@ export default function LiveChat() {
                     <button type="submit" style={{ display: 'none' }}>Send</button>
                 </form>
             </div>
+
+            {/* Mobile: inline emoji bottom sheet that pushes chat up */}
+            {isEmojiPickerOpen && isMobile() && (
+                <div
+                    className="mobile-emoji-sheet"
+                    style={{ height: emojiSheetHeight }}
+                >
+                    <div
+                        ref={emojiHandleRef}
+                        className="mobile-emoji-sheet-handle-area"
+                    >
+                        <div className="mobile-emoji-sheet-grip" />
+                    </div>
+                    {hasOpenedMainPicker && (
+                        <EmojiPicker
+                            isOpen={isEmojiPickerOpen}
+                            onSelectGif={async (url) => {
+                                setIsEmojiPickerOpen(false);
+                                if (!channel?.id || !user) return;
+                                const gifContent = `![image](${url})`;
+                                const tempId = 'temp-' + Date.now();
+                                const optimisticMsg = { id: tempId, user_id: user.id, user: profile || user, content: gifContent, created_at: new Date().toISOString(), _optimistic: true };
+                                setMessages(prev => [...prev, optimisticMsg]);
+                                setTimeout(() => { scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' }); }, 50);
+                                try {
+                                    const { data: insertedMsg } = await supabase.from('space_messages').insert({ space_id: space?.id, channel_id: channel.id, user_id: user.id, content: gifContent }).select('*, user:profiles(id,username,avatar_url,role)').single();
+                                    if (insertedMsg) { setMessages(prev => prev.map(m => m.id === tempId ? insertedMsg : m)); }
+                                } catch (e) { setMessages(prev => prev.filter(m => m.id !== tempId)); }
+                            }}
+                            onSelect={(emoji) => {
+                                const isCustom = emoji.startsWith(':') && emoji.endsWith(':');
+                                if (isCustom) {
+                                    const name = emoji.slice(1, -1);
+                                    const url = globalEmojisMap[name];
+                                    if (url && textareaRef.current) { document.execCommand('insertHTML', false, `<img src="${url}" alt="${emoji}" class="inline-emoji twemoji-input" style="width: 22px; height: 22px; object-fit: contain; vertical-align: middle; margin: -3px 2px 0 2px; display: inline-block;" />&nbsp;`); }
+                                    else if (textareaRef.current) { document.execCommand('insertText', false, emoji); }
+                                    else { setText(prev => prev + emoji); }
+                                } else {
+                                    const code = toCodePoint(emoji);
+                                    const twemojiUrl = `https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/svg/${code}.svg`;
+                                    if (textareaRef.current) { document.execCommand('insertHTML', false, `<img src="${twemojiUrl}" alt="${emoji}" class="inline-emoji twemoji-input" style="width: 22px; height: 22px; object-fit: contain; vertical-align: middle; margin: -3px 2px 0 2px; display: inline-block;" />&nbsp;`); }
+                                    else { setText(prev => prev + emoji); }
+                                }
+                                if (textareaRef.current) { setText(htmlToText(textareaRef.current.innerHTML)); }
+                                setIsEmojiPickerOpen(false);
+                                updateQuickReactions();
+                            }}
+                            onClose={() => setIsEmojiPickerOpen(false)}
+                        />
+                    )}
+                </div>
+            )}
 
             {zoomedImage && (
                 <div className={`lightbox-overlay ${isClosingLightbox ? 'closing' : ''}`} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'default', overflow: lightboxZoom ? 'auto' : 'hidden' }} onClick={closeLightbox}>
@@ -1378,6 +1507,49 @@ export default function LiveChat() {
                     }} 
                     onClose={() => setReactionPickerMsgId(null)} 
                 />,
+                document.body
+            )}
+
+            {/* Mobile Context Menu for Long Press */}
+            {longPressedMsg && createPortal(
+                <div className="mobile-context-overlay" onClick={() => setLongPressedMsg(null)}>
+                    <div className="mobile-context-sheet" onClick={(e) => e.stopPropagation()}>
+                        <div className="mobile-context-header">
+                            <div className="mobile-context-handle" />
+                            <h3>Opciones</h3>
+                        </div>
+                        <div className="mobile-context-actions">
+                            <button className="mobile-context-btn" onClick={(e) => { setReactionPickerMsgId(longPressedMsg.id); setHasOpenedReactionPicker(true); setReactionPickerStyle({}); setLongPressedMsg(null); }}>
+                                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+                                Añadir reacción
+                            </button>
+                            <button className="mobile-context-btn" onClick={() => { startReplying(longPressedMsg); setLongPressedMsg(null); }}>
+                                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
+                                Responder
+                            </button>
+                            <button className="mobile-context-btn" onClick={() => { handleTranslate(longPressedMsg.id, longPressedMsg.content); setLongPressedMsg(null); }}>
+                                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg>
+                                Traducir
+                            </button>
+                            {longPressedMsg.user_id === user?.id && (
+                                <button className="mobile-context-btn" onClick={() => { startEditing(longPressedMsg); setLongPressedMsg(null); }}>
+                                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                    Editar
+                                </button>
+                            )}
+                            <button className="mobile-context-btn" onClick={() => { navigator.clipboard.writeText(longPressedMsg.id); setLongPressedMsg(null); }}>
+                                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                                Copiar ID
+                            </button>
+                            {(longPressedMsg.user_id === user?.id || profile?.role === 'admin' || profile?.role === 'mod' || profile?.role === 'owner') && (
+                                <button className="mobile-context-btn danger" onClick={() => { handleDeleteMessage(longPressedMsg.id); setLongPressedMsg(null); }}>
+                                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                                    Eliminar
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>,
                 document.body
             )}
 

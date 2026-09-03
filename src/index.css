@@ -572,9 +572,19 @@ button { font-family: var(--font-sans); }
   .nav-link { padding: var(--space-sm); font-size: var(--text-xs); }
   .modal { max-height: 95vh; }
   
-  /* Mobile Profile Header Hide */
-  body.hide-main-header-on-mobile .header { display: none !important; }
-  body.hide-main-header-on-mobile .main { margin-top: 0 !important; padding-top: 0 !important; }
+  /* Space view: always hide top header on mobile */
+  body.space-no-header .header { display: none !important; }
+  body.space-no-header .main { margin-top: 0 !important; padding-top: 0 !important; }
+  body.space-no-header .space-layout { height: 100dvh; }
+
+  /* Chat view: also hide bottom nav and fill full screen */
+  body.hide-main-header-on-mobile .main { 
+    padding-bottom: 0 !important;
+    height: 100dvh !important;
+    overflow: hidden !important;
+  }
+  body.hide-main-header-on-mobile .bottom-nav { display: none !important; }
+  body.hide-main-header-on-mobile .layout { padding-bottom: 0 !important; }
 }
 @media (max-width: 480px) {
   .container { padding: 0 var(--space-sm); }

@@ -528,7 +528,7 @@ export default function WorkPage({ mediaType }) {
                     <h3 className="work-section-title" style={{ marginBottom: '1.5rem', borderBottom: '1px solid var(--border-default)', paddingBottom: '0.5rem' }}>
                         ESPACIOS RELACIONADOS
                     </h3>
-                    <div className="spaces-list" style={{ maxWidth: '100%', margin: '0' }}>
+                    <div className="spaces-list work-page-spaces" style={{ maxWidth: '100%', margin: '0' }}>
                         {relatedSpaces.map(space => (
                             <div key={space.id} className="space-card-list-item">
                                 <div className="space-card-avatar">

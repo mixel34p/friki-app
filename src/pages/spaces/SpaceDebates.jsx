@@ -43,7 +43,12 @@ export default function SpaceDebates() {
     return (
         <div className="space-debates-container">
             <div className="debates-header">
-                <h2>Debates</h2>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <button className="chat-mobile-back" onClick={() => navigate(`/spaces/${id}`)} title="Volver a canales">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                    </button>
+                    <h2>Debates</h2>
+                </div>
                 <button className="create-debate-btn" onClick={() => setShowModal(true)}>Create Thread</button>
             </div>
             

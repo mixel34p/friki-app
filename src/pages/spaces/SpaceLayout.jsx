@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, useParams, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { getSpaceChannels, createSpaceChannel, getSpaceById, updateSpaceChannel, deleteSpaceChannel, leaveSpace, updateSpace, checkMembership, joinSpace, getSpaceEmojis, createCustomEmoji, deleteCustomEmoji, updateCustomEmoji } from '../../lib/spaceService';
+import { getSpaceChannels, createSpaceChannel, getSpaceById, updateSpaceChannel, deleteSpaceChannel, leaveSpace, updateSpace, deleteSpace, checkMembership, joinSpace, getSpaceEmojis, createCustomEmoji, deleteCustomEmoji, updateCustomEmoji } from '../../lib/spaceService';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 import GlobalSearchModal from '../../components/GlobalSearchModal';
@@ -45,6 +45,43 @@ export default function SpaceLayout() {
   const [editingEmojiId, setEditingEmojiId] = useState(null);
   const [editingEmojiName, setEditingEmojiName] = useState('');
   const [showAddEmojiModal, setShowAddEmojiModal] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteConfirmName, setDeleteConfirmName] = useState('');
+  const [isDeletingSpace, setIsDeletingSpace] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+
+  // Swipe logic state (must be at top level)
+  const isChannelView = location.pathname.includes('/chat/') || location.pathname.includes('/debates');
+  const [lastActiveChannelPath, setLastActiveChannelPath] = useState(null);
+  const [touchStart, setTouchStart] = useState({ x: null, y: null });
+  const [touchEnd, setTouchEnd] = useState({ x: null, y: null });
+
+  useEffect(() => {
+    if (isChannelView) {
+      setLastActiveChannelPath(location.pathname);
+    }
+  }, [location.pathname, isChannelView]);
+
+  // Always hide the top header in spaces on mobile
+  useEffect(() => {
+    document.body.classList.add('space-no-header');
+    return () => {
+      document.body.classList.remove('space-no-header');
+    };
+  }, []);
+
+  // Hide bottom nav only when inside a chat channel
+  useEffect(() => {
+    if (isChannelView) {
+      document.body.classList.add('hide-main-header-on-mobile');
+    } else {
+      document.body.classList.remove('hide-main-header-on-mobile');
+    }
+    return () => {
+      document.body.classList.remove('hide-main-header-on-mobile');
+    };
+  }, [isChannelView]);
+
   
   useEffect(() => {
       if (activeSettingsSection === 'emojis') {
@@ -122,6 +159,23 @@ export default function SpaceLayout() {
   };
 
   
+  const handleDeleteSpace = async () => {
+    if (deleteConfirmName !== space?.name) return;
+    setIsDeletingSpace(true);
+    setDeleteError('');
+    try {
+      await deleteSpace(spaceId);
+      setIsDeleteModalOpen(false);
+      setIsSettingsModalOpen(false);
+      navigate('/spaces/explore');
+    } catch (err) {
+      console.error('Error deleting space:', err);
+      setDeleteError(`Error al eliminar: ${err.message || err.details || JSON.stringify(err)}`);
+    } finally {
+      setIsDeletingSpace(false);
+    }
+  };
+
   const isAdmin = space && user && space.owner_id === user.id;
 
   const SETTINGS_TABS = [
@@ -171,15 +225,17 @@ export default function SpaceLayout() {
       });
       setChannels(channelsData);
       
-      // Auto-redirect to the first text channel if on the root space URL
+      // Auto-redirect to the first text channel if on the root space URL and not on mobile
       if (location.pathname === `/spaces/${spaceId}`) {
-        const safeChan = Array.isArray(channelsData) ? channelsData : [];
-        const textChans = safeChan.filter(c => c.type !== 'foro' && c.type !== 'forum' && c.type !== 'debates');
-        
-        if (textChans.length > 0) {
-            navigate(`/spaces/${spaceId}/chat/${textChans[0].id}`, { replace: true });
-        } else {
-            navigate(`/spaces/${spaceId}/debates`, { replace: true });
+        if (window.innerWidth > 768) {
+          const safeChan = Array.isArray(channelsData) ? channelsData : [];
+          const textChans = safeChan.filter(c => c.type !== 'foro' && c.type !== 'forum' && c.type !== 'debates');
+          
+          if (textChans.length > 0) {
+              navigate(`/spaces/${spaceId}/chat/${textChans[0].id}`, { replace: true });
+          } else {
+              navigate(`/spaces/${spaceId}/debates`, { replace: true });
+          }
         }
       }
     } catch (error) {
@@ -396,8 +452,54 @@ export default function SpaceLayout() {
     );
   }
 
+  const minSwipeDistance = 50;
+
+  const handleTouchStart = (e) => {
+    setTouchEnd({ x: null, y: null });
+    setTouchStart({
+      x: e.targetTouches[0].clientX,
+      y: e.targetTouches[0].clientY
+    });
+  };
+
+  const handleTouchMove = (e) => {
+    setTouchEnd({
+      x: e.targetTouches[0].clientX,
+      y: e.targetTouches[0].clientY
+    });
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart.x || !touchEnd.x) return;
+    
+    const distanceX = touchStart.x - touchEnd.x;
+    const distanceY = touchStart.y - touchEnd.y;
+    const isHorizontalSwipe = Math.abs(distanceX) > Math.abs(distanceY);
+    
+    if (isHorizontalSwipe) {
+      const isLeftSwipe = distanceX > minSwipeDistance;
+      const isRightSwipe = distanceX < -minSwipeDistance;
+      
+      // Swipe Right in chat -> Go to channels
+      if (isChannelView && isRightSwipe) {
+        navigate(`/spaces/${spaceId}`);
+      }
+      
+      // Swipe Left in channels -> Go to last chat
+      if (!isChannelView && isLeftSwipe && lastActiveChannelPath) {
+        navigate(lastActiveChannelPath);
+      }
+    }
+  };
+
   return (
-    <div className="space-layout" style={customStyles}>
+    <div 
+      className={`space-layout ${isChannelView ? 'is-channel-view' : ''}`} 
+      style={customStyles}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
       <div className="space-sidebar">
         <div className={`space-header-container ${space?.banner_url ? 'has-banner' : ''}`}>
           {space?.banner_url && (
@@ -808,18 +910,31 @@ export default function SpaceLayout() {
                         
                         {activeSettingsSection === 'danger' && (
                             <>
-                                <div className="ep-field" style={{ padding: '20px', background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: 'var(--radius-lg)' }}>
-                                    <h3 style={{ color: '#ef4444', margin: '0 0 8px 0', fontSize: '1rem' }}>Eliminar servidor</h3>
-                                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '20px', marginTop: 0 }}>
-                                        Si eliminas este espacio, no podrás recuperarlo. Todos los canales, debates y mensajes se perderán de forma permanente.
+                                <div className="danger-zone-block">
+                                    <div className="danger-zone-header">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                                        <h3>Zona de peligro</h3>
+                                    </div>
+                                    <p className="danger-zone-desc">
+                                        Las acciones de esta sección son <strong>permanentes e irreversibles</strong>. Todos los canales, mensajes y debates de esta comunidad se eliminarán para siempre.
                                     </p>
-                                    <button type="button" className="btn btn-primary" style={{ backgroundColor: '#ef4444', color: 'white', border: 'none', width: 'auto' }} onClick={() => {
-                                        if (window.confirm('¿Estás SEGURO de que quieres borrar este espacio para siempre?')) {
-                                            alert('Funcionalidad de borrar espacio aún no implementada.');
-                                        }
-                                    }}>
-                                        Eliminar espacio
-                                    </button>
+                                    <div className="danger-zone-action">
+                                        <div>
+                                            <p className="danger-action-title">Eliminar esta comunidad</p>
+                                            <p className="danger-action-desc">Se eliminarán todos los canales, mensajes y debates de forma permanente.</p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            className="btn-delete-space"
+                                            onClick={() => {
+                                                setDeleteConfirmName('');
+                                                setDeleteError('');
+                                                setIsDeleteModalOpen(true);
+                                            }}
+                                        >
+                                            Eliminar comunidad
+                                        </button>
+                                    </div>
                                 </div>
                             </>
                         )}
@@ -835,6 +950,69 @@ export default function SpaceLayout() {
             </div>
         </div>
       )}
+
+      {/* Modal confirmación borrar espacio */}
+      {isDeleteModalOpen && (
+        <div className="delete-space-overlay" onClick={() => !isDeletingSpace && setIsDeleteModalOpen(false)}>
+          <div className="delete-space-modal" onClick={e => e.stopPropagation()}>
+            <div className="delete-space-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+            </div>
+
+            <h2 className="delete-space-title">Eliminar '{space?.name}'</h2>
+            <p className="delete-space-warning">
+              Esta acción <strong>no se puede deshacer</strong>. Se eliminarán permanentemente todos los canales, mensajes y debates de esta comunidad.
+            </p>
+
+            <div className="delete-space-confirm-field">
+              <label>
+                Escribe <strong className="delete-space-name-hint">{space?.name}</strong> para confirmar:
+              </label>
+              <input
+                type="text"
+                className={`delete-space-input ${deleteConfirmName && deleteConfirmName !== space?.name ? 'error' : ''}`}
+                placeholder={space?.name}
+                value={deleteConfirmName}
+                onChange={e => setDeleteConfirmName(e.target.value)}
+                autoFocus
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && deleteConfirmName === space?.name) handleDeleteSpace();
+                }}
+              />
+            </div>
+
+            {deleteError && (
+              <p className="delete-space-error">{deleteError}</p>
+            )}
+
+            <div className="delete-space-actions">
+              <button
+                type="button"
+                className="btn-cancel-delete"
+                onClick={() => setIsDeleteModalOpen(false)}
+                disabled={isDeletingSpace}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="btn-confirm-delete"
+                onClick={handleDeleteSpace}
+                disabled={deleteConfirmName !== space?.name || isDeletingSpace}
+              >
+                {isDeletingSpace ? (
+                  <>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'spin 1s linear infinite' }}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                    Eliminando...
+                  </>
+                ) : 'Eliminar comunidad'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
 
       {isCreatingChannel && (
         <div className="modal-overlay" onClick={() => setIsCreatingChannel(false)}>

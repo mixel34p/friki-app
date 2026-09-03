@@ -30,12 +30,14 @@ export default function SpacesExplore() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [fetchError, setFetchError] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     loadSpaces();
   }, []);
 
   const loadSpaces = async () => {
+    setIsLoading(true);
     try {
       const data = await getSpaces();
       setSpaces(data);
@@ -43,6 +45,8 @@ export default function SpacesExplore() {
     } catch (error) {
       console.error('Error loading spaces:', error);
       setFetchError(error.message || JSON.stringify(error));
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -169,10 +173,34 @@ export default function SpacesExplore() {
   };
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState('recent'); // 'recent' | 'popular'
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
 
-  const filteredSpaces = spaces.filter(s => 
-    s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    (s.description && s.description.toLowerCase().includes(searchTerm.toLowerCase()))
+  // Reset to page 1 whenever search or sort changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, sortBy]);
+
+  const filteredSpaces = spaces
+    .filter(s =>
+      s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (s.description && s.description.toLowerCase().includes(searchTerm.toLowerCase()))
+    )
+    .sort((a, b) => {
+      if (sortBy === 'popular') {
+        const aCount = a.space_members?.[0]?.count || 0;
+        const bCount = b.space_members?.[0]?.count || 0;
+        return bCount - aCount;
+      }
+      // 'recent': sort by created_at desc (already comes from DB ordered, but enforce client-side too)
+      return new Date(b.created_at) - new Date(a.created_at);
+    });
+
+  const totalPages = Math.ceil(filteredSpaces.length / ITEMS_PER_PAGE);
+  const pagedSpaces = filteredSpaces.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
   );
 
   // Portadas estáticas para el mosaico del fondo (estilo Landing)
@@ -207,36 +235,61 @@ export default function SpacesExplore() {
         <div className="spaces-hero-content">
           <h1>Descubre Comunidades</h1>
           <p>Únete a espacios creados por fans, chatea en tiempo real y participa en los foros de debate.</p>
-          <div className="spaces-hero-actions" style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-            <button className="btn-primary" onClick={() => setIsModalOpen(true)}>
+          <div className="spaces-hero-actions" style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <button
+              className="btn-primary"
+              onClick={() => {
+                if (!user) return navigate('/login');
+                setIsModalOpen(true);
+              }}
+            >
               + Crear nuevo espacio
             </button>
-            <Link to="/spaces" className="btn-secondary" style={{ backgroundColor: 'rgba(0,0,0,0.6)', color: 'white', border: '1px solid rgba(255,255,255,0.2)' }}>
-              Ver Mis Comunidades
-            </Link>
+            {user && (
+              <Link to="/spaces" className="btn-secondary" style={{ backgroundColor: 'rgba(0,0,0,0.6)', color: 'white', border: '1px solid rgba(255,255,255,0.2)' }}>
+                Ver Mis Comunidades
+              </Link>
+            )}
           </div>
         </div>
       </div>
 
       <div className="spaces-main-content">
-        {/* Search Bar */}
-        <div className="spaces-search-section">
+
+        {/* Toolbar: búsqueda + ordenación */}
+        <div className="spaces-toolbar">
           <div className="spaces-search-wrapper">
             <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" className="search-icon">
               <circle cx="11" cy="11" r="8"></circle>
               <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
             </svg>
-            <input 
-              type="text" 
+            <input
+              type="text"
               className="spaces-search-input"
               placeholder="Buscar por nombre o descripción..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
+          <div className="spaces-sort-buttons">
+            <button
+              className={`sort-btn ${sortBy === 'recent' ? 'active' : ''}`}
+              onClick={() => setSortBy('recent')}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              Más recientes
+            </button>
+            <button
+              className={`sort-btn ${sortBy === 'popular' ? 'active' : ''}`}
+              onClick={() => setSortBy('popular')}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+              Más populares
+            </button>
+          </div>
         </div>
 
-        {/* Grid de Comunidades */}
+        {/* Error */}
         {fetchError && (
           <div style={{ backgroundColor: 'var(--bg-card)', padding: '2rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--error)', color: 'var(--error)', marginBottom: '1.5rem', textAlign: 'center' }}>
             <h3>Error de conexión</h3>
@@ -245,51 +298,85 @@ export default function SpacesExplore() {
           </div>
         )}
 
-        <div className="spaces-list">
-          {filteredSpaces.map(space => {
-            const memberCount = space.space_members?.[0]?.count || 0;
-            return (
-              <div key={space.id} className="space-card-list-item">
-                <div className="space-card-avatar">
-                  {space.avatar_url ? (
-                    <img src={space.avatar_url} alt={space.name} />
-                  ) : (
-                    <div className="space-avatar-placeholder">
-                      {space.name.charAt(0).toUpperCase()}
-                    </div>
-                  )}
+        {/* Grid */}
+        <div className="spaces-grid">
+          {isLoading ? (
+            Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="space-card space-card-skeleton">
+                <div className="skeleton-banner" />
+                <div className="space-card-avatar-wrap">
+                  <div className="skeleton-avatar" />
                 </div>
-                <div className="space-card-body">
-                  <div className="space-card-header">
-                    <h3 className="space-name">
-                      {space.name}
-                      {space.is_verified && (
-                        <span className="verified-badge" title="Comunidad Verificada" style={{ color: '#1d9bf0' }}>
-                          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M22.5 12.5l-2.43 2.8.57 3.65-3.6.86-2.07 3.14-3.47-1.5-3.47 1.5-2.07-3.14-3.6-.86.57-3.65L.5 12.5l2.43-2.8-.57-3.65 3.6-.86 2.07-3.14 3.47 1.5 3.47-1.5 2.07 3.14 3.6.86-.57 3.65 2.43 2.8zM10.1 17.6l7.7-7.7-1.4-1.4-6.3 6.3-3-3-1.4 1.4 4.4 4.4z"/>
-                          </svg>
-                        </span>
-                      )}
-                    </h3>
-                    <span className="space-members">
-                      {memberCount} {memberCount === 1 ? 'miembro' : 'miembros'}
-                    </span>
-                  </div>
-                  <p className="space-desc">{space.description || 'Sin descripción.'}</p>
-                </div>
-                <div className="space-card-actions">
-                  <Link to={`/spaces/${space.id}`} className="btn-enter">
-                    Entrar a la comunidad
-                  </Link>
+                <div className="space-card-info">
+                  <div className="skeleton-line" style={{ width: '60%', height: '1rem' }} />
+                  <div className="skeleton-line" style={{ width: '100%', height: '0.75rem', marginTop: '0.25rem' }} />
+                  <div className="skeleton-line" style={{ width: '80%', height: '0.75rem' }} />
                 </div>
               </div>
-            );
-          })}
-          
-          {filteredSpaces.length === 0 && (
+            ))
+          ) : pagedSpaces.length > 0 ? (
+            pagedSpaces.map(space => {
+              const memberCount = space.space_members?.[0]?.count || 0;
+              const themeColor = space.theme_color || '#14b8a6';
+              return (
+                <Link key={space.id} to={`/spaces/${space.id}`} className="space-card" style={{ '--tc': themeColor }}>
+                  {/* Banner */}
+                  <div
+                    className="space-card-banner"
+                    style={
+                      space.banner_url
+                        ? { backgroundImage: `url(${space.banner_url})` }
+                        : { background: `linear-gradient(135deg, ${themeColor}55 0%, ${themeColor}22 100%)` }
+                    }
+                  >
+                    {!space.banner_url && (
+                      <div className="space-card-banner-pattern" style={{ '--tc': themeColor }} />
+                    )}
+                  </div>
+
+                  {/* Avatar superpuesto */}
+                  <div className="space-card-avatar-wrap">
+                    <div className="space-card-avatar" style={{ borderColor: themeColor }}>
+                      {space.avatar_url ? (
+                        <img src={space.avatar_url} alt={space.name} />
+                      ) : (
+                        <div className="space-avatar-placeholder" style={{ color: themeColor }}>
+                          {space.name.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Info */}
+                  <div className="space-card-info">
+                    <div className="space-card-title-row">
+                      <h3 className="space-name">
+                        {space.name}
+                        {space.is_verified && (
+                          <span className="verified-badge" title="Comunidad Verificada" style={{ color: '#1d9bf0' }}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                              <path d="M22.5 12.5l-2.43 2.8.57 3.65-3.6.86-2.07 3.14-3.47-1.5-3.47 1.5-2.07-3.14-3.6-.86.57-3.65L.5 12.5l2.43-2.8-.57-3.65 3.6.86 2.07-3.14 3.47 1.5 3.47-1.5 2.07 3.14 3.6.86-.57 3.65 2.43 2.8zM10.1 17.6l7.7-7.7-1.4-1.4-6.3 6.3-3-3-1.4 1.4 4.4 4.4z"/>
+                            </svg>
+                          </span>
+                        )}
+                      </h3>
+                      <span className="space-members-pill">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+                        {memberCount}
+                      </span>
+                    </div>
+                    <p className="space-desc">{space.description || 'Sin descripción.'}</p>
+                    <div className="space-card-footer">
+                      <span className="btn-enter-inline">Entrar →</span>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })
+          ) : (
             <div className="spaces-empty-state">
               {searchTerm ? (
-                <p>No se encontraron espacios que coincidan con "{searchTerm}".</p>
+                <p>No se encontraron comunidades que coincidan con "{searchTerm}".</p>
               ) : (
                 <>
                   <p>No hay ningún espacio todavía.</p>
@@ -301,7 +388,54 @@ export default function SpacesExplore() {
             </div>
           )}
         </div>
+
+        {/* Paginación */}
+        {!isLoading && totalPages > 1 && (
+          <div className="spaces-pagination">
+            <button
+              className="page-btn"
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              aria-label="Página anterior"
+            >
+              ←
+            </button>
+
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => {
+              // Mostrar siempre: primera, última, página actual y sus vecinas
+              const nearCurrent = Math.abs(page - currentPage) <= 1;
+              const isEdge = page === 1 || page === totalPages;
+              if (!nearCurrent && !isEdge) {
+                // Mostrar elipsis solo una vez por salto
+                if (page === 2 || page === totalPages - 1) {
+                  return <span key={page} className="page-ellipsis">…</span>;
+                }
+                return null;
+              }
+              return (
+                <button
+                  key={page}
+                  className={`page-btn ${page === currentPage ? 'active' : ''}`}
+                  onClick={() => setCurrentPage(page)}
+                >
+                  {page}
+                </button>
+              );
+            })}
+
+            <button
+              className="page-btn"
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              aria-label="Página siguiente"
+            >
+              →
+            </button>
+          </div>
+        )}
+
       </div>
+
 
       {isModalOpen && (
         <div className="explore-modal-overlay" onClick={resetModal}>

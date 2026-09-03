@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { getDebateById, getDebateReplies, addDebateReply } from '../../lib/spaceService';
 import { useAuth } from '../../context/AuthContext';
 import './DebateThread.css';
@@ -7,6 +7,7 @@ import './DebateThread.css';
 export default function DebateThread() {
     const { debateId } = useParams();
     const { user } = useAuth();
+    const navigate = useNavigate();
     const [debate, setDebate] = useState(null);
     const [replies, setReplies] = useState([]);
     const [text, setText] = useState('');
@@ -52,6 +53,9 @@ export default function DebateThread() {
         <div className="debate-thread-container">
             <div className="debate-original-post">
                 <div className="post-header">
+                    <button className="chat-mobile-back" onClick={() => navigate(-1)} title="Volver a debates" style={{ marginRight: '16px', background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer', padding: '0 8px' }}>
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                    </button>
                     <img src={debate.user?.avatar_url || '/default-avatar.png'} alt="avatar" className="post-avatar" />
                     <div>
                         <h2 className="post-title">{debate.title}</h2>

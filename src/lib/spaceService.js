@@ -47,6 +47,62 @@ export async function updateSpace(spaceId, updates) {
     return data;
 }
 
+export async function deleteSpace(spaceId) {
+    try {
+        // 1. Delete all custom emojis for this space
+        await supabase.from('custom_emojis').delete().eq('space_id', spaceId);
+
+        // 2. Delete all members of this space
+        await supabase.from('space_members').delete().eq('space_id', spaceId);
+
+        // 3. Handle debates (Forums)
+        const { data: debates } = await supabase.from('space_debates').select('id').eq('space_id', spaceId);
+        if (debates && debates.length > 0) {
+            const debateIds = debates.map(d => d.id);
+            // Delete all replies for these debates
+            await supabase.from('space_debate_replies').delete().in('debate_id', debateIds);
+            // Delete the debates themselves
+            await supabase.from('space_debates').delete().eq('space_id', spaceId);
+        }
+
+        // 4. Handle channels and their messages
+        const { data: channels } = await supabase.from('space_channels').select('id').eq('space_id', spaceId);
+        if (channels && channels.length > 0) {
+            const channelIds = channels.map(c => c.id);
+            
+            // Delete messages in these channels
+            const { data: messages } = await supabase.from('space_messages').select('id').in('channel_id', channelIds);
+            if (messages && messages.length > 0) {
+                const messageIds = messages.map(m => m.id);
+                // Delete reactions for these messages
+                await supabase.from('space_message_reactions').delete().in('message_id', messageIds);
+                // Delete the messages themselves
+                await supabase.from('space_messages').delete().in('channel_id', channelIds);
+            }
+            // Delete the channels
+            await supabase.from('space_channels').delete().eq('space_id', spaceId);
+        }
+
+        // 5. Finally, delete the space itself
+        const { data: deletedSpace, error: spaceError } = await supabase
+            .from('spaces')
+            .delete()
+            .eq('id', spaceId)
+            .select();
+
+        if (spaceError) throw spaceError;
+
+        if (!deletedSpace || deletedSpace.length === 0) {
+            throw new Error('El espacio no se pudo borrar. Es posible que te falte la política RLS (Row Level Security) de tipo DELETE en la tabla "spaces" en Supabase.');
+        }
+
+        return true;
+    } catch (error) {
+        console.error("Manual cascade delete failed:", error);
+        throw error;
+    }
+}
+
 export async function getSpaceChannels(spaceId) {
     const { data, error } = await supabase
         .from('space_channels')

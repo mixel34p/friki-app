@@ -547,3 +547,35 @@
     color: var(--accent);
     background: var(--bg-card);
 }
+.work-page-spaces {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+.work-page-spaces .space-card-list-item {
+    padding: 1rem 1.2rem;
+    gap: 1rem;
+    align-items: center;
+    border-radius: var(--radius-md);
+}
+.work-page-spaces .space-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.2rem;
+}
+.work-page-spaces .space-card-avatar {
+    width: 50px;
+    height: 50px;
+}
+.work-page-spaces .space-name {
+    font-size: 1.1rem;
+}
+.work-page-spaces .btn-enter {
+    padding: 0.5rem 1.2rem;
+    font-size: 0.9rem;
+}
+
+.work-page-spaces .space-card-actions {
+    margin-left: auto;
+}
+

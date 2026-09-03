@@ -161,3 +161,15 @@
 .submit-btn:hover {
     background-color: var(--brand-secondary);
 }
+
+@media (max-width: 768px) {
+    .space-debates-container {
+        padding: 1rem;
+    }
+    .debates-header {
+        margin-bottom: 1rem;
+    }
+    .debate-item {
+        padding: 1rem;
+    }
+}

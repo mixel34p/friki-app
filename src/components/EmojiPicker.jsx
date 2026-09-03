@@ -272,7 +272,9 @@ export default function EmojiPicker({ onSelect, onSelectGif, onClose, style, dis
     }, [search, customEmojisGrouped]);
 
     return (
-        <div className="emoji-picker-container" ref={pickerRef} onClick={e => e.stopPropagation()} style={style}>
+        <>
+            <div className="mobile-emoji-overlay" onClick={onClose} style={{ display: style?.display === 'none' ? 'none' : '' }} />
+            <div className="emoji-picker-container" ref={pickerRef} onClick={e => e.stopPropagation()} style={style}>
 
             {/* ── TOP TABS: Emoji / GIF / Sticker ── */}
             {!disableMediaTabs && (
@@ -520,5 +522,6 @@ export default function EmojiPicker({ onSelect, onSelectGif, onClose, style, dis
                 </div>
             )}
         </div>
+        </>
     );
 }
