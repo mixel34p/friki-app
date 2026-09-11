@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
-import Twemoji from 'react-twemoji';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { EMOJI_CATEGORIES } from '../lib/standardEmojis';
@@ -57,6 +56,53 @@ const CATEGORY_ICONS = {
 // Module-level cache — survives re-mounts, cleared on user change
 let _customEmojiCache = null;
 let _customEmojiCacheUserId = null;
+const _gifSearchCache = new Map();
+const GIF_SEARCH_CACHE_LIMIT = 20;
+const TWEMOJI_BASE_URL = 'https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/svg';
+
+const saveGifSearchCache = (key, results) => {
+    if (_gifSearchCache.has(key)) _gifSearchCache.delete(key);
+    _gifSearchCache.set(key, results);
+    if (_gifSearchCache.size > GIF_SEARCH_CACHE_LIMIT) {
+        _gifSearchCache.delete(_gifSearchCache.keys().next().value);
+    }
+};
+
+function toCodePoint(unicodeSurrogates, sep = '-') {
+    let codePointParts = [];
+    let previous = 0;
+    let index = 0;
+
+    if (unicodeSurrogates.indexOf(String.fromCharCode(0x200D)) < 0) {
+        unicodeSurrogates = unicodeSurrogates.replace(/\uFE0F/g, '');
+    }
+
+    while (index < unicodeSurrogates.length) {
+        const charCode = unicodeSurrogates.charCodeAt(index++);
+        if (previous) {
+            codePointParts.push((0x10000 + ((previous - 0xD800) << 10) + (charCode - 0xDC00)).toString(16));
+            previous = 0;
+        } else if (0xD800 <= charCode && charCode <= 0xDBFF) {
+            previous = charCode;
+        } else {
+            codePointParts.push(charCode.toString(16));
+        }
+    }
+
+    return codePointParts.join(sep);
+}
+
+const TwemojiImage = memo(function TwemojiImage({ emoji, className = '' }) {
+    return (
+        <img
+            src={`${TWEMOJI_BASE_URL}/${toCodePoint(emoji)}.svg`}
+            alt={emoji}
+            className={`ep-twemoji-img ${className}`}
+            loading="lazy"
+            decoding="async"
+        />
+    );
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // StandardEmojiGrid — memoized so it NEVER re-renders after first mount.
@@ -74,12 +120,74 @@ const StandardEmojiGrid = memo(function StandardEmojiGrid({ emojis, onSelectRef,
                     onMouseEnter={() => onHoverRef.current({ ...emoji, isStandard: true })}
                     onMouseLeave={() => onHoverRef.current(null)}
                 >
-                    <Twemoji options={{ className: 'twemoji', folder: 'svg', ext: '.svg' }}>
-                        {emoji.char}
-                    </Twemoji>
+                    <TwemojiImage emoji={emoji.char} />
                 </div>
             ))}
         </div>
+    );
+});
+
+const CustomEmojiGrid = memo(function CustomEmojiGrid({ emojis, onSelectRef, onHoverRef }) {
+    return (
+        <div className="emoji-grid-picker">
+            {emojis.map(e => (
+                <div
+                    key={e.id}
+                    className="emoji-item"
+                    title={`:${e.name}:`}
+                    onClick={() => onSelectRef.current({ ...e, isStandard: false })}
+                    onMouseEnter={() => onHoverRef.current({ ...e, isStandard: false })}
+                    onMouseLeave={() => onHoverRef.current(null)}
+                >
+                    <img src={e.image_url} alt={e.name} loading="lazy" decoding="async" />
+                </div>
+            ))}
+        </div>
+    );
+});
+
+const RecentEmojiGrid = memo(function RecentEmojiGrid({ emojis, onSelectRef, onHoverRef }) {
+    return (
+        <div className="emoji-grid-picker">
+            {emojis.map((e, i) => (
+                <div
+                    key={`${e.name}-${e.isStandard ? 'standard' : 'custom'}-${i}`}
+                    className="emoji-item"
+                    title={`:${e.name}:`}
+                    onClick={() => onSelectRef.current(e)}
+                    onMouseEnter={() => onHoverRef.current(e)}
+                    onMouseLeave={() => onHoverRef.current(null)}
+                >
+                    {e.isStandard
+                        ? <TwemojiImage emoji={e.char} />
+                        : <img src={e.image_url} alt={e.name} loading="lazy" decoding="async" />}
+                </div>
+            ))}
+        </div>
+    );
+});
+
+const GifItem = memo(function GifItem({ gif, onSelectGifRef }) {
+    const [isPreviewing, setIsPreviewing] = useState(false);
+    const src = isPreviewing ? (gif.preview || gif.still) : (gif.still || gif.preview);
+
+    return (
+        <button
+            type="button"
+            className="ep-gif-item"
+            onClick={() => onSelectGifRef.current(gif)}
+            onMouseEnter={() => setIsPreviewing(true)}
+            onMouseLeave={() => setIsPreviewing(false)}
+            title="Enviar GIF"
+        >
+            <img
+                src={src}
+                alt="GIF"
+                className="ep-gif-img"
+                loading="lazy"
+                decoding="async"
+            />
+        </button>
     );
 });
 
@@ -105,6 +213,7 @@ export default function EmojiPicker({ onSelect, onSelectGif, onClose, style, dis
     const pickerRef = useRef(null);
     const contentRef = useRef(null);
     const searchRef = useRef(null);
+    const onSelectGifRef = useRef(null);
 
     // ── Reset state when closed ──
     useEffect(() => {
@@ -189,7 +298,17 @@ export default function EmojiPicker({ onSelect, onSelectGif, onClose, style, dis
             return;
         }
 
+        const cacheKey = q.toLowerCase();
+        const cached = _gifSearchCache.get(cacheKey);
+        if (cached) {
+            setGifs(cached);
+            setLoadingGifs(false);
+            setGifError(false);
+            return;
+        }
+
         let active = true;
+        const controller = new AbortController();
         setLoadingGifs(true);
         setGifError(false);
 
@@ -197,22 +316,30 @@ export default function EmojiPicker({ onSelect, onSelectGif, onClose, style, dis
             try {
                 // Se leerá desde el archivo .env
                 const apiKey = import.meta.env.VITE_GIPHY_API_KEY || 'GlVGYHqc3SyCEGqme3ZqONHq9W12C7sD';
-                const endpoint = `https://api.giphy.com/v1/gifs/search?api_key=${apiKey}&q=${encodeURIComponent(q)}&limit=30`;
+                const endpoint = `https://api.giphy.com/v1/gifs/search?api_key=${apiKey}&q=${encodeURIComponent(q)}&limit=24&rating=pg-13&lang=es`;
                 
-                const res = await fetch(endpoint);
+                const res = await fetch(endpoint, { signal: controller.signal });
                 if (res.status === 401 || res.status === 403 || res.status === 429) {
                     if (active) setGifError(true);
                     throw new Error('API Key unauthorized or rate limited');
                 }
                 const data = await res.json();
                 if (active && data.data) {
-                    setGifs(data.data.map(g => ({
-                        id: g.id,
-                        preview: g.images.fixed_height_small.url,
-                        url: g.images.downsized_medium?.url || g.images.downsized?.url || g.images.fixed_height.url
-                    })));
+                    const mapped = data.data.map(g => {
+                        const images = g.images || {};
+                        const animatedPreview = images.fixed_width_small?.url || images.fixed_height_small?.url || images.downsized?.url || images.original?.url;
+                        return {
+                            id: g.id,
+                            still: images.fixed_width_small_still?.url || images.fixed_height_small_still?.url || animatedPreview,
+                            preview: animatedPreview,
+                            url: images.downsized_medium?.url || images.downsized?.url || images.original?.webp || images.original?.url || animatedPreview
+                        };
+                    }).filter(g => g.url);
+                    saveGifSearchCache(cacheKey, mapped);
+                    setGifs(mapped);
                 }
             } catch (e) {
+                if (e.name === 'AbortError') return;
                 console.error('Error fetching GIFs:', e);
                 if (active) setGifs([]);
             } finally {
@@ -220,9 +347,10 @@ export default function EmojiPicker({ onSelect, onSelectGif, onClose, style, dis
             }
         };
         
-        const timeoutId = setTimeout(fetchGifs, 500);
+        const timeoutId = setTimeout(fetchGifs, 350);
         return () => {
             active = false;
+            controller.abort();
             clearTimeout(timeoutId);
         };
     }, [mainTab, search, recentGifs]);
@@ -242,9 +370,24 @@ export default function EmojiPicker({ onSelect, onSelectGif, onClose, style, dis
         onClose();
     }, [onSelect, onClose]);
 
+    const handleGifSelect = useCallback((gif) => {
+        try {
+            const currentSaved = JSON.parse(localStorage.getItem('friki_recent_gifs') || '[]');
+            const next = [gif, ...currentSaved.filter(g => g.id !== gif.id)].slice(0, 24);
+            localStorage.setItem('friki_recent_gifs', JSON.stringify(next));
+            setRecentGifs(next);
+        } catch (err) {
+            console.error('Error saving recent gifs', err);
+        }
+
+        if (onSelectGif) onSelectGif(gif.url);
+        onClose();
+    }, [onSelectGif, onClose]);
+
     // Keep refs in sync
     onSelectRef.current = handleSelect;
     onHoverRef.current = setHoveredEmoji;
+    onSelectGifRef.current = handleGifSelect;
 
     // ── Scroll to group ──
     const scrollToGroup = useCallback((id) => {
@@ -342,16 +485,7 @@ export default function EmojiPicker({ onSelect, onSelectGif, onClose, style, dis
                                 {searchResults.custom.map((g, i) => (
                                     <div key={i} className="emoji-group">
                                         <h4 className="emoji-group-title">{g.name}</h4>
-                                        <div className="emoji-grid-picker">
-                                            {g.emojis.map(e => (
-                                                <div key={e.id} className="emoji-item" title={`:${e.name}:`}
-                                                    onClick={() => handleSelect(e)}
-                                                    onMouseEnter={() => setHoveredEmoji(e)}
-                                                    onMouseLeave={() => setHoveredEmoji(null)}>
-                                                    <img src={e.image_url} alt={e.name} loading="lazy" />
-                                                </div>
-                                            ))}
-                                        </div>
+                                        <CustomEmojiGrid emojis={g.emojis} onSelectRef={onSelectRef} onHoverRef={onHoverRef} />
                                     </div>
                                 ))}
 
@@ -368,18 +502,7 @@ export default function EmojiPicker({ onSelect, onSelectGif, onClose, style, dis
                                 {recentEmojis.length > 0 && (
                                     <div id="ep-group-recents" className="emoji-group">
                                         <h4 className="emoji-group-title">Recientes</h4>
-                                        <div className="emoji-grid-picker">
-                                            {recentEmojis.map((e, i) => (
-                                                <div key={i} className="emoji-item" title={`:${e.name}:`}
-                                                    onClick={() => handleSelect(e)}
-                                                    onMouseEnter={() => setHoveredEmoji(e)}
-                                                    onMouseLeave={() => setHoveredEmoji(null)}>
-                                                    {e.isStandard
-                                                        ? <Twemoji options={{ className: 'twemoji', folder: 'svg', ext: '.svg' }}>{e.char}</Twemoji>
-                                                        : <img src={e.image_url} alt={e.name} loading="lazy" />}
-                                                </div>
-                                            ))}
-                                        </div>
+                                        <RecentEmojiGrid emojis={recentEmojis} onSelectRef={onSelectRef} onHoverRef={onHoverRef} />
                                     </div>
                                 )}
 
@@ -390,16 +513,7 @@ export default function EmojiPicker({ onSelect, onSelectGif, onClose, style, dis
                                             {group.avatar && <img src={group.avatar} alt="" style={{ width: '12px', height: '12px', borderRadius: '50%', objectFit: 'cover' }} />}
                                             {group.name}
                                         </h4>
-                                        <div className="emoji-grid-picker">
-                                            {group.emojis.map(e => (
-                                                <div key={e.id} className="emoji-item" title={`:${e.name}:`}
-                                                    onClick={() => handleSelect(e)}
-                                                    onMouseEnter={() => setHoveredEmoji(e)}
-                                                    onMouseLeave={() => setHoveredEmoji(null)}>
-                                                    <img src={e.image_url} alt={e.name} loading="lazy" />
-                                                </div>
-                                            ))}
-                                        </div>
+                                        <CustomEmojiGrid emojis={group.emojis} onSelectRef={onSelectRef} onHoverRef={onHoverRef} />
                                     </div>
                                 ))}
 
@@ -423,7 +537,7 @@ export default function EmojiPicker({ onSelect, onSelectGif, onClose, style, dis
                 )}
 
                 {mainTab === 'gif' && (
-                    <div className="ep-gifs-container" style={{ padding: '8px' }}>
+                    <div className="ep-gifs-container">
                         {loadingGifs ? (
                             <div className="ep-loading">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="ep-spinner">
@@ -431,25 +545,9 @@ export default function EmojiPicker({ onSelect, onSelectGif, onClose, style, dis
                                 </svg>
                             </div>
                         ) : gifs.length > 0 ? (
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                            <div className="ep-gifs-grid">
                                 {gifs.map(gif => (
-                                    <img 
-                                        key={gif.id} 
-                                        src={gif.preview} 
-                                        alt="gif" 
-                                        style={{ width: '100%', borderRadius: '4px', cursor: 'pointer', objectFit: 'cover', minHeight: '80px', backgroundColor: 'var(--bg-modifier-hover)' }}
-                                        onClick={() => {
-                                            try {
-                                                const currentSaved = JSON.parse(localStorage.getItem('friki_recent_gifs') || '[]');
-                                                const next = [gif, ...currentSaved.filter(g => g.id !== gif.id)].slice(0, 24);
-                                                localStorage.setItem('friki_recent_gifs', JSON.stringify(next));
-                                                setRecentGifs(next);
-                                            } catch (err) {
-                                                console.error('Error saving recent gifs', err);
-                                            }
-                                            if (onSelectGif) onSelectGif(gif.url);
-                                        }}
-                                    />
+                                    <GifItem key={gif.id} gif={gif} onSelectGifRef={onSelectGifRef} />
                                 ))}
                             </div>
                         ) : (
@@ -510,7 +608,7 @@ export default function EmojiPicker({ onSelect, onSelectGif, onClose, style, dis
                         {hoveredEmoji ? (
                             <div className="ep-footer-info">
                                 {hoveredEmoji.isStandard
-                                    ? <Twemoji options={{ className: 'twemoji ep-footer-img', folder: 'svg', ext: '.svg' }}>{hoveredEmoji.char}</Twemoji>
+                                    ? <TwemojiImage emoji={hoveredEmoji.char} className="ep-footer-img" />
                                     : <img src={hoveredEmoji.image_url} alt="preview" className="ep-footer-img" />
                                 }
                                 <strong className="ep-footer-name">:{hoveredEmoji.name}:</strong>

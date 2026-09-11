@@ -60,7 +60,7 @@ const YouTubeEmbed = ({ url }) => {
     );
 };
 
-const LinkEmbed = ({ url }) => {
+const LinkEmbed = () => {
     // Basic placeholder. Link is already rendered as an <a> tag in text.
     return null;
 };
@@ -68,7 +68,7 @@ const LinkEmbed = ({ url }) => {
 const htmlToText = (html) => {
     if (!html) return '';
     let t = html.replace(/<img[^>]*alt="([^"]+)"[^>]*>/g, '$1');
-    t = t.replace(/<br\s*[\/]?>/gi, '\n');
+    t = t.replace(/<br\s*[/]?>/gi, '\n');
     t = t.replace(/<div>/gi, '\n');
     t = t.replace(/<\/div>/gi, '');
     t = t.replace(/<[^>]+>/g, '');
@@ -106,8 +106,6 @@ export default function LiveChat() {
     const emojiDragStartY = useRef(null);
     const emojiDragStartHeight = useRef(null);
     const emojiHandleRef = useRef(null);
-    const [savedRange, setSavedRange] = useState(null);
-
     const [globalEmojisMap, setGlobalEmojisMap] = useState({});
 
     useEffect(() => {
@@ -169,7 +167,9 @@ export default function LiveChat() {
                 const mixed = [...new Set([...topSaved, ...defaults])].slice(0, 3);
                 setQuickReactions(mixed);
             }
-        } catch(e){}
+        } catch {
+            return;
+        }
     }, []);
 
     useEffect(() => {
@@ -202,7 +202,7 @@ export default function LiveChat() {
         try {
             const displayNames = new Intl.DisplayNames(['es'], { type: 'language' });
             return displayNames.of(code).toLowerCase();
-        } catch (e) {
+        } catch {
             return code;
         }
     };
@@ -635,10 +635,8 @@ export default function LiveChat() {
         if (e.clipboardData && e.clipboardData.items) {
             const items = e.clipboardData.items;
             const pastedFiles = [];
-            let hasImage = false;
             for (let i = 0; i < items.length; i++) {
                 if (items[i].type.indexOf('image') !== -1) {
-                    hasImage = true;
                     const file = items[i].getAsFile();
                     if (file) {
                         pastedFiles.push(file);
@@ -746,6 +744,48 @@ export default function LiveChat() {
         }
     };
 
+    const handleSendGif = useCallback(async (url) => {
+        setIsEmojiPickerOpen(false);
+        if (!url || !channel?.id || !user || uploadingImage) return;
+
+        const gifContent = `![image](${url})`;
+        const currentReplyingTo = replyingTo;
+        const tempId = 'temp-gif-' + Date.now();
+        const optimisticMsg = {
+            id: tempId,
+            user_id: user.id,
+            user: profile || user,
+            content: gifContent,
+            created_at: new Date().toISOString(),
+            reply_to_id: currentReplyingTo?.id,
+            hasReply: !!currentReplyingTo?.id,
+            reply_to: currentReplyingTo ? [currentReplyingTo] : null,
+            _optimistic: true
+        };
+
+        if (currentReplyingTo) setReplyingTo(null);
+        setMessages(prev => [...prev, optimisticMsg]);
+        setTimeout(scrollToBottom, 100);
+
+        try {
+            const newMsg = await sendMessage(channel.id, user.id, gifContent, currentReplyingTo?.id);
+            if (currentReplyingTo && (!newMsg.reply_to || (Array.isArray(newMsg.reply_to) && newMsg.reply_to.length === 0))) {
+                newMsg.reply_to = currentReplyingTo;
+            }
+
+            setMessages(prev => {
+                const withoutTemp = prev.filter(m => m.id !== tempId);
+                if (withoutTemp.some(m => m.id === newMsg.id)) return withoutTemp;
+                return [...withoutTemp, newMsg];
+            });
+            setTimeout(scrollToBottom, 100);
+        } catch (error) {
+            console.error('Error sending GIF', error);
+            setMessages(prev => prev.filter(m => m.id !== tempId));
+            if (currentReplyingTo) setReplyingTo(currentReplyingTo);
+        }
+    }, [channel?.id, user, profile, replyingTo, uploadingImage]);
+
     const handleInput = (e) => {
         const sel = window.getSelection();
         if (sel.rangeCount > 0) {
@@ -838,7 +878,7 @@ export default function LiveChat() {
 
     const navigate = useNavigate();
 
-    const handleTouchStart = (msg, e) => {
+    const handleTouchStart = (msg) => {
         if (window.innerWidth > 768) return; // Only mobile
         touchTimerRef.current = setTimeout(() => {
             setLongPressedMsg(msg);
@@ -863,29 +903,6 @@ export default function LiveChat() {
     };
 
     const isMobile = () => window.innerWidth <= 768;
-
-    const handleEmojiHandleTouchStart = (e) => {
-        emojiDragStartY.current = e.touches[0].clientY;
-        emojiDragStartHeight.current = emojiSheetHeight;
-    };
-
-    const handleEmojiHandleTouchMove = (e) => {
-        if (emojiDragStartY.current === null) return;
-        const delta = emojiDragStartY.current - e.touches[0].clientY; // positive = drag up
-        const newHeight = Math.max(180, Math.min(window.innerHeight * 0.80, emojiDragStartHeight.current + delta));
-        setEmojiSheetHeight(newHeight);
-    };
-
-    const handleEmojiHandleTouchEnd = () => {
-        emojiDragStartY.current = null;
-        // Snap: if past 40% of screen → expand fully, else compact
-        const mid = window.innerHeight * 0.38;
-        if (emojiSheetHeight > mid) {
-            setEmojiSheetHeight(Math.round(window.innerHeight * 0.70));
-        } else {
-            setEmojiSheetHeight(220);
-        }
-    };
 
     return (
         <div className="live-chat-container">
@@ -1278,16 +1295,6 @@ export default function LiveChat() {
                             data-placeholder={`Enviar mensaje a #${channel?.name || 'general'}`}
                             onInput={(e) => {
                                 handleInput(e);
-                                const sel = window.getSelection();
-                                if (sel.rangeCount > 0) setSavedRange(sel.getRangeAt(0));
-                            }}
-                            onKeyUp={() => {
-                                const sel = window.getSelection();
-                                if (sel.rangeCount > 0) setSavedRange(sel.getRangeAt(0));
-                            }}
-                            onMouseUp={() => {
-                                const sel = window.getSelection();
-                                if (sel.rangeCount > 0) setSavedRange(sel.getRangeAt(0));
                             }}
                             onKeyDown={handleKeyDown}
                             onPaste={handlePaste}
@@ -1314,22 +1321,7 @@ export default function LiveChat() {
                                 <EmojiPicker 
                                     style={{ display: isEmojiPickerOpen ? 'flex' : 'none' }}
                                     isOpen={isEmojiPickerOpen}
-                                    onSelectGif={async (url) => {
-                                        setIsEmojiPickerOpen(false);
-                                        if (!channel?.id || !user) return;
-                                        const gifContent = `![image](${url})`;
-                                        const tempId = 'temp-' + Date.now();
-                                        const optimisticMsg = {
-                                            id: tempId, user_id: user.id, user: profile || user,
-                                            content: gifContent, created_at: new Date().toISOString(), _optimistic: true
-                                        };
-                                        setMessages(prev => [...prev, optimisticMsg]);
-                                        setTimeout(() => { scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' }); }, 50);
-                                        try {
-                                            const { data: insertedMsg } = await supabase.from('space_messages').insert({ space_id: space?.id, channel_id: channel.id, user_id: user.id, content: gifContent }).select('*, user:profiles(id,username,avatar_url,role)').single();
-                                            if (insertedMsg) { setMessages(prev => prev.map(m => m.id === tempId ? insertedMsg : m)); }
-                                        } catch (e) { setMessages(prev => prev.filter(m => m.id !== tempId)); }
-                                    }}
+                                    onSelectGif={handleSendGif}
                                     onSelect={(emoji) => {
                                         const isCustom = emoji.startsWith(':') && emoji.endsWith(':');
                                         if (isCustom) {
@@ -1374,19 +1366,7 @@ export default function LiveChat() {
                     {hasOpenedMainPicker && (
                         <EmojiPicker
                             isOpen={isEmojiPickerOpen}
-                            onSelectGif={async (url) => {
-                                setIsEmojiPickerOpen(false);
-                                if (!channel?.id || !user) return;
-                                const gifContent = `![image](${url})`;
-                                const tempId = 'temp-' + Date.now();
-                                const optimisticMsg = { id: tempId, user_id: user.id, user: profile || user, content: gifContent, created_at: new Date().toISOString(), _optimistic: true };
-                                setMessages(prev => [...prev, optimisticMsg]);
-                                setTimeout(() => { scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' }); }, 50);
-                                try {
-                                    const { data: insertedMsg } = await supabase.from('space_messages').insert({ space_id: space?.id, channel_id: channel.id, user_id: user.id, content: gifContent }).select('*, user:profiles(id,username,avatar_url,role)').single();
-                                    if (insertedMsg) { setMessages(prev => prev.map(m => m.id === tempId ? insertedMsg : m)); }
-                                } catch (e) { setMessages(prev => prev.filter(m => m.id !== tempId)); }
-                            }}
+                            onSelectGif={handleSendGif}
                             onSelect={(emoji) => {
                                 const isCustom = emoji.startsWith(':') && emoji.endsWith(':');
                                 if (isCustom) {
@@ -1476,7 +1456,7 @@ export default function LiveChat() {
                                 a.click();
                                 document.body.removeChild(a);
                                 URL.revokeObjectURL(objectUrl);
-                            } catch (error) {
+                            } catch {
                                 window.open(zoomedImage.src, '_blank');
                             }
                         }} style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }} title="Descargar">
@@ -1519,7 +1499,7 @@ export default function LiveChat() {
                             <h3>Opciones</h3>
                         </div>
                         <div className="mobile-context-actions">
-                            <button className="mobile-context-btn" onClick={(e) => { setReactionPickerMsgId(longPressedMsg.id); setHasOpenedReactionPicker(true); setReactionPickerStyle({}); setLongPressedMsg(null); }}>
+                            <button className="mobile-context-btn" onClick={() => { setReactionPickerMsgId(longPressedMsg.id); setHasOpenedReactionPicker(true); setReactionPickerStyle({}); setLongPressedMsg(null); }}>
                                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
                                 Añadir reacción
                             </button>
