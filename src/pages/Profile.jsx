@@ -114,15 +114,15 @@ export default function Profile() {
     const [isScrolled, setIsScrolled] = useState(false)
 
     useEffect(() => {
-        document.body.classList.add('hide-main-header-on-mobile')
-        
+        document.body.classList.add('profile-no-main-header-on-mobile')
+
         const handleScroll = () => {
             setIsScrolled(window.scrollY > 300)
         }
         window.addEventListener('scroll', handleScroll)
-        
+
         return () => {
-            document.body.classList.remove('hide-main-header-on-mobile')
+            document.body.classList.remove('profile-no-main-header-on-mobile')
             window.removeEventListener('scroll', handleScroll)
         }
     }, [])
@@ -403,8 +403,8 @@ export default function Profile() {
                         )}
                     </div>
                     {!isOwnProfile && (
-                        <button 
-                            className="btn btn-primary" 
+                        <button
+                            className="btn btn-primary"
                             style={{ padding: '4px 12px', fontSize: '0.8rem', minHeight: '28px', flexShrink: 0 }}
                             onClick={handleFollow}
                         >

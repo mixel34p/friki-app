@@ -577,6 +577,10 @@ button { font-family: var(--font-sans); }
   body.space-no-header .main { margin-top: 0 !important; padding-top: 0 !important; }
   body.space-no-header .space-layout { height: 100dvh; }
 
+  /* Profile view: use its own mobile topbar and keep bottom navigation visible */
+  body.profile-no-main-header-on-mobile .header { display: none !important; }
+  body.profile-no-main-header-on-mobile .main { margin-top: 0 !important; padding-top: 0 !important; }
+
   /* Chat view: also hide bottom nav and fill full screen */
   body.hide-main-header-on-mobile .main { 
     padding-bottom: 0 !important;

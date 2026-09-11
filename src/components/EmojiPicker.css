@@ -402,32 +402,98 @@
 
 @media (max-width: 768px) {
     .mobile-emoji-overlay {
-        display: block;
-        position: fixed;
-        top: 0; left: 0; right: 0; bottom: 0;
-        background: rgba(0, 0, 0, 0.6);
-        backdrop-filter: blur(4px);
-        z-index: 100001;
-        animation: fadeIn 0.2s ease-out;
+        display: none;
     }
 
-    .emoji-picker-container {
-        top: auto !important;
-        bottom: 0 !important;
-        left: 0 !important;
-        right: 0 !important;
-        width: 100% !important;
-        height: 60vh !important;
-        border-radius: 20px 20px 0 0 !important;
-        border: none !important;
-        border-top: 1px solid var(--border-subtle) !important;
-        animation: slideUpEmoji 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
-        box-shadow: 0 -10px 40px rgba(0,0,0,0.5) !important;
-        z-index: 100002 !important;
+    /* ── Emoji grid: bigger tap targets ── */
+    .emoji-grid-picker {
+        grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+        gap: 2px;
     }
 
-    @keyframes slideUpEmoji {
-        from { transform: translateY(100%); }
-        to { transform: translateY(0); }
+    .emoji-item {
+        width: 44px;
+        height: 44px;
+        padding: 6px;
+        border-radius: 10px;
+    }
+
+    .emoji-item:active {
+        background-color: rgba(255,255,255,0.15);
+        transform: scale(0.90);
+        transition: transform 0.08s ease;
+    }
+
+    .ep-native-emoji {
+        font-size: 26px;
+    }
+
+    /* ── Search bar ── */
+    .emoji-picker-search {
+        padding: 10px 14px;
+        border-radius: 12px;
+        margin-bottom: 8px;
+        gap: 10px;
+    }
+
+    .emoji-picker-search input {
+        font-size: 1rem;
+    }
+
+    /* ── Header padding ── */
+    .emoji-picker-header {
+        padding: 10px 12px 0 12px;
+    }
+
+    /* ── Content area ── */
+    .emoji-picker-content {
+        padding: 0 12px;
+        scrollbar-width: none;
+    }
+    .emoji-picker-content::-webkit-scrollbar { display: none; }
+
+    /* ── Category title ── */
+    .emoji-group-title {
+        font-size: 0.7rem;
+        padding: 8px 0 6px 0;
+    }
+
+    /* ── Footer category tabs: bigger icons ── */
+    .ep-footer-tabs {
+        padding: 6px 10px;
+        gap: 2px;
+    }
+
+    .ep-footer-tab {
+        padding: 8px 10px;
+        min-width: 38px;
+        border-radius: 8px;
+    }
+
+    .ep-footer-tab svg {
+        width: 22px;
+        height: 22px;
+    }
+
+    .ep-footer-tab-divider {
+        height: 22px;
+        margin: 0 4px;
+    }
+
+    /* ── Footer preview: hide (hover = irrelevant on touch) ── */
+    .ep-footer-preview {
+        display: none;
+    }
+
+    /* ── Top main tabs (Emoji/GIF) ── */
+    .ep-main-tab {
+        padding: 8px 16px;
+        font-size: 0.9rem;
+    }
+
+    /* ── Group margin ── */
+    .emoji-group {
+        margin-bottom: 14px;
     }
 }
+
