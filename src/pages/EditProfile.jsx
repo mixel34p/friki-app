@@ -475,12 +475,12 @@ export default function EditProfile({ onClose }) {
             let avatarUrl = profile?.avatar_url
             let bannerUrl = profile?.banner_url
             if (avatarFile) {
-                const ext = avatarFile.name.split('.').pop()
+                const ext = (avatarFile.name && avatarFile.name.includes('.')) ? avatarFile.name.split('.').pop() : 'jpg'
                 let url = await uploadImage(avatarFile, 'avatars', `avatars/${user.id}.${ext}`)
                 avatarUrl = `${url}?t=${Date.now()}`
             }
             if (bannerFile) {
-                const ext = bannerFile.name.split('.').pop()
+                const ext = (bannerFile.name && bannerFile.name.includes('.')) ? bannerFile.name.split('.').pop() : 'jpg'
                 let url = await uploadImage(bannerFile, 'avatars', `banners/${user.id}.${ext}`)
                 bannerUrl = `${url}?t=${Date.now()}`
             }
@@ -500,8 +500,9 @@ export default function EditProfile({ onClose }) {
        Render
        ────────────────────────────────────── */
     return (
-        <div className="ep-overlay" onClick={handleClose}>
-            <div className="ep-modal" onClick={e => e.stopPropagation()}>
+        <>
+            <div className="ep-overlay" onClick={e => { if (e.target === e.currentTarget) handleClose() }}>
+                <div className="ep-modal" onClick={e => e.stopPropagation()}>
 
                 {/* Header */}
                 <div className="ep-modal-header">
@@ -1097,80 +1098,80 @@ export default function EditProfile({ onClose }) {
                     </div>
                 </form>
             </div>
-
-            {cropModal.isOpen && (
-                <ImageCropperModal
-                    imageSrc={cropModal.src}
-                    aspect={cropModal.aspect}
-                    onCropComplete={handleCropComplete}
-                    onCancel={() => setCropModal({ isOpen: false, type: null, src: null, aspect: 1 })}
-                />
-            )}
-
-            {/* Top 4 Modals */}
-                                    {activeGameSlot !== null && (
-                                        <div className="ep-overlay" style={{ zIndex: 1000 }} onClick={() => setActiveGameSlot(null)}>
-                                            <div className="ep-modal" style={{ width: '400px', height: 'auto', maxHeight: '80vh' }} onClick={e => e.stopPropagation()}>
-                                                <div className="ep-modal-header">
-                                                    <h3 className="ep-modal-title">Elige un Juego</h3>
-                                                    <button className="ep-close-btn" onClick={() => setActiveGameSlot(null)} type="button"><IconClose /></button>
-                                                </div>
-                                                <div className="ep-modal-body" style={{ padding: '16px' }}>
-                                                    <input
-                                                        type="text"
-                                                        className="ep-input"
-                                                        placeholder="Escribe el nombre del juego..."
-                                                        value={gameSearchQuery}
-                                                        onChange={e => setGameSearchQuery(e.target.value)}
-                                                        autoFocus
-                                                    />
-                                                    {isSearchingGames && <p className="ep-searching" style={{ marginTop: '12px' }}>Buscando...</p>}
-                                                    {gameSearchResults.length > 0 && (
-                                                        <div className="ep-search-results" style={{ marginTop: '12px', border: '1px solid var(--border-subtle)', borderRadius: '8px', overflow: 'hidden' }}>
-                                                            {gameSearchResults.slice(0, 5).map(game => (
-                                                                <button key={game.id} type="button" className="ep-search-result" onClick={() => selectGame(game)}>
-                                                                    {(game.cover_url || game.image_url) && <img src={game.cover_url || game.image_url} alt="" className="square-cover" />}
-                                                                    <span className="ep-search-result-name">{game.name}</span>
-                                                                </button>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-                                    {activeAnimeSlot !== null && (
-                                        <div className="ep-overlay" style={{ zIndex: 1000 }} onClick={() => setActiveAnimeSlot(null)}>
-                                            <div className="ep-modal" style={{ width: '400px', height: 'auto', maxHeight: '80vh' }} onClick={e => e.stopPropagation()}>
-                                                <div className="ep-modal-header">
-                                                    <h3 className="ep-modal-title">Elige un Anime</h3>
-                                                    <button className="ep-close-btn" onClick={() => setActiveAnimeSlot(null)} type="button"><IconClose /></button>
-                                                </div>
-                                                <div className="ep-modal-body" style={{ padding: '16px' }}>
-                                                    <input
-                                                        type="text"
-                                                        className="ep-input"
-                                                        placeholder="Escribe el nombre del anime..."
-                                                        value={animeSearchQuery}
-                                                        onChange={e => setAnimeSearchQuery(e.target.value)}
-                                                        autoFocus
-                                                    />
-                                                    {isSearchingAnime && <p className="ep-searching" style={{ marginTop: '12px' }}>Buscando...</p>}
-                                                    {animeSearchResults.length > 0 && (
-                                                        <div className="ep-search-results" style={{ marginTop: '12px', border: '1px solid var(--border-subtle)', borderRadius: '8px', overflow: 'hidden' }}>
-                                                            {animeSearchResults.slice(0, 5).map(anime => (
-                                                                <button key={anime.id} type="button" className="ep-search-result" onClick={() => selectAnime(anime)}>
-                                                                    {(anime.cover_url || anime.image_url) && <img src={anime.cover_url || anime.image_url} alt="" className="square-cover" />}
-                                                                    <span className="ep-search-result-name">{anime.title}</span>
-                                                                </button>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-
         </div>
-    )
+
+        {cropModal.isOpen && (
+            <ImageCropperModal
+                imageSrc={cropModal.src}
+                aspect={cropModal.aspect}
+                onCropComplete={handleCropComplete}
+                onCancel={() => setCropModal({ isOpen: false, type: null, src: null, aspect: 1 })}
+            />
+        )}
+
+        {/* Top 4 Modals */}
+        {activeGameSlot !== null && (
+            <div className="ep-overlay" style={{ zIndex: 10001 }} onClick={e => { if (e.target === e.currentTarget) setActiveGameSlot(null) }}>
+                <div className="ep-modal" style={{ width: '400px', height: 'auto', maxHeight: '80vh' }} onClick={e => e.stopPropagation()}>
+                    <div className="ep-modal-header">
+                        <h3 className="ep-modal-title">Elige un Juego</h3>
+                        <button className="ep-close-btn" onClick={() => setActiveGameSlot(null)} type="button"><IconClose /></button>
+                    </div>
+                    <div className="ep-modal-body" style={{ padding: '16px' }}>
+                        <input
+                            type="text"
+                            className="ep-input"
+                            placeholder="Escribe el nombre del juego..."
+                            value={gameSearchQuery}
+                            onChange={e => setGameSearchQuery(e.target.value)}
+                            autoFocus
+                        />
+                        {isSearchingGames && <p className="ep-searching" style={{ marginTop: '12px' }}>Buscando...</p>}
+                        {gameSearchResults.length > 0 && (
+                            <div className="ep-search-results" style={{ marginTop: '12px', border: '1px solid var(--border-subtle)', borderRadius: '8px', overflow: 'hidden' }}>
+                                {gameSearchResults.slice(0, 5).map(game => (
+                                    <button key={game.id} type="button" className="ep-search-result" onClick={() => selectGame(game)}>
+                                        {(game.cover_url || game.image_url) && <img src={game.cover_url || game.image_url} alt="" className="square-cover" />}
+                                        <span className="ep-search-result-name">{game.name}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        )}
+        {activeAnimeSlot !== null && (
+            <div className="ep-overlay" style={{ zIndex: 10001 }} onClick={e => { if (e.target === e.currentTarget) setActiveAnimeSlot(null) }}>
+                <div className="ep-modal" style={{ width: '400px', height: 'auto', maxHeight: '80vh' }} onClick={e => e.stopPropagation()}>
+                    <div className="ep-modal-header">
+                        <h3 className="ep-modal-title">Elige un Anime</h3>
+                        <button className="ep-close-btn" onClick={() => setActiveAnimeSlot(null)} type="button"><IconClose /></button>
+                    </div>
+                    <div className="ep-modal-body" style={{ padding: '16px' }}>
+                        <input
+                            type="text"
+                            className="ep-input"
+                            placeholder="Escribe el nombre del anime..."
+                            value={animeSearchQuery}
+                            onChange={e => setAnimeSearchQuery(e.target.value)}
+                            autoFocus
+                        />
+                        {isSearchingAnime && <p className="ep-searching" style={{ marginTop: '12px' }}>Buscando...</p>}
+                        {animeSearchResults.length > 0 && (
+                            <div className="ep-search-results" style={{ marginTop: '12px', border: '1px solid var(--border-subtle)', borderRadius: '8px', overflow: 'hidden' }}>
+                                {animeSearchResults.slice(0, 5).map(anime => (
+                                    <button key={anime.id} type="button" className="ep-search-result" onClick={() => selectAnime(anime)}>
+                                        {(anime.cover_url || anime.image_url) && <img src={anime.cover_url || anime.image_url} alt="" className="square-cover" />}
+                                        <span className="ep-search-result-name">{anime.title}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        )}
+    </>
+)
 }

@@ -53,7 +53,11 @@ export default function ImageCropperModal({ imageSrc, aspect, onCropComplete, on
         setCroppedAreaPixels(croppedAreaPixels)
     }, [])
 
-    const handleSave = async () => {
+    const handleSave = async (e) => {
+        if (e) {
+            e.preventDefault()
+            e.stopPropagation()
+        }
         setLoading(true)
         try {
             const croppedData = await getCroppedImg(imageSrc, croppedAreaPixels)
@@ -66,11 +70,19 @@ export default function ImageCropperModal({ imageSrc, aspect, onCropComplete, on
     }
 
     return (
-        <div className="modal-overlay" style={{ zIndex: 10000 }}>
-            <div className="modal" style={{ width: '600px', maxWidth: '95%', padding: '0', overflow: 'hidden' }}>
+        <div 
+            className="modal-overlay" 
+            style={{ zIndex: 10005 }}
+            onClick={(e) => {
+                if (e.target === e.currentTarget) {
+                    onCancel()
+                }
+            }}
+        >
+            <div className="modal" style={{ width: '600px', maxWidth: '95%', padding: '0', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
                 <div className="modal-header" style={{ padding: 'var(--space-md)' }}>
                     <h3 style={{ margin: 0, fontFamily: 'var(--font-display)' }}>Ajustar Imagen</h3>
-                    <button className="modal-close" onClick={onCancel}>&times;</button>
+                    <button type="button" className="modal-close" onClick={(e) => { e.stopPropagation(); onCancel(); }}>&times;</button>
                 </div>
                 
                 <div style={{ position: 'relative', height: '400px', background: '#111', width: '100%' }}>
@@ -100,8 +112,8 @@ export default function ImageCropperModal({ imageSrc, aspect, onCropComplete, on
                         />
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-                        <button className="btn btn-ghost" onClick={onCancel} disabled={loading}>Cancelar</button>
-                        <button className="btn btn-primary" onClick={handleSave} disabled={loading}>
+                        <button type="button" className="btn btn-ghost" onClick={(e) => { e.stopPropagation(); onCancel(); }} disabled={loading}>Cancelar</button>
+                        <button type="button" className="btn btn-primary" onClick={handleSave} disabled={loading}>
                             {loading ? 'Recortando...' : 'Aplicar'}
                         </button>
                     </div>
