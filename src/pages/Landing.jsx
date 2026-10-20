@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom'
 import { motion, useScroll, useTransform } from 'framer-motion'
 import { getRecentReviews } from '../lib/reviewService'
 import { getTrendingWorks } from '../lib/workPageService'
-import { getDebates } from '../lib/debateService'
 import { STATIC_COVERS } from '../lib/constants'
 import SEO from '../components/SEO'
 import './Landing.css'
@@ -12,13 +11,11 @@ import './Landing.css'
 const EyeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>;
 const StarIcon = ({ size = 20, fill = "currentColor", stroke = "currentColor" }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>;
 const LayersIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 12 12 17 22 12"/><polyline points="2 17 12 22 22 17"/></svg>;
-const ChatIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>;
 
 export default function Landing() {
     const [trendingGames, setTrendingGames] = useState([])
     const [trendingAnime, setTrendingAnime] = useState([])
     const [recentReviews, setRecentReviews] = useState([])
-    const [activeDebates, setActiveDebates] = useState([])
     const [loading, setLoading] = useState(true)
 
     const { scrollY } = useScroll();
@@ -29,16 +26,14 @@ export default function Landing() {
     useEffect(() => {
         async function loadData() {
             try {
-                const [games, anime, reviews, debates] = await Promise.all([
+                const [games, anime, reviews] = await Promise.all([
                     getTrendingWorks('game', 12),
                     getTrendingWorks('anime', 12),
-                    getRecentReviews(4),
-                    getDebates({ limit: 5, orderBy: 'active' })
+                    getRecentReviews(4)
                 ])
                 setTrendingGames(games || [])
                 setTrendingAnime(anime || [])
                 setRecentReviews(reviews || [])
-                setActiveDebates(debates || [])
             } catch (err) {
                 console.error('Error loading landing data', err)
             } finally {
@@ -140,7 +135,7 @@ export default function Landing() {
                             <div className="feature-col">
                                 <div className="feature-icon-box"><LayersIcon /></div>
                                 <h3>Crea Tierlists</h3>
-                                <p>Construye, comparte y debate listas personalizadas con el creador más rápido de internet.</p>
+                                <p>Construye y comparte listas personalizadas con el creador más rápido de internet.</p>
                             </div>
                         </div>
                     </div>
@@ -248,25 +243,6 @@ export default function Landing() {
                                                 <p className="lbx-review-text">"{review.content?.substring(0, 100)}..."</p>
                                             </div>
                                         </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div className="lbx-debates-section">
-                                <h2 className="landing-section-title">Debates</h2>
-                                <div className="lbx-debates-list">
-                                    {activeDebates.map(debate => (
-                                        <Link key={debate.id} to={`/debate/${debate.id}`} className="lbx-debate-item">
-                                            <h4 className="lbx-debate-title">{debate.title}</h4>
-                                            <div className="lbx-debate-meta">
-                                                {debate.media?.[0]?.name && (
-                                                    <span className="lbx-debate-category">{debate.media[0].name}</span>
-                                                )}
-                                                <span className="lbx-debate-replies">
-                                                    <ChatIcon size={12} /> {debate.posts_count}
-                                                </span>
-                                            </div>
-                                        </Link>
                                     ))}
                                 </div>
                             </div>

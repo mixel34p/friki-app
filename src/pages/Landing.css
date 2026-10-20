@@ -538,59 +538,6 @@
     margin: 0;
 }
 
-/* Debates - Letterboxd Dense List */
-.lbx-debates-list {
-    display: flex;
-    flex-direction: column;
-}
-
-.lbx-debate-item {
-    display: flex;
-    flex-direction: column;
-    padding: var(--space-md) 0;
-    border-bottom: 1px solid var(--border-subtle);
-    text-decoration: none;
-    transition: background var(--transition-fast);
-}
-
-.lbx-debate-item:hover {
-    background: var(--bg-secondary);
-    padding-left: var(--space-xs);
-    padding-right: var(--space-xs);
-    margin-left: calc(-1 * var(--space-xs));
-    margin-right: calc(-1 * var(--space-xs));
-    border-radius: var(--radius-sm);
-    border-bottom-color: transparent;
-}
-
-.lbx-debate-title {
-    font-size: 1rem;
-    color: var(--text-primary);
-    margin: 0 0 8px 0;
-    line-height: 1.3;
-}
-
-.lbx-debate-meta {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    font-size: 0.8rem;
-}
-
-.lbx-debate-category {
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    font-weight: 600;
-}
-
-.lbx-debate-replies {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    color: var(--text-secondary);
-}
-
 /* ── Footer ── */
 .landing-footer {
     padding: var(--space-2xl) 0;
@@ -721,7 +668,6 @@
     }
     .lbx-work-title { font-size: 0.95rem; }
     .lbx-review-text { font-size: 0.82rem; }
-    .lbx-debate-title { font-size: 0.92rem; }
 
     /* Footer */
     .footer-content {

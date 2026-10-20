@@ -3,15 +3,12 @@ import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import {
     getWorkById,
-    getDebatesForWork,
     getTierlistsWithWork,
-    getUsersWhoInteractedWithWork,
     getSimilarWorks,
     getWorkStats
 } from '../lib/workPageService'
 import { getWorkLog, getWorkReviews } from '../lib/libraryService'
 import { getSpacesByWork } from '../lib/spaceService'
-import { DEBATE_TYPES } from '../lib/debateService'
 import LogModal from '../components/LogModal'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ReviewLikeButton from '../components/ReviewLikeButton'
@@ -31,7 +28,6 @@ export default function WorkPage({ mediaType }) {
 
     // Data states
     const [work, setWork] = useState(null)
-    const [debates, setDebates] = useState([])
     const [relatedSpaces, setRelatedSpaces] = useState([])
     const [similarWorks, setSimilarWorks] = useState([])
     const [recentReviews, setRecentReviews] = useState([])
@@ -51,7 +47,6 @@ export default function WorkPage({ mediaType }) {
 
     useEffect(() => {
         if (work) {
-            loadDebates()
             loadStats()
             loadReviews()
             loadRelatedSpaces()
@@ -146,13 +141,6 @@ export default function WorkPage({ mediaType }) {
         } finally {
             setLoading(false)
         }
-    }
-
-    const loadDebates = async () => {
-        const debatesData = await getDebatesForWork(mediaType, parseInt(id), {
-            orderBy: 'recent'
-        })
-        setDebates(debatesData || [])
     }
 
     const handleReviewAdded = async (savedLog) => {
@@ -414,20 +402,6 @@ export default function WorkPage({ mediaType }) {
                         </div>
                     )}
 
-                    {/* We can embed the debates here */}
-                    {debates.length > 0 && (
-                        <div>
-                            <h3 className="work-section-title">Debates Recientes</h3>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                {debates.slice(0, 3).map(debate => (
-                                    <Link key={debate.id} to={`/debate/${debate.id}`} style={{ padding: '1rem', background: 'var(--bg-card)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 'var(--radius-md)', textDecoration: 'none', color: 'inherit' }}>
-                                        <div style={{ fontWeight: '500', marginBottom: '0.25rem' }}>{debate.title}</div>
-                                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{debate.posts_count} respuestas</div>
-                                    </Link>
-                                ))}
-                            </div>
-                        </div>
-                    )}
                 </div>
 
                 <div className="work-sidebar">

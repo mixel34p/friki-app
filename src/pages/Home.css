@@ -127,30 +127,6 @@
     text-decoration: underline;
 }
 
-/* DEBATES SCROLL */
-.debates-scroll-cards {
-    display: flex;
-    gap: var(--space-md);
-    overflow-x: auto;
-    padding-bottom: var(--space-md);
-    padding-left: 2px;
-    padding-right: 2px;
-    scrollbar-width: none;
-}
-
-.debates-scroll-cards::-webkit-scrollbar {
-    display: none;
-}
-
-.debate-scroll-item {
-    flex: 0 0 350px;
-    max-width: 90vw;
-}
-
-.debate-scroll-item .debate-card {
-    height: 100%;
-}
-
 /* TRENDING GRID */
 .trending-grid {
     display: grid;
@@ -426,10 +402,6 @@
 
     .section-header h2 {
         font-size: 1.25rem;
-    }
-
-    .debate-scroll-item {
-        flex: 0 0 280px;
     }
 
     .trending-grid,

@@ -925,11 +925,6 @@
     color: #f87171;
 }
 
-.debate-card .chat-card-type {
-    background: rgba(59, 130, 246, 0.2);
-    color: #60a5fa;
-}
-
 .chat-card h4 {
     margin: 0;
     font-size: 0.9rem;
@@ -953,10 +948,6 @@
 
 .work-card {
     border-left: 3px solid #ef4444;
-}
-
-.debate-card {
-    border-left: 3px solid #3b82f6;
 }
 
 /* ═══════════════════════════════════════════════════════

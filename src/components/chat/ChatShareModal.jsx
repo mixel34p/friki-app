@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getUserTierlists, getUserDebates } from '../../lib/socialDiscoveryService'
+import { getUserTierlists } from '../../lib/socialDiscoveryService'
 import { searchGames } from '../../lib/gameService'
 import { searchAnime } from '../../lib/animeService'
 import LoadingSpinner from '../LoadingSpinner'
@@ -7,7 +7,7 @@ import LoadingSpinner from '../LoadingSpinner'
 export function ChatShareModal({ isOpen, onClose, onSelect, userId }) {
     if (!isOpen) return null
 
-    const [activeTab, setActiveTab] = useState('tierlist') // tierlist, game, anime, debate
+    const [activeTab, setActiveTab] = useState('tierlist')
     const [loading, setLoading] = useState(false)
     const [items, setItems] = useState([])
     const [searchQuery, setSearchQuery] = useState('')
@@ -37,13 +37,6 @@ export function ChatShareModal({ isOpen, onClose, onSelect, userId }) {
                         return
                     }
                     data = await getUserTierlists(userId)
-                } else if (activeTab === 'debate') {
-                    if (!userId) {
-                        setError('Usuario no identificado')
-                        setItems([])
-                        return
-                    }
-                    data = await getUserDebates(userId)
                 } else if (activeTab === 'game') {
                     if (debouncedQuery.length >= 2) {
                         data = await searchGames(debouncedQuery)
@@ -82,9 +75,6 @@ export function ChatShareModal({ isOpen, onClose, onSelect, userId }) {
             type = 'WORK'
             extra = 'anime'
             tag = `[WORK|${item.id}|${item.name || item.title}|${item.cover_url || item.image_url || ''}|anime]`
-        } else if (activeTab === 'debate') {
-            type = 'DEBATE'
-            tag = `[DEBATE|${item.id}|${item.title}]`
         }
 
         onSelect({
@@ -125,12 +115,6 @@ export function ChatShareModal({ isOpen, onClose, onSelect, userId }) {
                     >
                         <img src="/icons/anime.png" alt="📺" style={{ width: '16px', height: '16px', marginRight: '6px' }} /> Anime
                     </button>
-                    <button
-                        className={`tab-btn ${activeTab === 'debate' ? 'active' : ''}`}
-                        onClick={() => { setActiveTab('debate'); setSearchQuery('') }}
-                    >
-                        <img src="/icons/dialog.png" alt="💬" style={{ width: '16px', height: '16px', marginRight: '6px' }} /> Debates
-                    </button>
                 </div>
 
                 {(activeTab === 'game' || activeTab === 'anime') && (
@@ -155,21 +139,18 @@ export function ChatShareModal({ isOpen, onClose, onSelect, userId }) {
                     ) : items.length > 0 ? (
                         items.map(item => (
                             <div key={item.id} className="share-item" onClick={() => handleSelect(item)}>
-                                {activeTab !== 'debate' && (
-                                    <div className="share-item-img">
-                                        {item.cover_url || item.image_url ? (
-                                            <img src={item.cover_url || item.image_url} alt="" />
-                                        ) : (
-                                            <div className="placeholder-img">
-                                                {activeTab === 'tierlist' ? <img src="/icons/tierlist.png" alt="📊" style={{ width: '24px', height: '24px', opacity: 0.7 }} /> : activeTab === 'anime' ? <img src="/icons/anime.png" alt="📺" style={{ width: '24px', height: '24px', opacity: 0.7 }} /> : <img src="/icons/videogame.png" alt="🎮" style={{ width: '24px', height: '24px', opacity: 0.7 }} />}
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
+                                <div className="share-item-img">
+                                    {item.cover_url || item.image_url ? (
+                                        <img src={item.cover_url || item.image_url} alt="" />
+                                    ) : (
+                                        <div className="placeholder-img">
+                                            {activeTab === 'tierlist' ? <img src="/icons/tierlist.png" alt="📊" style={{ width: '24px', height: '24px', opacity: 0.7 }} /> : activeTab === 'anime' ? <img src="/icons/anime.png" alt="📺" style={{ width: '24px', height: '24px', opacity: 0.7 }} /> : <img src="/icons/videogame.png" alt="🎮" style={{ width: '24px', height: '24px', opacity: 0.7 }} />}
+                                        </div>
+                                    )}
+                                </div>
                                 <div className="share-item-info">
                                     <h4>{item.name || item.title}</h4>
                                     {item.category && <span>{item.category}</span>}
-                                    {activeTab === 'debate' && <span>{new Date(item.created_at).toLocaleDateString()}</span>}
                                 </div>
                             </div>
                         ))
@@ -179,9 +160,7 @@ export function ChatShareModal({ isOpen, onClose, onSelect, userId }) {
                                 ? 'Escribe para buscar'
                                 : activeTab === 'tierlist'
                                     ? 'No tienes tierlists'
-                                    : activeTab === 'debate'
-                                        ? 'No tienes debates'
-                                        : 'No se encontraron resultados'}
+                                    : 'No se encontraron resultados'}
                         </div>
                     )}
                 </div>

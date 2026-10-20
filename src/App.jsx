@@ -42,8 +42,6 @@ import SpacesExplore from './pages/spaces/SpacesExplore'
 import MySpaces from './pages/spaces/MySpaces'
 import SpaceLayout from './pages/spaces/SpaceLayout'
 import LiveChat from './pages/spaces/LiveChat'
-import SpaceDebates from './pages/spaces/SpaceDebates'
-import DebateThread from './pages/spaces/DebateThread'
 
 // Protected Route component
 function ProtectedRoute({ children, requireProfile = true }) {
@@ -158,8 +156,6 @@ function App() {
             <Route path="/spaces/explore" element={<ProtectedRoute><SpacesExplore /></ProtectedRoute>} />
             <Route path="/spaces/:id" element={<ProtectedRoute><SpaceLayout /></ProtectedRoute>}>
               <Route path="chat/:channelId" element={<LiveChat />} />
-              <Route path="debates" element={<SpaceDebates />} />
-              <Route path="debates/:debateId" element={<DebateThread />} />
             </Route>
 
             {/* Social Discovery Routes */}

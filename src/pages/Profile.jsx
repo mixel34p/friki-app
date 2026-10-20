@@ -650,7 +650,6 @@ export default function Profile() {
                 {[
                     { id: 'actividad', label: 'Actividad' },
                     { id: 'tierlists', label: 'Tierlists' },
-                    { id: 'debates', label: 'Debates' },
                 ].map(tab => (
                     <button
                         key={tab.id}
@@ -798,13 +797,6 @@ export default function Profile() {
                                 </div>
                             )}
                         </div>
-                    </div>
-                )}
-                {activeProfileTab === 'debates' && (
-                    <div className="profile-tab-placeholder">
-                        <div className="placeholder-icon">💬</div>
-                        <h3>Debates</h3>
-                        <p>Los debates de {profile?.username} estarán aquí pronto.</p>
                     </div>
                 )}
             </div>

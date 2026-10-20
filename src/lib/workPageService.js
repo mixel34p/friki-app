@@ -3,7 +3,6 @@
  * 
  * Funciones para obtener:
  * - Detalles de la obra
- * - Debates relacionados
  * - Tierlists que contienen la obra
  * - Usuarios que han interactuado
  * - Obras similares/recomendaciones
@@ -34,68 +33,6 @@ export async function getWorkById(mediaType, id) {
     } catch (error) {
         console.error('getWorkById error:', error)
         return null
-    }
-}
-
-// ═══════════════════════════════════════════════════════
-// DEBATES FOR WORK
-// ═══════════════════════════════════════════════════════
-
-/**
- * Get debates that mention this work
- * @param {'game' | 'anime'} mediaType 
- * @param {number} mediaId 
- * @param {Object} options
- * @returns {Promise<Array>}
- */
-export async function getDebatesForWork(mediaType, mediaId, { limit = 10, orderBy = 'recent' } = {}) {
-    try {
-        // Get debate IDs from debate_media
-        const { data: debateMedia, error: mediaError } = await supabase
-            .from('debate_media')
-            .select('debate_id')
-            .eq('media_type', mediaType)
-            .eq('media_id', mediaId)
-
-        if (mediaError) throw mediaError
-        if (!debateMedia || debateMedia.length === 0) return []
-
-        const debateIds = debateMedia.map(dm => dm.debate_id)
-
-        // Get debates
-        let query = supabase
-            .from('debates')
-            .select('id, title, debate_type, posts_count, created_at, user_id')
-            .in('id', debateIds)
-            .limit(limit)
-
-        if (orderBy === 'recent') {
-            query = query.order('created_at', { ascending: false })
-        } else if (orderBy === 'popular') {
-            query = query.order('posts_count', { ascending: false })
-        }
-
-        const { data: debates, error } = await query
-
-        if (error) throw error
-        if (!debates || debates.length === 0) return []
-
-        // Get profiles
-        const userIds = [...new Set(debates.map(d => d.user_id))]
-        const { data: profiles } = await supabase
-            .from('profiles')
-            .select('user_id, username, display_name, avatar_url, color_primary, color_secondary')
-            .in('user_id', userIds)
-
-        const profilesMap = (profiles || []).reduce((acc, p) => ({ ...acc, [p.user_id]: p }), {})
-
-        return debates.map(d => ({
-            ...d,
-            profiles: profilesMap[d.user_id]
-        }))
-    } catch (error) {
-        console.error('getDebatesForWork error:', error)
-        return []
     }
 }
 
@@ -206,7 +143,7 @@ export async function getTierlistsWithWork(mediaType, mediaId, { limit = 20 } = 
 // ═══════════════════════════════════════════════════════
 
 /**
- * Get users who have tierliested or debated this work
+ * Get users who have tierlisted this work
  * @param {'game' | 'anime'} mediaType 
  * @param {number} mediaId 
  * @param {string} currentUserId - For affinity calculation
@@ -228,29 +165,6 @@ export async function getUsersWhoInteractedWithWork(mediaType, mediaId, currentU
         if (tierlists) {
             tierlists.forEach(t => {
                 if (t.user_id !== currentUserId) userIds.add(t.user_id)
-            })
-        }
-
-        // Get users from debates
-        const { data: debateMedia, error: debateMediaError } = await supabase
-            .from('debate_media')
-            .select('debate_id')
-            .eq('media_type', mediaType)
-            .eq('media_id', mediaId)
-
-        if (!debateMediaError && debateMedia && debateMedia.length > 0) {
-            const debateIds = debateMedia.map(dm => dm.debate_id)
-
-            // Get authors of these debates
-            const { data: debateAuthors } = await supabase
-                .from('debates')
-                .select('user_id')
-                .in('id', debateIds)
-
-            debateAuthors?.forEach(d => {
-                if (d.user_id && d.user_id !== currentUserId) {
-                    userIds.add(d.user_id)
-                }
             })
         }
 
@@ -459,13 +373,6 @@ async function getSimilarFromTierlists(mediaType, mediaId, limit, seenIds = new 
  */
 export async function getWorkStats(mediaType, mediaId) {
     try {
-        // Get debates count
-        const { count: debatesCount } = await supabase
-            .from('debate_media')
-            .select('*', { count: 'exact', head: true })
-            .eq('media_type', mediaType)
-            .eq('media_id', mediaId)
-
         // Get members, average rating
         const { data: entries, error: entriesError } = await supabase
             .from('library_entries')
@@ -520,14 +427,13 @@ export async function getWorkStats(mediaType, mediaId) {
         }
 
         return {
-            debatesCount: debatesCount || 0,
             membersCount: membersCount,
             avgRating: avgRating > 0 ? avgRating.toFixed(1) : 0,
             recentMembers
         }
     } catch (error) {
         console.error('getWorkStats error:', error)
-        return { debatesCount: 0 }
+        return { membersCount: 0, avgRating: 0, recentMembers: [] }
     }
 }
 

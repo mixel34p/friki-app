@@ -51,7 +51,7 @@ export default function SpaceLayout() {
   const [deleteError, setDeleteError] = useState('');
 
   // Swipe logic state (must be at top level)
-  const isChannelView = location.pathname.includes('/chat/') || location.pathname.includes('/debates');
+  const isChannelView = location.pathname.includes('/chat/');
   const [lastActiveChannelPath, setLastActiveChannelPath] = useState(null);
   const [touchStart, setTouchStart] = useState({ x: null, y: null });
   const [touchEnd, setTouchEnd] = useState({ x: null, y: null });
@@ -229,12 +229,10 @@ export default function SpaceLayout() {
       if (location.pathname === `/spaces/${spaceId}`) {
         if (window.innerWidth > 768) {
           const safeChan = Array.isArray(channelsData) ? channelsData : [];
-          const textChans = safeChan.filter(c => c.type !== 'foro' && c.type !== 'forum' && c.type !== 'debates');
+          const textChans = safeChan.filter(c => c.type === 'chat');
           
           if (textChans.length > 0) {
               navigate(`/spaces/${spaceId}/chat/${textChans[0].id}`, { replace: true });
-          } else {
-              navigate(`/spaces/${spaceId}/debates`, { replace: true });
           }
         }
       }
@@ -367,8 +365,7 @@ export default function SpaceLayout() {
   };
 
   const safeChannels = Array.isArray(channels) ? channels : [];
-  const defaultChannel = safeChannels.find(c => c.type === 'foro' || c.type === 'forum' || c.type === 'debates');
-  const chatChannels = safeChannels.filter(c => c.id !== defaultChannel?.id && c.type === 'chat');
+  const chatChannels = safeChannels.filter(c => c.type === 'chat');
 
   const customStyles = space?.theme_color ? { 
     '--brand-primary': space.theme_color,
@@ -544,13 +541,6 @@ export default function SpaceLayout() {
           </div>
         </div>
         <div className="space-channels">
-          {defaultChannel && (
-            <NavLink to={`/spaces/${spaceId}/debates`} className={({isActive}) => `channel-link ${isActive ? 'active' : ''}`}>
-              <svg className="channel-icon" viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-              <span className="channel-name">{defaultChannel.name}</span>
-            </NavLink>
-          )}
-          
           <div className="channel-category" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ lineHeight: 1 }}>CANALES DE TEXTO</span>
             {isAdmin && (
@@ -593,7 +583,17 @@ export default function SpaceLayout() {
         </div>
       </div>
       <div className="space-main">
-        <Outlet context={{ channels, space }} />
+        {isChannelView ? (
+          <Outlet context={{ channels, space }} />
+        ) : chatChannels.length > 0 ? (
+          <div className="space-empty-channel" style={{ display: 'grid', placeItems: 'center', height: '100%', padding: '2rem', color: 'var(--text-muted)', textAlign: 'center' }}>
+            Selecciona un canal de chat para empezar.
+          </div>
+        ) : (
+          <div className="space-empty-channel" style={{ display: 'grid', placeItems: 'center', height: '100%', padding: '2rem', color: 'var(--text-muted)', textAlign: 'center' }}>
+            Este espacio aún no tiene canales de chat.
+          </div>
+        )}
       </div>
 
       {editingChannel && (
@@ -916,12 +916,12 @@ export default function SpaceLayout() {
                                         <h3>Zona de peligro</h3>
                                     </div>
                                     <p className="danger-zone-desc">
-                                        Las acciones de esta sección son <strong>permanentes e irreversibles</strong>. Todos los canales, mensajes y debates de esta comunidad se eliminarán para siempre.
+                                        Las acciones de esta sección son <strong>permanentes e irreversibles</strong>. Todos los canales y mensajes de esta comunidad se eliminarán para siempre.
                                     </p>
                                     <div className="danger-zone-action">
                                         <div>
                                             <p className="danger-action-title">Eliminar esta comunidad</p>
-                                            <p className="danger-action-desc">Se eliminarán todos los canales, mensajes y debates de forma permanente.</p>
+                                            <p className="danger-action-desc">Se eliminarán todos los canales y mensajes de forma permanente.</p>
                                         </div>
                                         <button
                                             type="button"
@@ -961,7 +961,7 @@ export default function SpaceLayout() {
 
             <h2 className="delete-space-title">Eliminar '{space?.name}'</h2>
             <p className="delete-space-warning">
-              Esta acción <strong>no se puede deshacer</strong>. Se eliminarán permanentemente todos los canales, mensajes y debates de esta comunidad.
+              Esta acción <strong>no se puede deshacer</strong>. Se eliminarán permanentemente todos los canales y mensajes de esta comunidad.
             </p>
 
             <div className="delete-space-confirm-field">

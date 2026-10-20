@@ -116,7 +116,7 @@ export default function CompareProfiles() {
         )
     }
 
-    const { profile1, profile2, affinity, matches, commonWorks, tierlists1, tierlists2, commonDebates } = comparison
+    const { profile1, profile2, affinity, matches, commonWorks, tierlists1, tierlists2 } = comparison
 
     return (
         <div className="compare-profiles">
@@ -292,26 +292,6 @@ export default function CompareProfiles() {
                         </div>
                     </div>
                 </section>
-
-                {/* Common Debates */}
-                {commonDebates.length > 0 && (
-                    <section className="compare-section">
-                        <h2><img src="/icons/dialog.png" alt="💬" style={{ width: '24px', height: '24px', verticalAlign: 'middle', marginRight: '8px' }} /> Debates en común</h2>
-                        <div className="common-debates-list">
-                            {commonDebates.map(debate => (
-                                <Link key={debate.id} to={`/debate/${debate.id}`} className="debate-link">
-                                    <span className="debate-type-icon">
-                                        {debate.debate_type === 'comparison' && <img src="/icons/scale.png" alt="⚖️" style={{ width: '16px', height: '16px', verticalAlign: 'middle' }} />}
-                                        {debate.debate_type === 'opinion' && <img src="/icons/opinion.png" alt="💭" style={{ width: '16px', height: '16px', verticalAlign: 'middle' }} />}
-                                        {debate.debate_type === 'question' && <img src="/icons/interrogation.png" alt="❓" style={{ width: '16px', height: '16px', verticalAlign: 'middle' }} />}
-                                        {debate.debate_type === 'ranking' && <img src="/icons/medal.png" alt="🏆" style={{ width: '16px', height: '16px', verticalAlign: 'middle' }} />}
-                                    </span>
-                                    <span className="debate-title">{debate.title}</span>
-                                </Link>
-                            ))}
-                        </div>
-                    </section>
-                )}
 
                 {/* Request Modal */}
                 {showRequestModal && (

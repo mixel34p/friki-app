@@ -157,7 +157,7 @@ const MessageContent = ({ content, commonWorks = [], imageUrl, onImageClick }) =
 
     const handleCardClick = (part) => {
         if (part.cardType === 'DEBATE') {
-            navigate(`/debate/${part.id}`)
+            return
         } else if (part.cardType === 'TIERLIST') {
             navigate(`/tierlist/${part.id}`)
         } else if (part.cardType === 'WORK') {
@@ -188,9 +188,9 @@ const MessageContent = ({ content, commonWorks = [], imageUrl, onImageClick }) =
                         return (
                             <div
                                 key={i}
-                                className={`chat-card ${part.cardType.toLowerCase()}-card`}
+                                className={`chat-card ${part.cardType.toLowerCase()}-card ${part.cardType === 'DEBATE' ? 'unavailable-card' : ''}`}
                                 onClick={() => handleCardClick(part)}
-                                title="Ver detalles"
+                                title={part.cardType === 'DEBATE' ? 'Este contenido ya no está disponible' : 'Ver detalles'}
                             >
                                 {part.image && (
                                     <div className="chat-card-media">
@@ -198,8 +198,8 @@ const MessageContent = ({ content, commonWorks = [], imageUrl, onImageClick }) =
                                     </div>
                                 )}
                                 <div className="chat-card-info">
-                                    <span className="chat-card-type">{part.cardType === 'WORK' ? 'Obra' : part.cardType}</span>
-                                    <h4>{part.title}</h4>
+                                    <span className="chat-card-type">{part.cardType === 'WORK' ? 'Obra' : part.cardType === 'DEBATE' ? 'Contenido retirado' : part.cardType}</span>
+                                    <h4>{part.cardType === 'DEBATE' ? 'Este contenido ya no está disponible' : part.title}</h4>
                                     {part.extra && <span className="chat-card-extra">{part.extra}</span>}
                                 </div>
                             </div>
@@ -417,7 +417,8 @@ No añadas explicaciones, ni texto extra.`
         const match = content.match(/\[(TIERLIST|WORK|DEBATE)\|([^|]+)\|([^|]+)(?:\|([^|]*))?(?:\|([^|]*))?\]/)
         if (match) {
             const [, type, id, title, image, extra] = match
-            const emoji = type === 'TIERLIST' ? '📊' : type === 'WORK' ? (extra === 'anime' ? <img src="/icons/anime.png" alt="📺" style={{ width: '16px', height: '16px' }} /> : <img src="/icons/videogame.png" alt="🎮" style={{ width: '16px', height: '16px' }} />) : <img src="/icons/dialog.png" alt="💬" style={{ width: '16px', height: '16px' }} />
+            if (type === 'DEBATE') return 'Contenido retirado'
+            const emoji = type === 'TIERLIST' ? '📊' : (extra === 'anime' ? <img src="/icons/anime.png" alt="📺" style={{ width: '16px', height: '16px' }} /> : <img src="/icons/videogame.png" alt="🎮" style={{ width: '16px', height: '16px' }} />)
             return `${emoji} ${title}`
         }
 

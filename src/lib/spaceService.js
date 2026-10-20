@@ -55,7 +55,7 @@ export async function deleteSpace(spaceId) {
         // 2. Delete all members of this space
         await supabase.from('space_members').delete().eq('space_id', spaceId);
 
-        // 3. Handle debates (Forums)
+        // 3. Remove legacy forum records when deleting a space
         const { data: debates } = await supabase.from('space_debates').select('id').eq('space_id', spaceId);
         if (debates && debates.length > 0) {
             const debateIds = debates.map(d => d.id);
@@ -280,70 +280,6 @@ export async function toggleReaction(messageId, userId, emoji) {
         return { action: 'added', reaction: data };
     }
 }
-
-// Debates (Forums)
-export async function getSpaceDebates(spaceId) {
-    const { data, error } = await supabase
-        .from('space_debates')
-        .select(`
-            *,
-            user:profiles!space_debates_user_id_fkey (username, display_name, avatar_url, featured_badge)
-        `)
-        .eq('space_id', spaceId)
-        .order('created_at', { ascending: false });
-    if (error) throw error;
-    return data;
-}
-
-export async function getDebateById(debateId) {
-    const { data, error } = await supabase
-        .from('space_debates')
-        .select(`
-            *,
-            user:profiles!space_debates_user_id_fkey (username, display_name, avatar_url, featured_badge)
-        `)
-        .eq('id', debateId)
-        .single();
-    if (error) throw error;
-    return data;
-}
-
-export async function createDebate({ space_id, user_id, title, content }) {
-    const { data, error } = await supabase
-        .from('space_debates')
-        .insert([{ space_id, user_id, title, content }])
-        .select()
-        .single();
-    if (error) throw error;
-    return data;
-}
-
-export async function getDebateReplies(debateId) {
-    const { data, error } = await supabase
-        .from('space_debate_replies')
-        .select(`
-            *,
-            user:profiles!space_debate_replies_user_id_fkey (username, display_name, avatar_url, featured_badge)
-        `)
-        .eq('debate_id', debateId)
-        .order('created_at', { ascending: true });
-    if (error) throw error;
-    return data;
-}
-
-export async function addDebateReply(debateId, userId, content) {
-    const { data, error } = await supabase
-        .from('space_debate_replies')
-        .insert([{ debate_id: debateId, user_id: userId, content }])
-        .select(`
-            *,
-            user:profiles!space_debate_replies_user_id_fkey (username, display_name, avatar_url, featured_badge)
-        `)
-        .single();
-    if (error) throw error;
-    return data;
-}
-
 
 // Emojis Custom
 export async function getCustomEmojis() {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { getSpaces, createSpace, createSpaceChannel } from '../../lib/spaceService';
+import { getSpaces, createSpace, createSpaceChannel, getSpaceChannels, deleteSpaceChannel } from '../../lib/spaceService';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import ImageCropperModal from '../../components/ImageCropperModal';
@@ -125,6 +125,17 @@ export default function SpacesExplore() {
         theme_color: newSpace.theme_color,
         related_works: newSpace.related_works
       });
+
+      // Remove forum channels that may still be created by the database default.
+      try {
+        const createdChannels = await getSpaceChannels(space.id);
+        const legacyForumChannels = createdChannels.filter(channel =>
+          ['foro', 'forum', 'debates'].includes(channel.type)
+        );
+        await Promise.all(legacyForumChannels.map(channel => deleteSpaceChannel(channel.id)));
+      } catch (cleanupError) {
+        console.warn('No se pudieron retirar los canales de foro heredados:', cleanupError);
+      }
       
       setCreatedSpaceId(space.id);
       loadSpaces();
@@ -234,7 +245,7 @@ export default function SpacesExplore() {
         </div>
         <div className="spaces-hero-content">
           <h1>Descubre Comunidades</h1>
-          <p>Únete a espacios creados por fans, chatea en tiempo real y participa en los foros de debate.</p>
+          <p>Únete a espacios creados por fans y chatea en tiempo real.</p>
           <div className="spaces-hero-actions" style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
             <button
               className="btn-primary"
@@ -445,7 +456,7 @@ export default function SpacesExplore() {
               <>
                 <h2>Crear Nuevo Espacio</h2>
                 <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
-                    Un espacio es una comunidad con foros y chats en tiempo real.
+                    Un espacio es una comunidad con canales de chat en tiempo real.
                 </p>
                 
                 <form onSubmit={handleStep1Submit}>
@@ -576,7 +587,7 @@ export default function SpacesExplore() {
               <>
                 <h2>Añadir Canales</h2>
                 <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
-                    ¡Espacio creado! Hemos generado un canal <strong># General</strong> y un <strong>Foro de Debates</strong> por defecto. ¿Quieres añadir más canales de chat?
+                    El espacio está creado. Puedes añadir canales de chat ahora o hacerlo más tarde.
                 </p>
                 
                 <form onSubmit={handleStep3Submit}>

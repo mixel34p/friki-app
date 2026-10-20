@@ -802,25 +802,6 @@ export async function compareProfiles(userId1, userId2) {
             supabase.from('tierlists').select('*').eq('user_id', userId2).eq('visibility', 'public')
         ])
 
-        // Get common debates
-        const [{ data: debates1 }, { data: debates2 }] = await Promise.all([
-            supabase.from('debate_posts').select('debate_id').eq('user_id', userId1),
-            supabase.from('debate_posts').select('debate_id').eq('user_id', userId2)
-        ])
-
-        const debateIds1 = new Set(debates1?.map(d => d.debate_id) || [])
-        const debateIds2 = new Set(debates2?.map(d => d.debate_id) || [])
-        const commonDebateIds = [...debateIds1].filter(id => debateIds2.has(id))
-
-        let commonDebates = []
-        if (commonDebateIds.length > 0) {
-            const { data } = await supabase
-                .from('debates')
-                .select('id, title, debate_type')
-                .in('id', commonDebateIds.slice(0, 5))
-            commonDebates = data || []
-        }
-
         // Calculate detailed affinity
         const { score, matches } = calculateAffinityClient(profile1, profile2)
         const commonWorks = await getCommonWorks(userId1, userId2, 10)
@@ -838,7 +819,6 @@ export async function compareProfiles(userId1, userId2) {
             commonWorks,
             tierlists1: tierlists1 || [],
             tierlists2: tierlists2 || [],
-            commonDebates,
             commonLibrary: getCommonLibrary(profile1?.library, profile2?.library),
             commonAnimeLibrary: getCommonLibrary(profile1?.anime_library, profile2?.anime_library),
             commonAnimeTags
@@ -950,15 +930,5 @@ export async function getUserTierlists(userId) {
     }))
 }
 
-export async function getUserDebates(userId) {
-    const { data } = await supabase
-        .from('debates')
-        .select('id, title, created_at')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(20)
-
-    return data || []
-}
 
 
