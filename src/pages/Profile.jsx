@@ -1,5 +1,6 @@
 
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -100,6 +101,7 @@ export default function Profile() {
     const [isFollowing, setIsFollowing] = useState(false)
     const [loading, setLoading] = useState(true)
     const [followsModal, setFollowsModal] = useState({ isOpen: false, type: 'followers' })
+    const [selectedBadge, setSelectedBadge] = useState(null)
     const [isPlaying, setIsPlaying] = useState(false)
     const audioRef = useRef(null)
     const [activeFavTab, setActiveFavTab] = useState('games')
@@ -112,6 +114,22 @@ export default function Profile() {
 
     const navigate = useNavigate()
     const [isScrolled, setIsScrolled] = useState(false)
+
+    useEffect(() => {
+        if (!selectedBadge) return undefined
+
+        const previousOverflow = document.body.style.overflow
+        const handleKeyDown = event => {
+            if (event.key === 'Escape') setSelectedBadge(null)
+        }
+
+        document.body.style.overflow = 'hidden'
+        document.addEventListener('keydown', handleKeyDown)
+        return () => {
+            document.body.style.overflow = previousOverflow
+            document.removeEventListener('keydown', handleKeyDown)
+        }
+    }, [selectedBadge])
 
     useEffect(() => {
         document.body.classList.add('profile-no-main-header-on-mobile')
@@ -395,12 +413,14 @@ export default function Profile() {
                 </button>
                 <div className={`profile-mobile-mini-info ${isScrolled ? 'visible' : ''}`}>
                     <div className="profile-mobile-name-row">
-                        <span className="profile-mobile-name">{profile.display_name}</span>
-                        {profile.featured_badge && BADGES_MAP[profile.featured_badge] && (
-                            <div style={{ color: BADGES_MAP[profile.featured_badge].color, display: 'flex', flexShrink: 0 }} title={BADGES_MAP[profile.featured_badge].title}>
-                                {BADGES_MAP[profile.featured_badge].icon}
-                            </div>
+                        {profile.avatar_url ? (
+                            <img className="profile-mobile-mini-avatar" src={profile.avatar_url} alt="" />
+                        ) : (
+                            <span className="profile-mobile-mini-avatar profile-mobile-mini-avatar-placeholder">
+                                {profile.display_name?.charAt(0).toUpperCase() || '?'}
+                            </span>
                         )}
+                        <span className="profile-mobile-name">{profile.display_name}</span>
                     </div>
                     {!isOwnProfile && (
                         <button
@@ -476,6 +496,19 @@ export default function Profile() {
                             
                         <div className="profile-name-row" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                             <h1 className="profile-display-name" style={{ margin: 0 }}>{profile.display_name}</h1>
+                            {profile.featured_badge && BADGES_MAP[profile.featured_badge] && (
+                                <button
+                                    type="button"
+                                    className="profile-featured-badge"
+                                    title={`Insignia destacada: ${BADGES_MAP[profile.featured_badge].title}`}
+                                    aria-label={`Insignia destacada: ${BADGES_MAP[profile.featured_badge].title}`}
+                                    aria-haspopup="dialog"
+                                    onClick={() => setSelectedBadge(profile.featured_badge)}
+                                    style={{ color: BADGES_MAP[profile.featured_badge].color }}
+                                >
+                                    {BADGES_MAP[profile.featured_badge].icon}
+                                </button>
+                            )}
                             {profile.pronouns && (
                                 <span className="profile-pronouns">{profile.pronouns}</span>
                             )}
@@ -483,15 +516,6 @@ export default function Profile() {
 
                         <div className="profile-meta-row" style={{ display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--text-muted)' }}>
                             <p className="profile-username" style={{ margin: 0 }}>@{profile.username}</p>
-                            {profile.badges && profile.badges.length > 0 && (
-                                <div className="profile-badges" style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                                    {profile.badges.map(b => BADGES_MAP[b] && (
-                                        <div key={b} title={BADGES_MAP[b].title} style={{ color: BADGES_MAP[b].color, display: 'flex' }}>
-                                            {BADGES_MAP[b].icon}
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
                         </div>
 
                         {profile.location && (
@@ -806,7 +830,45 @@ export default function Profile() {
                 onClose={() => setFollowsModal(prev => ({ ...prev, isOpen: false }))}
                 type={followsModal.type}
                 userId={profile.id}
+                themeColor={profile.theme_color}
             />
+
+            {selectedBadge && BADGES_MAP[selectedBadge] && createPortal(
+                <div
+                    className="profile-badge-modal-backdrop"
+                    onClick={event => { if (event.target === event.currentTarget) setSelectedBadge(null) }}
+                >
+                    <section
+                        className="profile-badge-modal"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="profile-badge-modal-title"
+                        style={{ '--badge-color': BADGES_MAP[selectedBadge].color }}
+                    >
+                        <button
+                            type="button"
+                            className="profile-badge-modal-close"
+                            onClick={() => setSelectedBadge(null)}
+                            aria-label="Cerrar información de insignia"
+                        >
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                                <path d="m18 6-12 12M6 6l12 12" />
+                            </svg>
+                        </button>
+                        <div className="profile-badge-modal-icon" aria-hidden="true">
+                            {BADGES_MAP[selectedBadge].icon}
+                        </div>
+                        <span className="profile-badge-modal-kicker">Insignia de perfil</span>
+                        <h2 id="profile-badge-modal-title">{BADGES_MAP[selectedBadge].title}</h2>
+                        <p>{BADGES_MAP[selectedBadge].description}</p>
+                        <div className="profile-badge-modal-footer">
+                            <span className="profile-badge-modal-dot" />
+                            Insignia de la comunidad
+                        </div>
+                    </section>
+                </div>,
+                document.body
+            )}
 
             {searchParams.get('edit') === 'true' && (
                 <EditProfile onClose={() => setSearchParams({})} />

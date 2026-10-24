@@ -102,7 +102,7 @@ export default function UserReviews() {
                 // Get profile ID from username
                 const { data: userData, error: userError } = await supabase
                     .from('profiles')
-                    .select('id, username, avatar_url, pinned_review_id')
+                    .select('id, username, avatar_url, pinned_review_id, theme_color')
                     .eq('username', username)
                     .single()
                 
@@ -153,7 +153,13 @@ export default function UserReviews() {
     if (loading) return <LoadingSpinner />
 
     return (
-        <div className="page-container user-reviews-page">
+        <div
+            className="page-container user-reviews-page"
+            style={profile?.theme_color ? {
+                '--brand-primary': profile.theme_color,
+                '--brand-dark': profile.theme_color
+            } : {}}
+        >
             <div className="user-page-header">
                 <div className="user-page-header-content">
                     <div className="user-page-title-row">

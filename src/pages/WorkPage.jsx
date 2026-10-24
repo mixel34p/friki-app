@@ -499,8 +499,8 @@ export default function WorkPage({ mediaType }) {
 
             {relatedSpaces.length > 0 && (
                 <div style={{ maxWidth: '1200px', margin: '0 auto 3rem auto', padding: '0 1.5rem' }}>
-                    <h3 className="work-section-title" style={{ marginBottom: '1.5rem', borderBottom: '1px solid var(--border-default)', paddingBottom: '0.5rem' }}>
-                        ESPACIOS RELACIONADOS
+                    <h3 className="work-section-title" style={{ marginBottom: '1rem', borderBottom: 'none', paddingBottom: 0 }}>
+                        Espacios relacionados
                     </h3>
                     <div className="spaces-list work-page-spaces" style={{ maxWidth: '100%', margin: '0' }}>
                         {relatedSpaces.map(space => (
@@ -527,7 +527,12 @@ export default function WorkPage({ mediaType }) {
                                             )}
                                         </h3>
                                         <span className="space-members">
-                                            {space.member_count} {space.member_count === 1 ? 'miembro' : 'miembros'}
+                                            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                                <path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                                                <circle cx="10" cy="7" r="4" />
+                                                <path d="M20 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+                                            </svg>
+                                            <span>{space.member_count}</span>
                                         </span>
                                     </div>
                                     <p className="space-desc">{space.description || 'Sin descripción.'}</p>

@@ -370,7 +370,7 @@ export default function ViewTierlist() {
                                 className="tier-label"
                                 style={{
                                     backgroundColor: activeTemplate.colors[tier],
-                                    color: 'white',
+                                    color: '#000',
                                     fontSize: templateId === 'ranking' ? '1.2rem' : undefined,
                                     width: '80px', // We'll override this in CSS
                                 }}

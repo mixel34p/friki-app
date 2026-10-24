@@ -311,33 +311,6 @@
     color: white;
 }
 
-/* Top Emoji Row in Dropdown */
-.chat-dropdown-reactions {
-    display: flex;
-    background-color: rgba(255, 255, 255, 0.05); /* very subtle */
-    border-radius: 6px;
-    padding: 4px;
-    margin-bottom: 4px;
-    gap: 4px;
-}
-
-.chat-dropdown-reaction-btn {
-    background: transparent;
-    border: none;
-    font-size: 1.25rem;
-    padding: 6px;
-    border-radius: 4px;
-    cursor: pointer;
-    flex: 1;
-    display: flex;
-    justify-content: center;
-    transition: background-color 0.1s;
-}
-
-.chat-dropdown-reaction-btn:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-}
-
 .chat-text {
     line-height: 1.5rem;
     color: var(--text-primary);
@@ -795,6 +768,11 @@
     display: block;
 }
 
+/* This affordance belongs only to the mobile swipe gesture. */
+.chat-swipe-reply-indicator {
+  display: none;
+}
+
 @media (max-width: 768px) {
   .rich-text-input:empty:before {
       content: "Escribe un mensaje...";
@@ -818,6 +796,48 @@
   }
   .chat-message-row {
     padding: 0.25rem 1rem;
+    touch-action: pan-y;
+  }
+  .chat-message-row > :not(.chat-swipe-reply-indicator) {
+    transition: transform 150ms cubic-bezier(.2, .8, .2, 1);
+  }
+  .chat-message-row.swiping-for-reply > :not(.chat-swipe-reply-indicator) {
+    transform: translateX(calc(0px - var(--swipe-distance, 0px)));
+    transition: none;
+  }
+  .chat-message-row.swipe-reply-accepted > :not(.chat-swipe-reply-indicator) {
+    transform: translateX(-82px);
+    transition: transform 150ms cubic-bezier(.2, .8, .2, 1);
+  }
+  .chat-message-row.mentioned::before {
+    transition: transform 150ms cubic-bezier(.2, .8, .2, 1);
+  }
+  .chat-message-row.mentioned.swiping-for-reply::before {
+    transform: translateX(calc(0px - var(--swipe-distance, 0px)));
+    transition: none;
+  }
+  .chat-message-row.mentioned.swipe-reply-accepted::before {
+    transform: translateX(-82px);
+  }
+  .chat-swipe-reply-indicator {
+    position: absolute;
+    top: 50%;
+    right: 18px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--brand-primary);
+    font-size: .76rem;
+    font-weight: 700;
+    opacity: var(--swipe-progress, 0);
+    pointer-events: none;
+    transform: translateY(-50%) translateX(7px);
+    transition: opacity 140ms ease, transform 140ms ease;
+    white-space: nowrap;
+  }
+  .chat-message-row.swiping-for-reply .chat-swipe-reply-indicator,
+  .chat-message-row.swipe-reply-accepted .chat-swipe-reply-indicator {
+    transform: translateY(-50%) translateX(0);
   }
   .chat-welcome {
 

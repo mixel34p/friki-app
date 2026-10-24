@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Outlet, useParams, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { getSpaceChannels, createSpaceChannel, getSpaceById, updateSpaceChannel, deleteSpaceChannel, leaveSpace, updateSpace, deleteSpace, checkMembership, joinSpace, getSpaceEmojis, createCustomEmoji, deleteCustomEmoji, updateCustomEmoji } from '../../lib/spaceService';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { markSpaceMessagesRead } from '../../lib/spaceUnread';
 import GlobalSearchModal from '../../components/GlobalSearchModal';
 import './SpaceLayout.css';
 import '../EditProfile.css';
@@ -49,6 +51,12 @@ export default function SpaceLayout() {
   const [deleteConfirmName, setDeleteConfirmName] = useState('');
   const [isDeletingSpace, setIsDeletingSpace] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+
+  useEffect(() => {
+    if (!user?.id || !spaceId) return undefined;
+    markSpaceMessagesRead(user.id, spaceId);
+    return () => markSpaceMessagesRead(user.id, spaceId);
+  }, [spaceId, user?.id]);
 
   // Swipe logic state (must be at top level)
   const isChannelView = location.pathname.includes('/chat/');
@@ -596,8 +604,8 @@ export default function SpaceLayout() {
         )}
       </div>
 
-      {editingChannel && (
-        <div className="modal-overlay" onClick={() => setEditingChannel(null)}>
+      {editingChannel && createPortal(
+        <div className="modal-overlay" style={customStyles} onClick={() => setEditingChannel(null)}>
           <div className="modal" onClick={e => e.stopPropagation()} style={{maxWidth: '400px'}}>
             <div className="modal-header">
               <h2>Ajustes del Canal</h2>
@@ -626,11 +634,12 @@ export default function SpaceLayout() {
               </form>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {isSettingsModalOpen && (
-        <div className="ep-overlay">
+      {isSettingsModalOpen && createPortal(
+        <div className="ep-overlay" style={customStyles}>
             {showAddEmojiModal && (
                 <div className="ep-modal" style={{ position: 'absolute', zIndex: 100, maxWidth: '400px', width: '90%' }}>
                     <div className="ep-modal-header">
@@ -948,12 +957,13 @@ export default function SpaceLayout() {
                     </div>
                 </form>
             </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Modal confirmación borrar espacio */}
-      {isDeleteModalOpen && (
-        <div className="delete-space-overlay" onClick={() => !isDeletingSpace && setIsDeleteModalOpen(false)}>
+      {isDeleteModalOpen && createPortal(
+        <div className="delete-space-overlay" style={customStyles} onClick={() => !isDeletingSpace && setIsDeleteModalOpen(false)}>
           <div className="delete-space-modal" onClick={e => e.stopPropagation()}>
             <div className="delete-space-icon">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
@@ -1009,13 +1019,14 @@ export default function SpaceLayout() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
 
 
-      {isCreatingChannel && (
-        <div className="modal-overlay" onClick={() => setIsCreatingChannel(false)}>
+      {isCreatingChannel && createPortal(
+        <div className="modal-overlay" style={customStyles} onClick={() => setIsCreatingChannel(false)}>
           <div className="modal" onClick={e => e.stopPropagation()} style={{maxWidth: '400px'}}>
             <div className="modal-header">
               <h2>Crear Canal</h2>
@@ -1045,12 +1056,13 @@ export default function SpaceLayout() {
               </form>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
 
-      {channelToDelete && (
-        <div className="modal-overlay" onClick={() => { setEditingChannel(channelToDelete); setChannelToDelete(null); }}>
+      {channelToDelete && createPortal(
+        <div className="modal-overlay" style={customStyles} onClick={() => { setEditingChannel(channelToDelete); setChannelToDelete(null); }}>
           <div className="modal" onClick={e => e.stopPropagation()} style={{maxWidth: '400px'}}>
             <div className="modal-header">
               <h2>¿Borrar canal?</h2>
@@ -1070,7 +1082,8 @@ export default function SpaceLayout() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {searchModalOpen && (

@@ -235,7 +235,7 @@
     display: flex;
     flex-direction: column;
     border-radius: 0;
-    overflow: hidden;
+    overflow: visible;
     border: 1px solid var(--border-subtle);
     background: var(--bg-card);
     box-shadow: var(--shadow-sm);
@@ -248,10 +248,10 @@
     transition: background var(--transition-fast);
 }
 .tb-live-tier-row:first-child .tb-live-tier-label {
-    border-top-left-radius: var(--radius-xl);
+    border-top-left-radius: 0;
 }
 .tb-live-tier-row:first-child .tb-live-tier-drop {
-    border-top-right-radius: var(--radius-xl);
+    border-top-right-radius: 0;
 }
 .tb-live-tier-row:last-of-type { border-bottom: none; }
 .tb-live-tier-row:hover { background: var(--bg-hover); }
@@ -263,23 +263,39 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 4px;
-    font-family: var(--font-display);
-    font-weight: 900;
+    font-family: var(--font-sans);
+    font-weight: 400;
     font-size: 1.4rem;
-    color: #fff;
+    color: #000;
     cursor: pointer;
     position: relative;
     border-right: 1px solid rgba(0,0,0,0.15);
-    text-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    text-shadow: none;
     transition: filter var(--transition-fast);
     user-select: none;
 }
 .tb-live-tier-label:hover { filter: brightness(1.15); }
 
-.tb-tier-text { line-height: 1; }
+.tb-tier-text {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    line-height: 1.05;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: normal;
+    word-break: normal;
+    font-family: var(--font-sans);
+    font-weight: 400;
+    color: #000;
+    text-align: center;
+}
 
 .tb-tier-edit-hint {
+    position: absolute;
+    left: 50%;
+    bottom: 4px;
+    transform: translateX(-50%);
     font-size: 0.65rem;
     opacity: 0;
     transition: opacity var(--transition-fast);
@@ -338,7 +354,7 @@
 /* ── Tier popover ── */
 .tb-tier-popover {
     position: absolute;
-    left: calc(100% + 12px);
+    left: 102px;
     top: 50%;
     transform: translateY(-50%);
     background: var(--bg-elevated);
@@ -346,7 +362,7 @@
     padding: var(--space-md);
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-xl);
-    z-index: 100;
+    z-index: 20001;
     width: 220px;
     display: flex;
     flex-direction: column;
@@ -936,7 +952,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
+    /* The item-search backdrop must cover tier popovers as well. */
+    z-index: 30000;
     padding: var(--space-md);
     animation: overlayIn 0.15s ease;
 }
@@ -1198,9 +1215,11 @@
     .tb-live-tier-label { width: 64px; font-size: 1.1rem; }
     .tb-tier-popover {
         left: 0;
-        top: auto; bottom: calc(100% + 8px);
+        top: auto;
+        bottom: calc(100% + 8px);
         transform: none;
-        width: 280px;
+        width: min(280px, calc(100vw - 32px));
+        padding: var(--space-sm);
     }
     .tb-tier-popover::before { display: none; }
 }

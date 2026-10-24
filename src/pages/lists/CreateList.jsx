@@ -12,6 +12,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { getTemplateById, createList, updateList, getListById, incrementTemplateUses } from '../../lib/listService';
 import { searchGames } from '../../lib/gameService';
 import { searchAnime } from '../../lib/animeService';
+import { getTierLabelFontSize } from '../../lib/tierLabel';
 import './CreateList.css';
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
@@ -433,7 +434,7 @@ export default function CreateList() {
                                     <div key={i} className={`cl-ranking-row top-${i}`}>
                                         <div className="cl-ranking-badge">{i + 1}</div>
                                         <div className="cl-ranking-slot">
-                                            <DropZone id={`r${i}`} items={content[`r${i}`] || []} />
+                                            <DropZone id={`r${i}`} items={content[`r${i}`] || []} isRanking />
                                         </div>
                                     </div>
                                 ))}
@@ -754,7 +755,7 @@ function TierRow({ tier, items }) {
     return (
         <div className="cl-tier-row">
             <div className="cl-tier-label" style={{ backgroundColor: tier.color }}>
-                {tier.label}
+                <span className="cl-tier-text" style={{ fontSize: getTierLabelFontSize(tier.label) }}>{tier.label}</span>
             </div>
             <DropZone id={tier.id} items={items} />
         </div>
@@ -762,16 +763,16 @@ function TierRow({ tier, items }) {
 }
 
 // ─── Drop Zone ────────────────────────────────────────────────────────────────
-function DropZone({ id, items, isPool, onRemoveItem }) {
+function DropZone({ id, items, isPool, onRemoveItem, isRanking = false }) {
     const { setNodeRef, isOver } = useDroppable({ id });
     return (
         <div
             ref={setNodeRef}
-            className={`cl-tier-drop ${isOver ? 'is-over' : ''} ${isPool ? 'is-pool' : ''}`}
+            className={`cl-tier-drop ${isOver ? 'is-over' : ''} ${isPool ? 'is-pool' : ''} ${isRanking ? 'is-ranking' : ''}`}
         >
             <SortableContext id={id} items={items.map(i => i.id)} strategy={rectSortingStrategy}>
                 {items.map(item => (
-                    <SortableItem key={item.id} item={item} onRemove={onRemoveItem ? () => onRemoveItem(item.id) : null} />
+                    <SortableItem key={item.id} item={item} isRanking={isRanking} onRemove={onRemoveItem ? () => onRemoveItem(item.id) : null} />
                 ))}
             </SortableContext>
             {items.length === 0 && isPool && (
@@ -784,7 +785,7 @@ function DropZone({ id, items, isPool, onRemoveItem }) {
 }
 
 // ─── Sortable Item ────────────────────────────────────────────────────────────
-function SortableItem({ item, onRemove }) {
+function SortableItem({ item, onRemove, isRanking = false }) {
     const {
         attributes, listeners, setNodeRef,
         transform, transition, isDragging
@@ -802,7 +803,7 @@ function SortableItem({ item, onRemove }) {
             style={style}
             {...attributes}
             {...listeners}
-            className="cl-item"
+            className={`cl-item ${isRanking ? 'cl-item-ranking' : ''}`}
             title={item.name}
         >
             {onRemove && (
@@ -816,11 +817,12 @@ function SortableItem({ item, onRemove }) {
             )}
             {item.image_url
                 ? <img src={item.image_url} alt={item.name} onError={e => e.target.style.display = 'none'} />
-                : <div className="cl-item-fallback">{item.name}</div>
+                : <div className={isRanking ? 'cl-ranking-cover-fallback' : 'cl-item-fallback'}>{isRanking ? item.name?.charAt(0) : item.name}</div>
             }
-            <div className="cl-item-overlay">
-                <span className="cl-item-name">{item.name}</span>
-            </div>
+            {isRanking
+                ? <span className="cl-ranking-name-view">{item.name}</span>
+                : <div className="cl-item-overlay"><span className="cl-item-name">{item.name}</span></div>
+            }
         </div>
     );
 }

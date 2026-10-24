@@ -225,23 +225,44 @@
 .cl-tier-row {
     display: flex;
     align-items: stretch;
-    min-height: 90px;
+    min-height: 96px;
     border-bottom: 1px solid var(--border-subtle);
     transition: background var(--transition-fast);
 }
 .cl-tier-row:last-child { border-bottom: none; }
 
 .cl-tier-label {
-    width: 72px;
-    flex-shrink: 0;
+    width: 96px;
+    height: 96px;
+    flex: 0 0 96px;
+    aspect-ratio: 1 / 1;
     display: flex;
     align-items: center;
     justify-content: center;
+    align-self: center;
+    box-sizing: border-box;
+    padding: 4px;
     font-family: var(--font-sans);
-    font-weight: 800;
+    font-weight: 400;
     font-size: var(--text-lg);
     color: #000;
     user-select: none;
+}
+
+.cl-tier-text {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    line-height: 1.05;
+    text-align: center;
+    white-space: normal;
+    overflow-wrap: normal;
+    word-break: normal;
+    hyphens: none;
+    font-family: var(--font-sans);
+    font-weight: 400;
+    color: #000;
 }
 
 /* Drop zone */
@@ -478,9 +499,13 @@
 .cl-ranking-slot {
     flex: 1;
     min-height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .cl-ranking-slot .cl-tier-drop {
+    width: 100%;
     min-height: 52px;
     padding: 0;
     background: transparent;
@@ -491,22 +516,111 @@
     justify-content: center;
     gap: 0;
 }
+.cl-ranking-slot .cl-tier-drop.is-ranking { flex-wrap: nowrap; }
+.cl-ranking-slot .cl-tier-drop.is-ranking .cl-item-ranking {
+    width: auto;
+    height: auto;
+    flex: 0 1 auto;
+    min-height: 58px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    overflow: visible;
+    aspect-ratio: unset;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+.cl-ranking-slot .cl-tier-drop.is-ranking .cl-item-ranking img {
+    width: 44px;
+    height: 58px;
+    flex: 0 0 44px;
+    object-fit: cover;
+    border-radius: var(--radius-sm);
+}
+.cl-ranking-slot .cl-tier-drop.is-ranking .cl-ranking-cover-fallback {
+    width: 44px;
+    height: 58px;
+    flex: 0 0 44px;
+}
 .cl-ranking-slot .cl-tier-drop.is-over {
     border-color: var(--brand-primary);
     background: rgba(20, 184, 166, 0.08);
 }
-.cl-ranking-slot .cl-item {
-    width: 100%;
-    height: 52px;
-    border-radius: var(--radius-md);
-    aspect-ratio: unset;
+.cl-ranking-item {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    max-width: 100%;
+    min-width: 0;
 }
-.cl-ranking-slot .cl-item img {
+.cl-ranking-item .cl-item {
+    width: 44px;
+    height: 58px;
+    flex: 0 0 44px;
+    aspect-ratio: unset;
+    border-radius: var(--radius-sm);
+}
+.cl-ranking-item .cl-item img {
+    display: block;
     width: 100%;
     height: 100%;
     object-fit: cover;
     object-position: center 25%;
     aspect-ratio: unset;
+}
+.cl-ranking-item .cl-item-ranking {
+    width: auto;
+    height: auto;
+    flex: 0 1 auto;
+    min-height: 58px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    overflow: visible;
+    aspect-ratio: unset;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+.cl-ranking-item .cl-item-ranking img,
+.cl-ranking-item .cl-ranking-cover-fallback,
+.cl-ranking-cover-placeholder {
+    width: 44px;
+    height: 58px;
+    flex: 0 0 44px;
+    object-fit: cover;
+    border-radius: var(--radius-sm);
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-subtle);
+}
+.cl-ranking-cover-fallback,
+.cl-ranking-cover-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    color: var(--text-muted);
+    font-size: 9px;
+    text-align: center;
+    padding: 3px;
+}
+.cl-ranking-name-view {
+    max-width: 260px;
+    min-width: 0;
+    color: var(--text-primary);
+    font-size: var(--text-base);
+    font-weight: 500;
+    line-height: 1.35;
+    text-align: left;
+    overflow-wrap: anywhere;
+}
+.cl-ranking-item-placeholder .cl-ranking-name-view {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
 }
 
 /* ════════════════════════════════
@@ -1217,6 +1331,14 @@
 }
 
 @media (max-width: 640px) {
+    .cl-tier-row { min-height: 80px; }
+    .cl-tier-label {
+        width: 80px;
+        height: 80px;
+        flex-basis: 80px;
+    }
+    .cl-tier-drop { min-height: 80px; }
+
     .cl-title-text {
         font-size: var(--text-sm);
         max-width: 150px;

@@ -1,0 +1,59 @@
+/* Keep the existing compact mobile layout; desktop gets a full-width DM list. */
+.my-spaces-unread-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 21px;
+  height: 21px;
+  box-sizing: border-box;
+  padding: 0 5px;
+  border-radius: 999px;
+  border: 1.5px solid var(--bg-primary);
+  background: var(--brand-primary);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 850;
+  line-height: 1;
+  flex: 0 0 auto;
+  box-shadow: 0 2px 7px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+@media (min-width: 961px) {
+  .main.my-spaces-main {
+    height: 100dvh;
+    min-height: 100dvh;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+
+  .my-spaces-panel {
+    width: 100% !important;
+    max-width: none !important;
+    height: calc(100dvh - 66px) !important;
+    margin: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    background: var(--bg-primary);
+  }
+
+  .my-spaces-panel-header {
+    flex: 0 0 auto;
+    margin-top: 0 !important;
+    padding: 12px 24px 18px !important;
+    border-bottom-color: var(--border-subtle);
+  }
+
+  .my-spaces-panel-list {
+    min-height: 0;
+    scrollbar-gutter: stable;
+  }
+
+  .my-spaces-row {
+    padding: 14px 24px !important;
+    border-bottom: 1px solid color-mix(in srgb, var(--border-subtle) 72%, transparent);
+  }
+
+  .my-spaces-row:last-child {
+    border-bottom-color: transparent;
+  }
+}

@@ -9,6 +9,7 @@ import {
 } from '../../lib/listService';
 import { searchGames } from '../../lib/gameService';
 import { searchAnime } from '../../lib/animeService';
+import { getTierLabelFontSize } from '../../lib/tierLabel';
 import './TemplateBuilder.css';
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
@@ -189,63 +190,73 @@ export default function TemplateBuilder() {
                             </div>
                             <div className="tb-live-tiers">
                                 {tiers.map((tier) => (
-                                    <div 
-                                        key={tier.id} 
-                                        className="tb-live-tier-row" 
-                                        style={{ position: 'relative', zIndex: activePopover === tier.id ? 10 : 1 }}
+                                    <div
+                                        key={tier.id}
+                                        className="tb-tier-edit-wrap"
+                                        style={{ position: 'relative', zIndex: activePopover === tier.id ? 20000 : 1 }}
                                     >
-                                        <div
-                                            className="tb-live-tier-label"
-                                            style={{ backgroundColor: tier.color }}
-                                            onClick={() => {
-                                                setActivePopover(activePopover === tier.id ? null : tier.id);
-                                                setPopoverLabel(tier.label);
-                                                setPopoverColor(tier.color);
-                                            }}
-                                        >
-                                            <span className="tb-tier-text">{tier.label}</span>
-                                            <span className="tb-tier-edit-hint"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>
-                                            {activePopover === tier.id && (
-                                                <div className="tb-tier-popover" onClick={e => e.stopPropagation()}>
-                                                    <p className="tb-popover-label">Nombre del tier</p>
-                                                    <input
-                                                        value={popoverLabel}
-                                                        onChange={e => {
-                                                            setPopoverLabel(e.target.value);
-                                                            setTiers(tiers.map(t => t.id === tier.id ? { ...t, label: e.target.value } : t));
-                                                        }}
-                                                        placeholder="Ej: S, A, B..."
-                                                    />
-                                                    <p className="tb-popover-label">Color</p>
-                                                    <div className="tb-popover-colors">
-                                                        {TIER_COLORS_PALETTE.map(c => (
-                                                            <div
-                                                                key={c}
-                                                                className={`tb-color-dot ${popoverColor === c ? 'active' : ''}`}
-                                                                style={{ background: c }}
-                                                                onClick={() => {
-                                                                    setPopoverColor(c);
-                                                                    setTiers(tiers.map(t => t.id === tier.id ? { ...t, color: c } : t));
-                                                                }}
-                                                            />
-                                                        ))}
-                                                    </div>
-                                                    <button
-                                                        className="tb-remove-tier-btn"
-                                                        disabled={tiers.length <= 2}
-                                                        onClick={() => {
-                                                            if (tiers.length <= 2) return;
-                                                            setTiers(tiers.filter(t => t.id !== tier.id));
-                                                            setActivePopover(null);
-                                                        }}
-                                                    >
-                                                        Eliminar esta fila
-                                                    </button>
+                                        <div className="tb-live-tier-row">
+                                            <div
+                                                className="tb-live-tier-label"
+                                                style={{ backgroundColor: tier.color }}
+                                                onClick={() => {
+                                                    setActivePopover(activePopover === tier.id ? null : tier.id);
+                                                    setPopoverLabel(tier.label);
+                                                    setPopoverColor(tier.color);
+                                                }}
+                                            >
+                                                <span
+                                                    className="tb-tier-text"
+                                                    style={{ fontSize: getTierLabelFontSize(tier.label, {
+                                                        availableWidth: window.matchMedia('(max-width: 600px)').matches ? 56 : 80,
+                                                        availableHeight: window.matchMedia('(max-width: 600px)').matches ? 56 : 72,
+                                                        maxSize: window.matchMedia('(max-width: 600px)').matches ? 17.6 : 22.4
+                                                    }) }}
+                                                >
+                                                    {tier.label}
+                                                </span>
+                                                <span className="tb-tier-edit-hint"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>
+                                            </div>
+                                            <div className="tb-live-tier-drop" />
+                                        </div>
+                                        {activePopover === tier.id && (
+                                            <div className="tb-tier-popover" onClick={e => e.stopPropagation()}>
+                                                <p className="tb-popover-label">Nombre del tier</p>
+                                                <input
+                                                    value={popoverLabel}
+                                                    onChange={e => {
+                                                        setPopoverLabel(e.target.value);
+                                                        setTiers(tiers.map(t => t.id === tier.id ? { ...t, label: e.target.value } : t));
+                                                    }}
+                                                    placeholder="Ej: S, A, B..."
+                                                />
+                                                <p className="tb-popover-label">Color</p>
+                                                <div className="tb-popover-colors">
+                                                    {TIER_COLORS_PALETTE.map(c => (
+                                                        <div
+                                                            key={c}
+                                                            className={`tb-color-dot ${popoverColor === c ? 'active' : ''}`}
+                                                            style={{ background: c }}
+                                                            onClick={() => {
+                                                                setPopoverColor(c);
+                                                                setTiers(tiers.map(t => t.id === tier.id ? { ...t, color: c } : t));
+                                                            }}
+                                                        />
+                                                    ))}
                                                 </div>
-                                            )}
-                                        </div>
-                                        <div className="tb-live-tier-drop">
-                                        </div>
+                                                <button
+                                                    className="tb-remove-tier-btn"
+                                                    disabled={tiers.length <= 2}
+                                                    onClick={() => {
+                                                        if (tiers.length <= 2) return;
+                                                        setTiers(tiers.filter(t => t.id !== tier.id));
+                                                        setActivePopover(null);
+                                                    }}
+                                                >
+                                                    Eliminar esta fila
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
                                 <button className="tb-live-add-tier" onClick={() => {

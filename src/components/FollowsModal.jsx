@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
@@ -12,7 +13,7 @@ const IconClose = () => (
     </svg>
 )
 
-export default function FollowsModal({ isOpen, onClose, type, userId }) {
+export default function FollowsModal({ isOpen, onClose, type, userId, themeColor }) {
     const { user: currentUser } = useAuth()
     const [currentTab, setCurrentTab] = useState(type)
     const [users, setUsers] = useState([])
@@ -99,8 +100,12 @@ export default function FollowsModal({ isOpen, onClose, type, userId }) {
         u.username?.toLowerCase().includes(searchQuery.toLowerCase())
     )
 
-    return (
-        <div className="follows-modal-overlay" onClick={onClose}>
+    return createPortal((
+        <div
+            className="follows-modal-overlay"
+            onClick={onClose}
+            style={themeColor ? { '--brand-primary': themeColor, '--brand-dark': themeColor } : undefined}
+        >
             <div className="follows-modal-card" onClick={e => e.stopPropagation()}>
                 <div className="follows-modal-header">
                     <div className="follows-tabs">
@@ -195,5 +200,5 @@ export default function FollowsModal({ isOpen, onClose, type, userId }) {
                 </div>
             </div>
         </div>
-    )
+    ), document.body)
 }

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useAuth } from '../context/AuthContext'
 import { logWork, deleteWorkLog } from '../lib/libraryService'
 import LoadingSpinner from './LoadingSpinner'
@@ -132,9 +133,9 @@ export default function LogModal({ isOpen, onClose, work, existingLog, onSaveCom
         );
     }
 
-    return (
+    return createPortal((
         <div className="log-modal-overlay">
-            <div className="log-modal-compact">
+            <div className="log-modal-compact" onClick={event => event.stopPropagation()}>
                 
                 <button className="log-close-btn" onClick={onClose}>&times;</button>
                 
@@ -231,6 +232,6 @@ export default function LogModal({ isOpen, onClose, work, existingLog, onSaveCom
                 </div>
             </div>
         </div>
-    )
+    ), document.body)
 }
 

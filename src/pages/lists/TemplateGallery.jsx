@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { getTemplates } from '../../lib/listService';
+import { getTemplates, getRandomTemplatePreviewCovers } from '../../lib/listService';
 import { useAuth } from '../../context/AuthContext';
 import CreateTemplateModal from './CreateTemplateModal';
 import './TemplateGallery.css';
@@ -23,7 +23,28 @@ export default function TemplateGallery() {
         setLoading(true);
         try {
             const data = await getTemplates({ type: filterType, mediaType: filterMedia, query: searchQuery });
-            setTemplates(data);
+            const missingByMedia = data.reduce((counts, template) => {
+                if (!template.default_items?.length && ['game', 'anime'].includes(template.media_type)) {
+                    counts[template.media_type] = (counts[template.media_type] || 0) + 1;
+                }
+                return counts;
+            }, {});
+            const sampledCovers = Object.fromEntries(await Promise.all(
+                Object.entries(missingByMedia).map(async ([mediaType, count]) => [
+                    mediaType,
+                    await getRandomTemplatePreviewCovers(mediaType, count * 5)
+                ])
+            ));
+            const coverIndexes = { game: 0, anime: 0 };
+            const templatesWithPreviews = data.map(template => {
+                if (template.default_items?.length || !sampledCovers[template.media_type]?.length) return template;
+                const covers = sampledCovers[template.media_type];
+                const start = coverIndexes[template.media_type] || 0;
+                const preview_covers = Array.from({ length: 5 }, (_, index) => covers[(start + index) % covers.length]);
+                coverIndexes[template.media_type] = start + 5;
+                return { ...template, preview_covers };
+            });
+            setTemplates(templatesWithPreviews);
         } catch (error) {
             console.error('Error fetching templates:', error);
         } finally {
@@ -116,48 +137,15 @@ export default function TemplateGallery() {
     );
 }
 
-const GAME_COVERS = [
-    'https://images.igdb.com/igdb/image/upload/t_cover_big/co1x7d.jpg',
-    'https://images.igdb.com/igdb/image/upload/t_cover_big/co2lbd.jpg',
-    'https://images.igdb.com/igdb/image/upload/t_cover_big/co1vce.jpg',
-    'https://images.igdb.com/igdb/image/upload/t_cover_big/co1tmu.jpg',
-    'https://images.igdb.com/igdb/image/upload/t_cover_big/co2mvt.jpg',
-    'https://images.igdb.com/igdb/image/upload/t_cover_big/co1wyy.jpg',
-    'https://images.igdb.com/igdb/image/upload/t_cover_big/co1qkx.jpg',
-    'https://images.igdb.com/igdb/image/upload/t_cover_big/co1r7f.jpg'
-];
-
-const ANIME_COVERS = [
-    'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx21-YCDignzx8zAE.jpg',
-    'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx11061-sOq0JulhwBqX.png',
-    'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx16498-m5ZMNtFiGzt6.jpg',
-    'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx20605-fwmXuktdJQZ5.png',
-    'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx113415-bbBWj4pEFseh.jpg',
-    'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx1-CXtrrkMtJQyk.jpg',
-    'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx170-eyy5jnSncZCS.jpg',
-    'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx1535-4rJ2EMOhywJk.jpg'
-];
-
-function getFallbackCovers(mediaType, templateId) {
-    const list = mediaType === 'game' ? GAME_COVERS : ANIME_COVERS;
-    // Simple deterministic random based on id string length/chars
-    const seed = String(templateId).split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    const result = [];
-    for (let i = 0; i < 5; i++) {
-        result.push(list[(seed + i) % list.length]);
-    }
-    return result;
-}
-
 function TemplateCard({ tpl, index }) {
     const isAnonymous = !tpl.profiles?.username;
     
     // Determine which items to show
     let previewItems = [];
     if (tpl.default_items && tpl.default_items.length > 0) {
-        previewItems = tpl.default_items.slice(0, 5).map(i => i.image_url);
+        previewItems = tpl.default_items.slice(0, 5).map(i => i.image_url || i.cover_url).filter(Boolean);
     } else {
-        previewItems = getFallbackCovers(tpl.media_type, tpl.id);
+        previewItems = tpl.preview_covers || [];
     }
     
     return (

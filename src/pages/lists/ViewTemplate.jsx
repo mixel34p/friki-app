@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { getTemplateById, deleteTemplate } from '../../lib/listService';
 import { BADGES_MAP } from '../../lib/badges';
+import { getTierLabelFontSize } from '../../lib/tierLabel';
 import './ViewList.css';
 import '../lists/CreateList.css'; // Same styling as ViewList for structure
 
@@ -31,16 +32,6 @@ export default function ViewTemplate() {
     }
   };
 
-  const getRelativeTime = (dateString) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now - date;
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    if (diffDays === 0) return 'hoy';
-    if (diffDays === 1) return 'ayer';
-    return `hace ${diffDays} días`;
-  }
-
   if (loading) return <div className="vl-page" style={{ justifyContent: 'center' }}>Cargando...</div>;
   if (error) return (
       <div className="vl-page" style={{ justifyContent: 'center' }}>
@@ -64,7 +55,20 @@ export default function ViewTemplate() {
   const authorDisplayName = template.profiles?.display_name || authorUsername;
   const authorAvatar = template.profiles?.avatar_url || '/default-avatar.png';
   const authorBadge = template.profiles?.featured_badge;
-  const timeDisplay = getRelativeTime(template.created_at);
+  const authorThemeColor = template.profiles?.theme_color || 'var(--brand-primary)';
+  const date = new Date(template.created_at);
+  const diffMs = new Date() - date;
+  const diffSecs = Math.floor(diffMs / 1000);
+  const diffMins = Math.floor(diffSecs / 60);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+  const timeDisplay = diffDays < 1
+    ? diffHours > 0
+      ? `hace ${diffHours} ${diffHours === 1 ? 'hora' : 'horas'}`
+      : diffMins > 0
+        ? `hace ${diffMins} ${diffMins === 1 ? 'minuto' : 'minutos'}`
+        : 'hace unos segundos'
+    : date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
   const columns = template.type_config?.columns || 2;
 
   return (
@@ -81,7 +85,7 @@ export default function ViewTemplate() {
         {/* Header (Author & Meta) */}
         <div className="vl-post-header">
             <Link to={`/profile/${authorUsername}`} className="vl-post-author">
-                <img src={authorAvatar} alt={authorUsername} className="vl-post-avatar" />
+                <img src={authorAvatar} alt={authorUsername} className="vl-post-avatar" style={{ borderColor: authorThemeColor }} />
                 <div className="vl-post-author-info">
                     <div className="vl-post-author-name-row">
                         <span className="vl-post-displayname">{authorDisplayName}</span>
@@ -179,7 +183,7 @@ export default function ViewTemplate() {
                     {template.type_config?.tiers?.map(tier => (
                         <div key={tier.id} className="cl-tier-row">
                             <div className="cl-tier-label" style={{ backgroundColor: tier.color, color: '#000' }}>
-                                {tier.label}
+                                <span className="cl-tier-text" style={{ fontSize: getTierLabelFontSize(tier.label) }}>{tier.label}</span>
                             </div>
                             <div className="cl-tier-drop" style={{ background: 'rgba(0, 0, 0, 0.2)' }}>
                                 {/* Empty Tier */}
@@ -194,8 +198,11 @@ export default function ViewTemplate() {
                     {Array.from({ length: template.type_config?.max_items || 10 }).map((_, i) => (
                         <div key={i} className={`cl-ranking-row top-${i}`}>
                             <div className="cl-ranking-badge">{i + 1}</div>
-                            <div className="cl-ranking-slot" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontStyle: 'italic' }}>Slot {i + 1}</span>
+                            <div className="cl-ranking-slot">
+                                <div className="cl-ranking-item cl-ranking-item-placeholder">
+                                    <span className="cl-ranking-cover-placeholder" aria-hidden="true" />
+                                    <span className="cl-ranking-name-view">Posición {i + 1}</span>
+                                </div>
                             </div>
                         </div>
                     ))}

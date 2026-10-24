@@ -575,7 +575,7 @@ button { font-family: var(--font-sans); }
   /* Space view: always hide top header on mobile */
   body.space-no-header .header { display: none !important; }
   body.space-no-header .main { margin-top: 0 !important; padding-top: 0 !important; }
-  body.space-no-header .space-layout { height: 100dvh; }
+  body.space-no-header .space-layout { height: calc(100dvh - 64px - env(safe-area-inset-bottom)); }
 
   /* Profile view: use its own mobile topbar and keep bottom navigation visible */
   body.profile-no-main-header-on-mobile .header { display: none !important; }
@@ -587,6 +587,7 @@ button { font-family: var(--font-sans); }
     height: 100dvh !important;
     overflow: hidden !important;
   }
+  body.hide-main-header-on-mobile .space-layout { height: 100dvh !important; }
   body.hide-main-header-on-mobile .bottom-nav { display: none !important; }
   body.hide-main-header-on-mobile .layout { padding-bottom: 0 !important; }
 }

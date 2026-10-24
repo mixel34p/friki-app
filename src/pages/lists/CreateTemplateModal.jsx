@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -148,7 +149,7 @@ export default function CreateTemplateModal({ templateId, onClose, onSuccess }) 
         }
     };
 
-    return (
+    return createPortal((
         <div className="ctm-overlay" ref={overlayRef} onClick={handleOverlay}>
             <div className="ctm-panel">
                 <button className="ctm-close" onClick={onClose} aria-label="Cerrar">&times;</button>
@@ -268,5 +269,5 @@ export default function CreateTemplateModal({ templateId, onClose, onSuccess }) 
                 </div>
             </div>
         </div>
-    );
+    ), document.body);
 }

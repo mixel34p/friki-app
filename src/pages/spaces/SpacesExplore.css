@@ -10,8 +10,10 @@
 /* --- Hero Section --- */
 .spaces-hero {
   position: relative;
-  /* Add negative margin to pull it up under the header if there's global padding */
-  margin-top: -2rem; 
+  width: 100%;
+  min-height: 410px;
+  box-sizing: border-box;
+  margin-top: 0;
   background-color: var(--bg-primary);
   padding: 7rem 2rem 5rem;
   border-bottom: 1px solid var(--border-subtle);
@@ -20,6 +22,15 @@
   align-items: center;
   text-align: center;
   overflow: hidden;
+}
+
+.main.spaces-explore-main {
+  padding: 0;
+}
+
+.main.spaces-explore-main > .spaces-explore-container {
+  width: 100%;
+  min-height: 100%;
 }
 
 .spaces-hero-bg {
@@ -231,7 +242,20 @@
   line-height: 36px;
 }
 
+@media (max-width: 960px) {
+  .main.spaces-explore-main {
+    padding: 58px 0 calc(88px + env(safe-area-inset-bottom)) !important;
+  }
+}
+
 @media (max-width: 600px) {
+  .spaces-hero {
+    min-height: 360px;
+    padding: 4.5rem 1.1rem 3.5rem;
+  }
+  .spaces-hero h1 { font-size: clamp(2.2rem, 10vw, 3rem); }
+  .spaces-hero p { font-size: 1rem; }
+  .spaces-hero-content { width: 100%; }
   .spaces-toolbar {
     flex-direction: column;
     align-items: stretch;
@@ -241,6 +265,15 @@
   }
   .spaces-sort-buttons {
     justify-content: center;
+  }
+}
+
+@media (min-width: 961px) {
+  .main.spaces-explore-main {
+    width: calc(100% - 278px);
+    min-height: 100dvh;
+    margin-left: 278px;
+    box-sizing: border-box;
   }
 }
 
@@ -472,26 +505,42 @@
 /* --- Modals --- */
 .explore-modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
+  box-sizing: border-box;
+  padding: 16px;
   background-color: rgba(0,0,0,0.8);
   backdrop-filter: blur(8px);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  z-index: 2000;
 }
 
 .explore-modal-content {
+  box-sizing: border-box;
   background-color: var(--bg-card);
   padding: 2.5rem;
   border-radius: var(--radius-xl);
   border: 1px solid var(--border-default);
-  width: 100%;
+  width: min(100%, 480px);
   max-width: 480px;
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
   box-shadow: var(--shadow-xl);
+}
+
+@media (max-width: 600px) {
+  .explore-modal-overlay {
+    padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
+  }
+
+  .explore-modal-content {
+    padding: 1.25rem;
+    border-radius: var(--radius-lg);
+    max-height: calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  }
 }
 
 .explore-modal-content h2 {

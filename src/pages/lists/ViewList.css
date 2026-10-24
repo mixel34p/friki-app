@@ -66,7 +66,7 @@
     border-radius: 50%;
     object-fit: cover;
     background: var(--bg-tertiary);
-    border: 2px solid transparent;
+    border: 2px solid var(--brand-primary);
     transition: border-color 0.2s ease;
 }
 
@@ -147,6 +147,85 @@
     color: #ef4444;
 }
 
+/* List sharing dialog */
+.vl-share-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.76);
+    backdrop-filter: blur(10px);
+    animation: vlShareFade 0.18s ease-out;
+}
+
+.vl-share-dialog {
+    width: min(100%, 520px);
+    box-sizing: border-box;
+    max-height: min(90dvh, 760px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 24px;
+    color: var(--text-primary);
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 22px;
+    box-shadow: 0 24px 90px rgba(0, 0, 0, 0.56);
+    animation: vlShareRise 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.vl-share-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
+.vl-share-heading h2 { margin: 5px 0 0; font-size: 1.35rem; letter-spacing: -0.03em; }
+.vl-share-eyebrow, .vl-share-link-label { color: var(--brand-primary); font-size: 0.68rem; font-weight: 800; letter-spacing: 0.12em; }
+.vl-share-link {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 15px 16px;
+    overflow: hidden;
+    text-align: left;
+    color: var(--text-primary);
+    background: color-mix(in srgb, var(--brand-primary) 9%, var(--bg-secondary));
+    border: 1px solid color-mix(in srgb, var(--brand-primary) 34%, var(--border-subtle));
+    border-radius: 14px;
+    cursor: pointer;
+}
+.vl-share-link-value { display: block; width: 100%; min-width: 0; max-width: 100%; overflow-x: auto; white-space: nowrap; scrollbar-width: none; color: var(--text-secondary); font-size: 0.86rem; }
+.vl-share-link-value::-webkit-scrollbar { display: none; }
+.vl-share-section-label { margin: 24px 0 12px; color: var(--text-secondary); font-size: 0.83rem; font-weight: 700; }
+.vl-share-networks { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.vl-share-network { display: flex; min-width: 0; flex-direction: column; align-items: center; gap: 8px; padding: 12px 4px 10px; color: var(--text-secondary); text-decoration: none; background: var(--bg-secondary); border: 1px solid var(--border-subtle); border-radius: 14px; transition: transform 0.18s ease, border-color 0.18s ease, color 0.18s ease; }
+.vl-share-network:hover { transform: translateY(-3px); border-color: var(--brand-primary); color: var(--text-primary); }
+.vl-share-network b { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 11px; color: white; background: #3b4145; font-size: 0.95rem; }
+.vl-share-network b svg { display: block; width: 19px; height: 19px; }
+.vl-share-network.whatsapp b { background: #25a766; }
+.vl-share-network.x-twitter b { background: #08090a; }
+.vl-share-network.telegram b { background: #229ed9; }
+.vl-share-network.reddit b { background: #ff4500; }
+.vl-share-network.facebook b { background: #0866ff; }
+.vl-share-network span { overflow: hidden; max-width: 100%; font-size: 0.67rem; text-overflow: ellipsis; white-space: nowrap; }
+.vl-share-divider { height: 1px; margin: 20px 0 12px; background: var(--border-subtle); }
+.vl-share-download { display: flex; width: 100%; align-items: center; gap: 13px; padding: 12px 8px; color: var(--text-primary); text-align: left; background: transparent; border: 0; border-radius: 12px; cursor: pointer; transition: background 0.18s ease; }
+.vl-share-download:hover { background: var(--bg-secondary); }
+.vl-share-download-icon { display: grid; width: 42px; height: 42px; flex: 0 0 42px; place-items: center; color: var(--brand-primary); background: color-mix(in srgb, var(--brand-primary) 13%, transparent); border-radius: 13px; }
+.vl-share-download strong, .vl-share-download small { display: block; }
+.vl-share-download strong { font-size: 0.9rem; }
+.vl-share-download small { margin-top: 3px; color: var(--text-muted); font-size: 0.75rem; }
+.vl-share-download-arrow { margin-left: auto; color: var(--text-muted); }
+@keyframes vlShareFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes vlShareRise { from { opacity: 0; transform: translateY(12px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+@media (max-width: 520px) {
+    .vl-share-overlay { align-items: center; padding: max(16px, env(safe-area-inset-top)) 14px max(16px, env(safe-area-inset-bottom)); }
+    .vl-share-dialog { width: 100%; max-height: min(88dvh, 720px); padding: 20px 16px; border-radius: 22px; }
+    .vl-share-networks { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .vl-share-network { border-radius: 11px; }
+}
+
 /* ─── Body (Title & Tags) ─── */
 .vl-post-body {
     padding: var(--space-xl) var(--space-xl) 0;
@@ -211,13 +290,6 @@
 
 .vl-post-visual {
     width: 100%;
-}
-
-.cl-ranking-name-view {
-    font-weight: 600;
-    color: var(--text-primary);
-    font-size: var(--text-base);
-    margin-left: 12px;
 }
 
 .vl-empty-state {

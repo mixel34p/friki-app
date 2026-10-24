@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -499,8 +500,12 @@ export default function EditProfile({ onClose }) {
     /* ──────────────────────────────────────
        Render
        ────────────────────────────────────── */
-    return (
-        <>
+    return createPortal((
+        <div className="ep-portal-root" style={{
+            '--brand-primary': formData.theme_color || '#14b8a6',
+            '--brand-dark': formData.theme_color || '#14b8a6',
+            '--profile-theme-color': formData.theme_color || '#14b8a6'
+        }}>
             <div className="ep-overlay" onClick={e => { if (e.target === e.currentTarget) handleClose() }}>
                 <div className="ep-modal" onClick={e => e.stopPropagation()}>
 
@@ -1172,6 +1177,6 @@ export default function EditProfile({ onClose }) {
                 </div>
             </div>
         )}
-    </>
-)
+        </div>
+), document.body)
 }

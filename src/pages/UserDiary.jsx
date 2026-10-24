@@ -61,7 +61,7 @@ export default function UserDiary() {
                 // Get profile ID from username
                 const { data: userData, error: userError } = await supabase
                     .from('profiles')
-                    .select('id, username, avatar_url')
+                    .select('id, username, avatar_url, theme_color')
                     .eq('username', username)
                     .single()
                 
@@ -133,7 +133,13 @@ export default function UserDiary() {
     const totalEntries = diaryMonths.reduce((sum, month) => sum + month.entries.length, 0)
 
     return (
-        <div className="page-container user-reviews-page">
+        <div
+            className="page-container user-reviews-page"
+            style={profile?.theme_color ? {
+                '--brand-primary': profile.theme_color,
+                '--brand-dark': profile.theme_color
+            } : {}}
+        >
             <div className="user-page-header">
                 <div className="user-page-header-content">
                     <div className="user-page-title-row">

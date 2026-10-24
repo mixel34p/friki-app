@@ -15,7 +15,8 @@
 .ctm-overlay {
     position: fixed;
     inset: 0;
-    z-index: 11000;
+    box-sizing: border-box;
+    z-index: 20000;
     background: rgba(0, 0, 0, 0.78);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
@@ -23,6 +24,8 @@
     align-items: center;
     justify-content: center;
     padding: 1rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
     animation: ctmOverlayIn 0.2s ease;
 }
 
@@ -768,8 +771,13 @@
 
 /* -- Responsive -- */
 @media (max-width: 600px) {
+    .ctm-overlay {
+        padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
+    }
     .ctm-panel {
-        max-height: 95dvh;
+        width: 100%;
+        max-width: 560px;
+        max-height: calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
         border-radius: var(--radius-xl);
     }
     .ctm-header { padding: 1.5rem 1.25rem 1rem; }

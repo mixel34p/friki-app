@@ -27,6 +27,36 @@ export async function getTemplates({ type = null, mediaType = null, query = '', 
     return data || []
 }
 
+export async function getRandomTemplatePreviewCovers(mediaType, limit = 30) {
+    const table = mediaType === 'game' ? 'games' : mediaType === 'anime' ? 'anime' : null;
+    if (!table || limit <= 0) return [];
+
+    const { count, error: countError } = await supabase
+        .from(table)
+        .select('id', { count: 'exact', head: true })
+        .not('cover_url', 'is', null);
+    if (countError) throw countError;
+    if (!count) return [];
+
+    const sampleSize = Math.min(count, Math.max(30, limit));
+    const maxStart = Math.max(0, count - sampleSize);
+    const start = Math.floor(Math.random() * (maxStart + 1));
+    const { data, error } = await supabase
+        .from(table)
+        .select('id, cover_url')
+        .not('cover_url', 'is', null)
+        .order('id', { ascending: true })
+        .range(start, start + sampleSize - 1);
+    if (error) throw error;
+
+    const covers = (data || []).map(item => item.cover_url).filter(Boolean);
+    for (let i = covers.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [covers[i], covers[j]] = [covers[j], covers[i]];
+    }
+    return covers;
+}
+
 export async function getTemplateById(id) {
     const { data, error } = await supabase
         .from('list_templates')
@@ -36,7 +66,7 @@ export async function getTemplateById(id) {
     if (error) throw error
     
     if (data && data.user_id) {
-        const { data: profile } = await supabase.from('profiles').select('username, avatar_url, display_name, featured_badge').eq('id', data.user_id).single();
+        const { data: profile } = await supabase.from('profiles').select('username, avatar_url, display_name, featured_badge, theme_color').eq('id', data.user_id).single();
         if (profile) data.profiles = profile;
     }
     return data
@@ -109,7 +139,7 @@ export async function getListById(id) {
     if (error) throw error
     
     if (data && data.user_id) {
-        const { data: profile } = await supabase.from('profiles').select('username, avatar_url, display_name, featured_badge').eq('id', data.user_id).single();
+        const { data: profile } = await supabase.from('profiles').select('username, avatar_url, display_name, featured_badge, theme_color').eq('id', data.user_id).single();
         if (profile) data.author = profile;
     }
     return data

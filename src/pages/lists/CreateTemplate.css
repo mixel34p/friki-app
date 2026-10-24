@@ -193,10 +193,13 @@
   align-items: center;
   justify-content: center;
   text-align: center;
-  font-weight: bold;
-  color: #111;
+  font-family: var(--font-sans, Inter, sans-serif);
+  font-weight: 400;
+  color: #000;
   border-radius: 4px;
   padding: 0 0.5rem;
+  white-space: normal;
+  overflow-wrap: normal;
 }
 
 .ranking-preview {
@@ -208,6 +211,7 @@
 .ranking-row {
   display: flex;
   align-items: center;
+  justify-content: center;
   padding: 0.5rem;
   border-bottom: 1px solid #333;
 }
@@ -215,6 +219,28 @@
   font-weight: bold;
   color: var(--brand-primary, #14b8a6);
   width: 30px;
+}
+.ranking-preview-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+.ranking-preview-cover {
+  width: 34px;
+  height: 46px;
+  flex: 0 0 34px;
+  border: 1px solid #333;
+  border-radius: 4px;
+  background: #222;
+}
+.ranking-preview-name {
+  max-width: 220px;
+  color: #ddd;
+  font-size: 0.9rem;
+  text-align: left;
 }
 
 .grid-preview {

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
 import { getSpaces, createSpace, createSpaceChannel, getSpaceChannels, deleteSpaceChannel } from '../../lib/spaceService';
 import { supabase } from '../../lib/supabase';
@@ -449,7 +450,7 @@ export default function SpacesExplore() {
 
 
       {isModalOpen && (
-        <div className="explore-modal-overlay" onClick={resetModal}>
+        createPortal(<div className="explore-modal-overlay" onClick={resetModal}>
           <div className="explore-modal-content" onClick={e => e.stopPropagation()}>
             
             {step === 1 && (
@@ -635,7 +636,7 @@ export default function SpacesExplore() {
             )}
 
           </div>
-        </div>
+        </div>, document.body)
       )}
 
       {cropModal.isOpen && (

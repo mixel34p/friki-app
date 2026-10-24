@@ -100,6 +100,8 @@ export default function LiveChat() {
     const [isClosingLightbox, setIsClosingLightbox] = useState(false);
     const [longPressedMsg, setLongPressedMsg] = useState(null);
     const touchTimerRef = useRef(null);
+    const messageTouchRef = useRef(null);
+    const swipeResetTimerRef = useRef(null);
     const [emojiSheetHeight, setEmojiSheetHeightState] = useState(220);
     const emojiSheetHeightRef = useRef(220); // always in sync for non-passive listeners
     const setEmojiSheetHeight = (h) => { emojiSheetHeightRef.current = h; setEmojiSheetHeightState(h); };
@@ -878,9 +880,25 @@ export default function LiveChat() {
 
     const navigate = useNavigate();
 
-    const handleTouchStart = (msg) => {
-        if (window.innerWidth > 768) return; // Only mobile
+    const handleTouchStart = (msg, event) => {
+        if (window.innerWidth > 768 || event.touches.length !== 1) return;
+        if (swipeResetTimerRef.current) {
+            clearTimeout(swipeResetTimerRef.current);
+            swipeResetTimerRef.current = null;
+        }
+        event.currentTarget.classList.remove('swiping-for-reply', 'swipe-reply-accepted');
+        event.currentTarget.style.setProperty('--swipe-distance', '0px');
+        event.currentTarget.style.setProperty('--swipe-progress', '0');
+        const touch = event.touches[0];
+        messageTouchRef.current = {
+            msg,
+            startX: touch.clientX,
+            startY: touch.clientY,
+            longPressTriggered: false,
+            swipeDistance: 0,
+        };
         touchTimerRef.current = setTimeout(() => {
+            if (messageTouchRef.current) messageTouchRef.current.longPressTriggered = true;
             setLongPressedMsg(msg);
             touchTimerRef.current = null;
             // Optionally provide haptic feedback if supported
@@ -888,17 +906,74 @@ export default function LiveChat() {
         }, 500); // 500ms long press
     };
 
-    const handleTouchEnd = () => {
+    const handleTouchEnd = (event) => {
         if (touchTimerRef.current) {
             clearTimeout(touchTimerRef.current);
             touchTimerRef.current = null;
         }
+        const gesture = messageTouchRef.current;
+        const touch = event.changedTouches?.[0];
+        messageTouchRef.current = null;
+        const row = event.currentTarget;
+        if (!gesture || !touch || gesture.longPressTriggered || window.innerWidth > 768) {
+            resetSwipeVisual(row);
+            return;
+        }
+
+        const deltaX = touch.clientX - gesture.startX;
+        const deltaY = touch.clientY - gesture.startY;
+        if (deltaX <= -70 && Math.abs(deltaX) > Math.abs(deltaY) * 1.3) {
+            row.classList.add('swipe-reply-accepted');
+            row.style.setProperty('--swipe-distance', '82px');
+            row.style.setProperty('--swipe-progress', '1');
+            startReplying(gesture.msg);
+            if (navigator.vibrate) navigator.vibrate(12);
+            swipeResetTimerRef.current = setTimeout(() => resetSwipeVisual(row), 150);
+        } else {
+            resetSwipeVisual(row);
+        }
     };
-    
-    const handleTouchMove = () => {
+
+    const resetSwipeVisual = (row) => {
+        row?.classList.remove('swiping-for-reply', 'swipe-reply-accepted');
+        row?.style.setProperty('--swipe-distance', '0px');
+        row?.style.setProperty('--swipe-progress', '0');
+        swipeResetTimerRef.current = null;
+    };
+
+    const handleTouchCancel = (event) => {
         if (touchTimerRef.current) {
             clearTimeout(touchTimerRef.current);
             touchTimerRef.current = null;
+        }
+        messageTouchRef.current = null;
+        resetSwipeVisual(event.currentTarget);
+    };
+    
+    const handleTouchMove = (event) => {
+        const gesture = messageTouchRef.current;
+        const touch = event.touches?.[0];
+        if (touchTimerRef.current) {
+            if (!touch || Math.abs(touch.clientX - gesture?.startX) > 10 || Math.abs(touch.clientY - gesture?.startY) > 10) {
+                clearTimeout(touchTimerRef.current);
+                touchTimerRef.current = null;
+            }
+        }
+        if (!gesture || !touch || window.innerWidth > 768) return;
+
+        const deltaX = touch.clientX - gesture.startX;
+        const deltaY = touch.clientY - gesture.startY;
+        const row = event.currentTarget;
+        if (deltaX < -8 && Math.abs(deltaX) > Math.abs(deltaY) * 1.1) {
+            gesture.swipeDistance = Math.min(82, -deltaX);
+            row.classList.add('swiping-for-reply');
+            row.style.setProperty('--swipe-distance', `${gesture.swipeDistance}px`);
+            row.style.setProperty('--swipe-progress', `${Math.min(1, gesture.swipeDistance / 70)}`);
+        } else if (row.classList.contains('swiping-for-reply')) {
+            gesture.swipeDistance = 0;
+            row.classList.remove('swiping-for-reply');
+            row.style.setProperty('--swipe-distance', '0px');
+            row.style.setProperty('--swipe-progress', '0');
         }
     };
 
@@ -967,10 +1042,16 @@ export default function LiveChat() {
                                 <div 
                                     id={`msg-${msg.id}`} 
                                     className={`chat-message-row ${msg.isConsecutive ? 'consecutive' : ''} ${msg.hasReply ? 'has-reply' : ''} ${isReplyToMe ? 'mentioned' : ''}`}
+                                    style={{ '--swipe-distance': '0px', '--swipe-progress': '0' }}
                                     onTouchStart={(e) => handleTouchStart(msg, e)}
                                     onTouchMove={handleTouchMove}
                                     onTouchEnd={handleTouchEnd}
+                                    onTouchCancel={handleTouchCancel}
                                 >
+                                    <div className="chat-swipe-reply-indicator" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
+                                        <span>Responder</span>
+                                    </div>
                                     {msg.hasReply && (
                                         <div className="chat-reply-banner" onClick={() => scrollToMessage(msg.reply_to_id)}>
                                             {replyMsg ? (
@@ -1180,28 +1261,6 @@ export default function LiveChat() {
                                             
                                             {activeDropdown === msg.id && createPortal(
                                                 <div className="chat-dropdown" style={{ position: 'fixed', bottom: dropdownCoords?.bottom, right: dropdownCoords?.right, zIndex: 99999 }}>
-                                                    <div className="chat-dropdown-reactions">
-                                                        {quickReactions.map(emoji => {
-                                                            const isCustom = emoji.startsWith(':') && emoji.endsWith(':');
-                                                            const customEmojiName = isCustom ? emoji.slice(1, -1) : null;
-                                                            const customEmojiUrl = isCustom ? globalEmojisMap[customEmojiName] : null;
-
-                                                            return (
-                                                                <button key={emoji} className="chat-dropdown-reaction-btn" onClick={() => handleToggleReaction(msg.id, emoji)} title={`Reaccionar con ${emoji}`}>
-                                                                    {isCustom ? (
-                                                                        customEmojiUrl ? (
-                                                                            <img src={customEmojiUrl} alt={emoji} style={{width: '20px', height: '20px', display: 'inline-block', objectFit: 'contain'}} />
-                                                                        ) : (
-                                                                            <span style={{fontSize: '11px', fontWeight: 'bold'}}>{customEmojiName.substring(0, 2).toUpperCase()}</span>
-                                                                        )
-                                                                    ) : (
-                                                                        emoji
-                                                                    )}
-                                                                </button>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                    
                                                     <button className="chat-dropdown-item" onClick={(e) => openReactionPicker(e, msg.id)}>
                                                         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
                                                         Añadir reacción
@@ -1517,9 +1576,16 @@ export default function LiveChat() {
                                     Editar
                                 </button>
                             )}
-                            <button className="mobile-context-btn" onClick={() => { navigator.clipboard.writeText(longPressedMsg.id); setLongPressedMsg(null); }}>
+                            <button className="mobile-context-btn" onClick={async () => {
+                                try {
+                                    await navigator.clipboard.writeText(htmlToText(longPressedMsg.content || ''));
+                                } catch (error) {
+                                    console.error('No se pudo copiar el mensaje:', error);
+                                }
+                                setLongPressedMsg(null);
+                            }}>
                                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                                Copiar ID
+                                Copiar mensaje
                             </button>
                             {(longPressedMsg.user_id === user?.id || profile?.role === 'admin' || profile?.role === 'mod' || profile?.role === 'owner') && (
                                 <button className="mobile-context-btn danger" onClick={() => { handleDeleteMessage(longPressedMsg.id); setLongPressedMsg(null); }}>

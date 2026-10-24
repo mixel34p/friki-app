@@ -397,7 +397,10 @@ export default function CreateTemplate() {
               {Array.from({length: maxItems}).map((_, i) => (
                 <div key={i} className="ranking-row">
                   <span className="ranking-num">{i + 1}</span>
-                  <span style={{color: '#888'}}>Posición {i + 1}</span>
+                  <div className="ranking-preview-item">
+                    <span className="ranking-preview-cover" aria-hidden="true" />
+                    <span className="ranking-preview-name">Posición {i + 1}</span>
+                  </div>
                 </div>
               ))}
             </div>

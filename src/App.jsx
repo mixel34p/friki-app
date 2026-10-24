@@ -9,12 +9,9 @@ import ForgotPassword from './pages/ForgotPassword'
 import ConfirmEmail from './pages/ConfirmEmail'
 import UpdatePassword from './pages/UpdatePassword'
 
-// Importamos los componentes, pero usaremos Placeholder temporalmente
-import Home from './pages/Home'
 import Profile from './pages/Profile'
 import EditProfile from './pages/EditProfile'
 import Library from './pages/Library'
-import Discover from './pages/Discover'
 import WorkPage from './pages/WorkPage'
 import Connections from './pages/Connections'
 import CompareProfiles from './pages/CompareProfiles'
