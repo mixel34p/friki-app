@@ -25,11 +25,18 @@ export default function MySpaces() {
   });
 
   useEffect(() => {
-    if (user) {
-      loadMySpaces();
-    } else {
-      setLoading(false);
-    }
+    if (!user) return undefined;
+    let active = true;
+    getUserSpaces(user.id).then(data => {
+      if (!active) return;
+      setSpaces(data);
+      setError(null);
+    }).catch(err => {
+      if (!active) return;
+      console.error('Error loading my spaces:', err);
+      setError(err.message || 'Error al cargar tus espacios');
+    }).finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
   }, [user]);
 
   useEffect(() => {
@@ -106,20 +113,6 @@ export default function MySpaces() {
     };
   }, [spaces, user?.id]);
 
-  const loadMySpaces = async () => {
-    try {
-      setLoading(true);
-      const data = await getUserSpaces(user.id);
-      setSpaces(data);
-      setError(null);
-    } catch (err) {
-      console.error('Error loading my spaces:', err);
-      setError(err.message || 'Error al cargar tus espacios');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const toggleFavorite = (e, id) => {
     e.stopPropagation();
     setFavorites(prev => {
@@ -162,7 +155,7 @@ export default function MySpaces() {
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
           <h1 style={{ fontSize: '1.5rem', margin: 0, fontWeight: 'bold' }}>Tus Espacios</h1>
-          <Link to="/spaces/explore" style={{ color: 'var(--text-primary)' }} title="Descubrir">
+          <Link to="/discover/spaces" style={{ color: 'var(--text-primary)' }} title="Descubrir">
             <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" />
               <line x1="12" y1="8" x2="12" y2="16" />
@@ -203,7 +196,7 @@ export default function MySpaces() {
         ) : spaces.length === 0 ? (
           <div style={{ padding: '4rem 2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
             <p style={{ marginBottom: '1.5rem', fontSize: '1.1rem' }}>No te has unido a ninguna comunidad.</p>
-            <Link to="/spaces/explore" className="btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', fontWeight: 'bold', textDecoration: 'none' }}>
+            <Link to="/discover/spaces" className="btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', fontWeight: 'bold', textDecoration: 'none' }}>
               <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10" />
                 <line x1="12" y1="8" x2="12" y2="16" />

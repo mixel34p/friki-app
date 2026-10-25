@@ -290,3 +290,157 @@
 
     .auth-title { font-size: 1.4rem; }
 }
+/* ── Register onboarding ── */
+.auth-container.register-container {
+    max-width: 510px;
+    padding: clamp(1.5rem, 4vw, 2.5rem);
+    background:
+        radial-gradient(ellipse at 100% 0%, rgba(20, 184, 166, 0.09), transparent 38%),
+        var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-2xl);
+    box-shadow: var(--shadow-xl);
+}
+
+.auth-container.register-container::before {
+    height: 3px;
+    background: linear-gradient(90deg, var(--brand-primary), rgba(20, 184, 166, 0.15));
+}
+
+.register-stepper {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: clamp(2rem, 5vw, 2.75rem);
+}
+
+.register-step {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    color: var(--text-muted);
+    position: relative;
+    font-size: 0.78rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.register-step:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    width: clamp(12px, 3vw, 34px);
+    height: 1px;
+    top: 50%;
+    left: calc(100% + 0.35rem);
+    background: var(--border-subtle);
+}
+
+.register-step-number {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    flex: 0 0 30px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 50%;
+    background: var(--bg-secondary);
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    transition: all var(--transition-base);
+}
+
+.register-step.current { color: var(--text-primary); }
+
+.register-step.current .register-step-number {
+    border-color: var(--brand-primary);
+    background: rgba(20, 184, 166, 0.14);
+    color: var(--brand-primary);
+    box-shadow: 0 0 0 4px rgba(20, 184, 166, 0.08);
+}
+
+.register-step.complete .register-step-number {
+    border-color: var(--brand-primary);
+    background: var(--brand-primary);
+    color: var(--bg-primary);
+    font-size: 0.9rem;
+}
+
+.register-step.complete:not(:last-child)::after { background: var(--brand-primary); }
+
+.register-header {
+    margin-bottom: 2rem;
+    text-align: left;
+}
+
+.register-header .auth-title { font-family: var(--font-display); letter-spacing: -0.035em; }
+.register-header .auth-subtitle { max-width: 34rem; }
+
+.register-container .auth-error {
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    line-height: 1.45;
+}
+
+.register-container .auth-form { gap: 1.5rem; }
+.register-container .input-group { gap: 0.55rem; }
+
+.register-container .input-label {
+    margin-left: 0;
+    color: var(--text-primary);
+    font-size: 0.86rem;
+    font-weight: 650;
+}
+
+.register-container .auth-input {
+    width: 100%;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-subtle);
+}
+
+.register-container .auth-input:focus {
+    background: var(--bg-primary);
+    border-color: var(--brand-primary);
+}
+
+.register-field-hint {
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    line-height: 1.45;
+}
+
+.register-actions { margin-top: 0.5rem; }
+.register-actions .auth-submit-next { min-height: 52px; font-weight: 700; }
+.register-back { min-width: 96px; border-radius: var(--radius-lg); }
+
+.register-footer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 1.75rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--border-subtle);
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+.register-footer a {
+    color: var(--text-primary);
+    font-weight: 650;
+    text-decoration: none;
+}
+
+.register-footer a:hover { color: var(--brand-primary); }
+.register-footer a span { color: var(--brand-primary); padding-left: 0.15rem; }
+
+@media (max-width: 480px) {
+    .auth-container.register-container { padding: 1.5rem 1.2rem; }
+    .register-step { gap: 0.4rem; font-size: 0.68rem; }
+    .register-step-number { width: 27px; height: 27px; flex-basis: 27px; }
+    .register-step:not(:last-child)::after { width: 10px; left: calc(100% + 0.2rem); }
+}
+
+@media (max-width: 360px) {
+    .register-step-label { display: none; }
+    .register-step:not(:last-child)::after { width: clamp(32px, 15vw, 55px); }
+}

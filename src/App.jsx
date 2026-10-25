@@ -1,7 +1,8 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { ToastProvider } from './components/Toast'
 import Layout from './components/Layout'
+import LoadingSpinner from './components/LoadingSpinner'
 import Landing from './pages/Landing'
 import Login from './pages/Login'
 import Register from './pages/Register'
@@ -20,6 +21,10 @@ import UserDiary from './pages/UserDiary'
 import UserTierlists from './pages/UserTierlists'
 import UserTemplates from './pages/UserTemplates'
 import WorkReviews from './pages/WorkReviews'
+import Search from './pages/Search'
+import DiscoverWorks from './pages/DiscoverWorks'
+import DiscoverLists from './pages/DiscoverLists'
+import DiscoverUsers from './pages/DiscoverUsers'
 import WishlistPage from './pages/WishlistPage'
 import Chat from './pages/Chat'
 import './index.css'
@@ -48,7 +53,7 @@ function ProtectedRoute({ children, requireProfile = true }) {
   if (loading) {
     return (
       <div className="flex items-center justify-center" style={{ minHeight: '100vh' }}>
-        <div className="animate-pulse">Cargando...</div>
+        <LoadingSpinner size="lg" label="Cargando" />
       </div>
     )
   }
@@ -75,7 +80,7 @@ function PublicOnlyRoute({ children }) {
   if (loading) {
     return (
       <div className="flex items-center justify-center" style={{ minHeight: '100vh' }}>
-        <div className="animate-pulse">Cargando...</div>
+        <LoadingSpinner size="lg" label="Cargando" />
       </div>
     )
   }
@@ -95,6 +100,21 @@ function Placeholder({ title }) {
       <p style={{ color: 'var(--text-muted)' }}>Esta página está vacía temporalmente para el rework.</p>
     </div>
   )
+}
+
+function DiscoverCategoryPlaceholder() {
+  const { category } = useParams()
+  const labels = { anime: 'Animes', games: 'Juegos', users: 'Usuarios', spaces: 'Espacios', lists: 'Listas' }
+  return <Placeholder title={`Descubrir ${labels[category] || ''}`} />
+}
+
+function DiscoverCategoryRoute() {
+  const { category } = useParams()
+  if (category === 'anime' || category === 'games') return <DiscoverWorks />
+  if (category === 'users') return <DiscoverUsers />
+  if (category === 'spaces') return <SpacesExplore />
+  if (category === 'lists') return <DiscoverLists />
+  return <DiscoverCategoryPlaceholder />
 }
 
 function App() {
@@ -125,6 +145,8 @@ function App() {
 
           {/* Protected routes with Layout */}
           <Route element={<Layout />}>
+            <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
+            <Route path="/search/results" element={<ProtectedRoute><Search /></ProtectedRoute>} />
             <Route path="/home" element={<ProtectedRoute><Placeholder title="Inicio (Home)" /></ProtectedRoute>} />
             <Route path="/profile/:username?" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="/profile/:username/reviews" element={<ProtectedRoute><UserReviews /></ProtectedRoute>} />
@@ -144,13 +166,15 @@ function App() {
             <Route path="/templates/:id" element={<ViewTemplate />} />
             <Route path="/lists/:id" element={<ViewList />} />
             
-            <Route path="/discover" element={<ProtectedRoute><Placeholder title="Descubrir" /></ProtectedRoute>} />
+            <Route path="/discover" element={<ProtectedRoute><Navigate to="/search" replace /></ProtectedRoute>} />
+            <Route path="/discover/users/all" element={<ProtectedRoute><Placeholder title="Todos los usuarios" /></ProtectedRoute>} />
+            <Route path="/discover/:category" element={<ProtectedRoute><DiscoverCategoryRoute /></ProtectedRoute>} />
             <Route path="/library/:username?" element={<Navigate to="/profile" replace />} />
             <Route path="/old-library" element={<ProtectedRoute><Placeholder title="Biblioteca" /></ProtectedRoute>} />
             
             {/* Spaces System */}
             <Route path="/spaces" element={<ProtectedRoute><MySpaces /></ProtectedRoute>} />
-            <Route path="/spaces/explore" element={<ProtectedRoute><SpacesExplore /></ProtectedRoute>} />
+            <Route path="/spaces/explore" element={<ProtectedRoute><Navigate to="/discover/spaces" replace /></ProtectedRoute>} />
             <Route path="/spaces/:id" element={<ProtectedRoute><SpaceLayout /></ProtectedRoute>}>
               <Route path="chat/:channelId" element={<LiveChat />} />
             </Route>
@@ -177,3 +201,5 @@ function App() {
 }
 
 export default App
+
+

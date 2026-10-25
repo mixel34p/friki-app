@@ -27,6 +27,96 @@ export async function getTemplates({ type = null, mediaType = null, query = '', 
     return data || []
 }
 
+/** Public, paginated catalog of user-created lists (never templates). */
+export async function getDiscoverLists({ type = null, mediaType = null, query = '', page = 1, pageSize = 24, signal } = {}) {
+    const safePage = Math.max(1, page)
+    const from = (safePage - 1) * pageSize
+    const scanSize = 500
+    const rankedLists = []
+    let total = 0
+
+    // Fetch light metadata with the related like count, then rank globally before slicing pages.
+    // Sorting only the current page would let older, popular lists stay buried.
+    for (let offset = 0; ; offset += scanSize) {
+        let request = supabase
+            .from('user_lists')
+            .select('id, created_at, user_list_likes(count)', { count: 'exact' })
+            .eq('visibility', 'public')
+            .range(offset, offset + scanSize - 1)
+        if (type) request = request.eq('list_type', type)
+        if (mediaType) request = request.eq('media_type', mediaType)
+        if (query.trim()) request = request.ilike('title', `%${query.trim()}%`)
+        if (signal) request = request.abortSignal(signal)
+        const { data, count, error } = await request
+        if (error) throw error
+        total = count || 0
+        rankedLists.push(...(data || []).map(list => ({
+            id: list.id,
+            created_at: list.created_at,
+            likes: list.user_list_likes?.[0]?.count || 0,
+        })))
+        if (!data?.length || data.length < scanSize || rankedLists.length >= total) break
+    }
+
+    rankedLists.sort((a, b) => b.likes - a.likes || (Date.parse(b.created_at || '') || 0) - (Date.parse(a.created_at || '') || 0) || String(a.id).localeCompare(String(b.id)))
+    const pageIds = rankedLists.slice(from, from + pageSize).map(list => list.id)
+    if (!pageIds.length) return { items: [], total }
+
+    let pageRequest = supabase
+        .from('user_lists')
+        .select('id, title, list_type, media_type, content, user_id, created_at, visibility')
+        .eq('visibility', 'public')
+        .in('id', pageIds)
+    if (signal) pageRequest = pageRequest.abortSignal(signal)
+    const { data, error } = await pageRequest
+    if (error) throw error
+    const rank = new Map(pageIds.map((id, index) => [String(id), index]))
+    const pageLists = (data || []).sort((a, b) => rank.get(String(a.id)) - rank.get(String(b.id)))
+
+    const userIds = [...new Set(pageLists.map(list => list.user_id).filter(Boolean))]
+    let profiles = []
+    if (userIds.length) {
+        let profileRequest = supabase.from('profiles').select('id, username, display_name, avatar_url, featured_badge').in('id', userIds)
+        if (signal) profileRequest = profileRequest.abortSignal(signal)
+        const { data: profileData, error: profileError } = await profileRequest
+        if (profileError) throw profileError
+        profiles = profileData || []
+    }
+    const profileMap = new Map(profiles.map(profile => [profile.id, profile]))
+    return { items: pageLists.map(list => ({ ...list, author: profileMap.get(list.user_id) || null })), total }
+}
+
+/** Public paginated template catalog. Templates stay separate from user-created lists. */
+export async function getDiscoverTemplates({ type = null, mediaType = null, query = '', page = 1, pageSize = 24, signal } = {}) {
+    const from = (Math.max(1, page) - 1) * pageSize
+    let request = supabase
+        .from('list_templates')
+        .select('*', { count: 'exact' })
+        .eq('visibility', 'public')
+        .order('uses_count', { ascending: false, nullsFirst: false })
+        .order('created_at', { ascending: false, nullsFirst: false })
+        .order('id', { ascending: true })
+        .range(from, from + pageSize - 1)
+    if (type) request = request.eq('list_type', type)
+    if (mediaType) request = request.eq('media_type', mediaType)
+    if (query.trim()) request = request.ilike('title', `%${query.trim()}%`)
+    if (signal) request = request.abortSignal(signal)
+    const { data, count, error } = await request
+    if (error) throw error
+
+    const userIds = [...new Set((data || []).map(template => template.user_id).filter(Boolean))]
+    let profiles = []
+    if (userIds.length) {
+        let profileRequest = supabase.from('profiles').select('id, username, display_name, avatar_url, featured_badge').in('id', userIds)
+        if (signal) profileRequest = profileRequest.abortSignal(signal)
+        const { data: profileData, error: profileError } = await profileRequest
+        if (profileError) throw profileError
+        profiles = profileData || []
+    }
+    const profileMap = new Map(profiles.map(profile => [profile.id, profile]))
+    return { items: (data || []).map(template => ({ ...template, profiles: profileMap.get(template.user_id) || null })), total: count || 0 }
+}
+
 export async function getRandomTemplatePreviewCovers(mediaType, limit = 30) {
     const table = mediaType === 'game' ? 'games' : mediaType === 'anime' ? 'anime' : null;
     if (!table || limit <= 0) return [];

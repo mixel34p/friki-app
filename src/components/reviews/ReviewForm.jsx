@@ -3,8 +3,27 @@ import { createReview, updateReview } from '../../lib/reviewService'
 import { useAuth } from '../../context/AuthContext'
 import './Reviews.css'
 
+function formatReviewAge(dateValue) {
+    const date = new Date(dateValue)
+    if (Number.isNaN(date.getTime())) return ''
+
+    const elapsedSeconds = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000))
+    if (elapsedSeconds < 60) return `hace ${elapsedSeconds} ${elapsedSeconds === 1 ? 'segundo' : 'segundos'}`
+
+    const elapsedMinutes = Math.floor(elapsedSeconds / 60)
+    if (elapsedMinutes < 60) return `hace ${elapsedMinutes} ${elapsedMinutes === 1 ? 'minuto' : 'minutos'}`
+
+    const elapsedHours = Math.floor(elapsedMinutes / 60)
+    if (elapsedHours < 24) return `hace ${elapsedHours} ${elapsedHours === 1 ? 'hora' : 'horas'}`
+
+    const elapsedDays = Math.floor(elapsedHours / 24)
+    if (elapsedDays < 7) return `hace ${elapsedDays} ${elapsedDays === 1 ? 'día' : 'días'}`
+
+    return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
 export default function ReviewForm({ workId, workType, onClose, onReviewAdded, initialData = null }) {
-    const { user } = useAuth()
+    const { user, profile } = useAuth()
     const [rating, setRating] = useState(initialData?.rating || 0)
     const [title, setTitle] = useState(initialData?.title || '')
     const [content, setContent] = useState(initialData?.content || '')
@@ -70,56 +89,76 @@ export default function ReviewForm({ workId, workType, onClose, onReviewAdded, i
         <div className="review-form-overlay" onClick={onClose}>
             <div className="review-modal-content" onClick={e => e.stopPropagation()}>
                 <button className="close-btn" onClick={onClose}>&times;</button>
+                {initialData?.created_at && (
+                    <time className="review-modal-date" dateTime={initialData.created_at}>
+                        {formatReviewAge(initialData.created_at)}
+                    </time>
+                )}
                 <div className="modal-title">
                     {initialData ? 'Editar Review' : 'Escribir Review'}
                 </div>
 
                 <form onSubmit={handleSubmit}>
-                    {/* Rating Stars - Large & Animated */}
-                    <div className="form-rating-section">
-                        <label className="input-label">Tu Puntuación</label>
-                        <div className="star-input-group">
-                            {[1, 2, 3, 4, 5].map(star => (
-                                <button
-                                    key={star}
-                                    type="button"
-                                    className={`star-input ${star <= (hoverRating || rating) ? 'active' : ''}`}
-                                    onMouseEnter={() => setHoverRating(star)}
-                                    onMouseLeave={() => setHoverRating(0)}
-                                    onClick={() => setRating(star)}
-                                >
-                                    ★
-                                </button>
-                            ))}
+                    <div className="review-composer-layout">
+                        <div className="review-composer-author">
+                            <img
+                                className="review-composer-avatar"
+                                src={profile?.avatar_url || 'https://via.placeholder.com/64'}
+                                alt={profile?.display_name || profile?.username || 'Tu perfil'}
+                            />
+                            <span className="review-composer-name">
+                                {profile?.display_name || profile?.username || 'Tu perfil'}
+                            </span>
                         </div>
-                    </div>
 
-                    {/* Title */}
-                    <div className="form-group">
-                        <label className="input-label">Título (Opcional)</label>
-                        <input
-                            type="text"
-                            className="modern-input"
-                            value={title}
-                            onChange={e => setTitle(e.target.value)}
-                            placeholder="Ej: Una obra maestra indispensable"
-                            maxLength={60}
-                        />
-                    </div>
+                        <div className="review-composer-rating">
+                            <div className="star-input-group">
+                                {[1, 2, 3, 4, 5].map(star => (
+                                    <button
+                                        key={star}
+                                        type="button"
+                                        className={`star-input ${star <= (hoverRating || rating) ? 'active' : ''}`}
+                                        aria-label={`${star} estrellas`}
+                                        onMouseEnter={() => setHoverRating(star)}
+                                        onMouseLeave={() => setHoverRating(0)}
+                                        onClick={() => setRating(star)}
+                                    >
+                                        ★
+                                    </button>
+                                ))}
+                            </div>
+                            <span className="review-composer-score">
+                                {hoverRating || rating ? `${hoverRating || rating}.0` : '—'}
+                            </span>
+                        </div>
 
-                    {/* Content */}
-                    <div className="form-group" style={{ marginTop: '1.5rem' }}>
-                        <label className="input-label">Tu Reseña</label>
-                        <textarea
-                            className="modern-input"
-                            value={content}
-                            onChange={e => setContent(e.target.value)}
-                            placeholder="¿Qué te ha parecido? Personajes, historia, aspectos técnicos..."
-                            rows={6}
-                            maxLength={2000}
-                            style={{ resize: 'vertical', minHeight: '120px' }}
-                        />
-                        <div className="char-counter">{content.length}/2000</div>
+                        <div className="review-composer-fields">
+                            <div className="form-group">
+                                <label className="input-label">Título (Opcional)</label>
+                                <input
+                                    type="text"
+                                    className="modern-input"
+                                    value={title}
+                                    onChange={e => setTitle(e.target.value)}
+                                    placeholder="Ej: Una obra maestra indispensable"
+                                    maxLength={60}
+                                />
+                            </div>
+
+                            <div className="form-group">
+                                <label className="input-label">Tu Reseña</label>
+                                <textarea
+                                    className="modern-input"
+                                    value={content}
+                                    onChange={e => setContent(e.target.value)}
+                                    placeholder="¿Qué te ha parecido? Personajes, historia, aspectos técnicos..."
+                                    rows={6}
+                                    maxLength={2000}
+                                    style={{ resize: 'vertical', minHeight: '120px', textAlign: 'left' }}
+                                />
+                                <div className="char-counter">{content.length}/2000</div>
+                            </div>
+                        </div>
                     </div>
 
                     {/* Spoiler Toggle */}

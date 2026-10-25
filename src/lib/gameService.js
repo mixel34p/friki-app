@@ -35,7 +35,7 @@ export async function getSimilarGames(gameId, limit = 10) {
  * @param {number} limit - Max results
  * @returns {Promise<Array>} Array of game objects
  */
-export async function searchGames(query, limit = 20) {
+export async function searchGames(query, limit = 20, { signal } = {}) {
     if (!query || query.length < 2) return []
 
     try {
@@ -45,6 +45,7 @@ export async function searchGames(query, limit = 20) {
             .select('*')
             .ilike('name', `%${query}%`)
             .limit(limit)
+            .abortSignal(signal)
 
         if (error) {
             console.error('Local DB search error:', error)
@@ -58,7 +59,7 @@ export async function searchGames(query, limit = 20) {
         }
 
         // 3. Fetch from IGDB for more results
-        const igdbResults = await searchGamesIGDB(query, limit)
+        const igdbResults = await searchGamesIGDB(query, limit, signal)
 
         // 4. Import new games to local DB (don't await, do in background)
         const localIds = new Set(localResults.map(g => g.id))

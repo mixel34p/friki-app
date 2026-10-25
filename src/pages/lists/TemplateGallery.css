@@ -115,6 +115,8 @@
 .tg-card-preview-items {
     position: relative; z-index: 2; display: flex; gap: 8px; justify-content: center; transform: translateY(10px);
 }
+.tg-card-type-icon { display: grid; width: 68px; height: 68px; place-items: center; border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); color: var(--brand-primary); background: color-mix(in srgb, var(--bg-card) 82%, transparent); box-shadow: var(--shadow-md); }
+.tg-card-type-icon svg { width: 36px; height: 36px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .tg-preview-img {
     width: 48px; height: 64px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border-subtle); box-shadow: 0 4px 12px rgba(0,0,0,0.2); background: var(--bg-card); transition: transform 0.2s;
 }

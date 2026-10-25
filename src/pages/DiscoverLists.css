@@ -1,0 +1,84 @@
+.discover-lists-page { max-width: 1540px; }
+.discover-lists-header { flex-direction: row; align-items: center; justify-content: space-between; gap: 1rem; }
+.discover-lists-header h1 { font-size: 1.35rem; }
+.discover-list-create { display: inline-grid; width: 38px; height: 38px; flex: 0 0 38px; place-items: center; padding: 0; border: 1px solid var(--border-brand); border-radius: 50%; color: #041715; background: var(--brand-primary); cursor: pointer; transition: transform var(--transition-fast), box-shadow var(--transition-fast), filter var(--transition-fast); }
+.discover-list-create:hover { transform: translateY(-2px); filter: brightness(1.06); box-shadow: 0 5px 16px var(--brand-glow); }
+.discover-list-create:active { transform: translateY(0) scale(.98); }
+.discover-list-create:focus-visible { outline: 2px solid var(--brand-primary); outline-offset: 3px; }
+.discover-list-create svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.discover-list-controls { display: grid; gap: .8rem; padding: .9rem 0 .7rem; }
+.discover-list-mode { position: relative; display: inline-flex; width: max-content; min-width: 208px; gap: .2rem; padding: .18rem; border: 1px solid var(--border-default); border-radius: var(--radius-full); background: var(--bg-card); isolation: isolate; }
+.discover-list-mode > span { position: absolute; z-index: -1; inset: 3px auto 3px 3px; width: calc(50% - 3px); border-radius: var(--radius-full); background: var(--brand-primary); transition: transform 320ms cubic-bezier(.2,.8,.2,1); }
+.discover-list-mode.templates-selected > span { transform: translateX(100%); }
+.discover-list-mode button { min-height: 31px; flex: 1; padding: .3rem .85rem; border: 0; border-radius: var(--radius-full); color: var(--text-secondary); background: transparent; font: 700 .73rem var(--font-sans); cursor: pointer; transition: color 180ms ease; }
+.discover-list-mode button:hover { color: var(--text-primary); }
+.discover-list-mode button.active { color: #041715; }
+.discover-list-mode button:focus-visible { outline: 2px solid var(--brand-primary); outline-offset: 2px; }
+.discover-list-filter-actions { display: flex; min-width: 0; align-items: center; gap: .5rem; margin-left: auto; }
+.discover-list-search { display: flex; width: min(30vw, 320px); min-width: 190px; min-height: 38px; align-items: center; gap: .55rem; padding: 0 .7rem; border: 1px solid var(--border-default); border-radius: var(--radius-full); background: var(--bg-card); transition: border-color var(--transition-fast), box-shadow var(--transition-fast); }
+.discover-list-search:focus-within { border-color: var(--border-brand); box-shadow: 0 0 0 3px var(--brand-glow); }
+.discover-list-search > svg { width: 16px; height: 16px; flex: 0 0 auto; fill: none; stroke: var(--text-muted); stroke-width: 1.8; stroke-linecap: round; }
+.discover-list-search input { width: 100%; min-width: 0; border: 0; outline: 0; color: var(--text-primary); background: transparent; font: 500 .78rem var(--font-sans); }
+.discover-list-search input::placeholder { color: var(--text-muted); }
+.discover-list-search input::-webkit-search-cancel-button { display: none; }
+.discover-list-search > button { display: grid; width: 23px; height: 23px; flex: 0 0 auto; place-items: center; border: 0; border-radius: 50%; color: var(--text-secondary); background: var(--bg-tertiary); font-size: 1rem; cursor: pointer; }
+.discover-list-search > button:hover { color: var(--text-primary); background: var(--bg-hover); }
+.discover-list-filter-row { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem 1rem; }
+.discover-list-type-picker { flex: 0 0 auto; }
+.discover-list-type-picker .discover-sort-options { z-index: 8; }
+.discover-list-filter-row .discover-genre-list { width: auto; }
+.discover-list-filter-row .discover-chip { padding: .36rem .66rem; font-size: .71rem; }
+.discover-list-results { padding-top: .5rem; animation: discover-results-in 260ms ease both; }
+.discover-list-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); gap: 1rem; }
+.discover-list-card { position: relative; min-width: 0; min-height: 154px; padding: .7rem; border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); color: var(--text-primary); background: var(--bg-card); transition: transform 220ms ease, border-color 220ms ease, background 220ms ease, box-shadow 220ms ease; }
+.discover-list-card:hover { transform: translateY(-3px); border-color: var(--border-brand); background: var(--bg-hover); box-shadow: var(--shadow-md); }
+.discover-list-card-link { display: flex; width: 100%; min-width: 0; min-height: 130px; align-items: center; gap: .9rem; border-radius: var(--radius-md); color: inherit; }
+.discover-list-card-link:focus-visible { outline: 2px solid var(--brand-primary); outline-offset: 3px; }
+.discover-list-like { position: absolute; z-index: 1; right: .65rem; bottom: .55rem; display: flex; align-items: center; justify-content: flex-end; }
+.discover-list-like .review-like-btn { gap: .25rem; margin: 0; font-size: .69rem; }
+.discover-list-like .review-like-btn svg { width: 14px; height: 14px; }
+.discover-list-like .review-like-btn:focus-visible { outline: 2px solid var(--brand-primary); outline-offset: 3px; border-radius: var(--radius-sm); }
+.discover-list-poster { position: relative; display: grid; width: 92px; height: 130px; flex: 0 0 92px; aspect-ratio: auto; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 2px; overflow: hidden; border-color: var(--border-default); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); transition: transform 220ms ease, border-color 220ms ease; }
+.discover-list-poster > img { min-width: 0; min-height: 0; object-fit: cover; }
+.discover-list-card:hover .discover-list-poster { transform: translateY(-2px) rotate(-1deg); border-color: var(--border-brand); }
+.discover-list-poster-fallback { display: grid; grid-column: 1 / -1; grid-row: 1 / -1; place-items: center; color: var(--brand-primary); background: radial-gradient(circle at 80% 15%, var(--brand-glow), transparent 48%), var(--bg-tertiary); }
+.discover-list-poster-fallback svg { width: 38px; height: 38px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.discover-list-card-copy { display: flex; min-width: 0; flex: 1; flex-direction: column; align-items: flex-start; gap: .5rem; }
+.discover-list-card-copy > strong { display: -webkit-box; overflow: hidden; color: var(--text-primary); font-size: .92rem; line-height: 1.25; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.discover-list-author { display: inline-flex; min-width: 0; align-items: center; gap: .4rem; color: var(--text-secondary); font-size: .72rem; }
+.discover-list-author-avatar { display: grid; width: 22px; height: 22px; flex: 0 0 22px; overflow: hidden; place-items: center; border: 1px solid var(--border-default); border-radius: 50%; color: var(--text-secondary); background: var(--bg-tertiary); font-size: .63rem; font-weight: 700; }
+.discover-list-author-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.discover-list-card-copy .search-list-tags { gap: .35rem; }
+.discover-list-card-copy .search-list-tag { padding: .22rem .48rem; font-size: .61rem; }
+.discover-list-uses { color: var(--text-muted); font-size: .67rem; }
+.discover-list-skeleton { display: grid; min-height: 154px; grid-template-columns: 92px 1fr; align-content: center; align-items: center; gap: .5rem .9rem; padding: .7rem; border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--bg-card); }
+.discover-list-skeleton > span { width: 92px; height: 130px; grid-row: 1 / 5; border-radius: var(--radius-md); background: linear-gradient(110deg,var(--bg-card) 30%,var(--bg-hover) 48%,var(--bg-card) 65%); background-size: 220% 100%; animation: discover-shimmer 1.2s linear infinite; }
+.discover-list-skeleton > i,.discover-list-skeleton > b,.discover-list-skeleton > em { height: .7rem; border-radius: var(--radius-full); background: var(--bg-tertiary); }
+.discover-list-skeleton > i { width: 85%; }.discover-list-skeleton > b { width: 54%; }.discover-list-skeleton > em { width: 66%; height: 1.1rem; }
+.discover-lists-page .discover-empty { justify-items: start; text-align: left; }
+.discover-lists-page .discover-empty > span { margin-left: 0; }
+.discover-lists-page .discover-empty button { margin-top: .85rem; }
+.discover-lists-page .discover-list-no-results { display: block; padding: .5rem 0 1rem; color: var(--text-muted); }
+.discover-list-no-results p { color: var(--text-muted); font-size: .78rem; line-height: 1.4; }
+.discover-list-results .discover-pagination { margin-bottom: .5rem; }
+@media (max-width: 700px) {
+  .discover-lists-header { align-items: center; }
+  .discover-lists-header h1 { font-size: 1.18rem; }
+  .discover-list-create { width: 34px; height: 34px; flex-basis: 34px; }
+  .discover-list-controls { gap: .65rem; padding-top: .7rem; }
+  .discover-list-filter-actions { width: 100%; margin-left: 0; }
+  .discover-list-search { width: 100%; min-width: 0; min-height: 34px; flex: 1; gap: .35rem; padding: 0 .55rem; }
+  .discover-list-search input { font-size: .7rem; }
+  .discover-list-search > svg { width: 14px; height: 14px; }
+  .discover-list-filter-row { align-items: flex-start; flex-direction: column; gap: .45rem; }
+  .discover-list-filter-row .discover-genre-list { width: 100%; }
+  .discover-list-grid { grid-template-columns: 1fr; gap: .65rem; }
+  .discover-list-card { min-height: 125px; padding: .55rem; }
+  .discover-list-card-link { min-height: 108px; gap: .7rem; }
+  .discover-list-like { right: .5rem; bottom: .4rem; }
+  .discover-list-poster { width: 76px; height: 108px; flex-basis: 76px; }
+  .discover-list-card-copy > strong { font-size: .86rem; }
+  .discover-list-skeleton { min-height: 125px; grid-template-columns: 76px 1fr; gap: .45rem .7rem; padding: .55rem; }
+  .discover-list-skeleton > span { width: 76px; height: 108px; }
+}
+@media (prefers-reduced-motion: reduce) { .discover-lists-page *,.discover-lists-page *::before,.discover-lists-page *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }

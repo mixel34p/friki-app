@@ -100,6 +100,13 @@
     margin-bottom: 1.5rem;
 }
 
+.review-card-rating-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.4rem;
+}
+
 .review-user-block {
     display: flex;
     gap: 1rem;
@@ -386,6 +393,81 @@
     text-align: center;
 }
 
+.review-modal-date {
+    position: absolute;
+    top: 1.3rem;
+    right: 4rem;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    line-height: 1.2rem;
+    white-space: nowrap;
+}
+
+.review-composer-layout {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+}
+
+.review-composer-author {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.review-composer-avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--profile-theme-color, var(--brand-primary));
+}
+
+.review-composer-rating {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    width: 100%;
+}
+
+.review-composer-rating .star-input-group {
+    flex: 0 0 auto;
+    justify-content: flex-start;
+    gap: 0.25rem;
+    font-size: 1.35rem;
+    line-height: 1;
+}
+
+.review-composer-rating .star-input {
+    font-size: inherit;
+}
+
+.review-composer-score {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    min-width: 2rem;
+    text-align: right;
+}
+
+.review-composer-name {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.review-composer-fields {
+    min-width: 0;
+    text-align: left;
+}
+
+.review-composer-fields .form-group + .form-group {
+    margin-top: 1rem;
+}
+
+.review-composer-fields .modern-input {
+    text-align: left;
+}
+
 .form-rating-section {
     display: flex;
     flex-direction: column;
@@ -410,6 +492,20 @@
     color: #4b5563;
     transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), color 0.1s;
     padding: 0;
+}
+
+@media (max-width: 560px) {
+    .review-modal-content {
+        padding: 1.5rem;
+    }
+
+    .review-composer-layout {
+        gap: 1rem;
+    }
+
+    .review-composer-author {
+        justify-content: flex-start;
+    }
 }
 
 .star-input:hover,

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, memo } from 'react'
+import { createPortal } from 'react-dom'
 import { searchGames } from '../lib/gameService'
 import { searchAnime } from '../lib/animeService'
 import { getWorkLog } from '../lib/libraryService'
@@ -141,7 +142,7 @@ export default function GlobalSearchModal({ isOpen, onClose, onSelect }) {
 
     if (!isOpen && !isClosing) return null
 
-    return (
+    return createPortal((
         <>
             <div className={`spotlight-overlay ${isClosing ? 'closing' : ''}`} onClick={handleClose}>
                 <button className="spotlight-close" onClick={handleClose}>&times;</button>
@@ -216,5 +217,5 @@ export default function GlobalSearchModal({ isOpen, onClose, onSelect }) {
                 </div>
             )}
         </>
-    )
+    ), document.body)
 }

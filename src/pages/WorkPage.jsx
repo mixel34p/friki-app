@@ -8,6 +8,7 @@ import {
     getWorkStats
 } from '../lib/workPageService'
 import { getWorkLog, getWorkReviews } from '../lib/libraryService'
+import { formatRelativeDate } from '../lib/formatRelativeDate'
 import { getSpacesByWork } from '../lib/spaceService'
 import LogModal from '../components/LogModal'
 import LoadingSpinner from '../components/LoadingSpinner'
@@ -33,7 +34,7 @@ export default function WorkPage({ mediaType }) {
     const [recentReviews, setRecentReviews] = useState([])
     const [revealedSpoilers, setRevealedSpoilers] = useState({})
     const [userReview, setUserReview] = useState(null)
-    const [reviewStats, setReviewStats] = useState({ average: 0, count: 0, recentMembers: [] })
+    const [reviewStats, setReviewStats] = useState({ average: 0, count: 0, ratingsCount: 0, recentMembers: [] })
 
     // UI states
     const [loading, setLoading] = useState(true)
@@ -104,6 +105,7 @@ export default function WorkPage({ mediaType }) {
         setReviewStats({
             average: stats.avgRating,
             count: stats.membersCount,
+            ratingsCount: stats.ratingsCount || 0,
             recentMembers: stats.recentMembers || []
         })
     }
@@ -194,7 +196,7 @@ export default function WorkPage({ mediaType }) {
                 </svg>
             )
         }
-        return <div style={{ display: 'flex', gap: '2px' }}>{stars}</div>
+        return <div className="wr-rating-stars" style={{ display: 'flex', gap: '2px' }}>{stars}</div>
     }
 
     if (loading) return <LoadingSpinner />
@@ -305,9 +307,14 @@ export default function WorkPage({ mediaType }) {
                     {/* Placeholder for real stats in the future */}
                     <div className="stat-item">
                         <span className="stat-label">Valoración Media</span>
-                        <span className="stat-value">
-                            <svg viewBox="0 0 24 24" width="18" height="18" fill="var(--brand-primary)"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
-                            {reviewStats.average > 0 ? reviewStats.average : '-.-'}
+                        <span className="stat-value work-average-summary">
+                            <span className="work-average-number">{reviewStats.average > 0 ? Number(reviewStats.average).toFixed(1) : '—'}</span>
+                            <span className="work-average-detail">
+                                {reviewStats.average > 0 && renderRatingStars(Number(reviewStats.average))}
+                                <span className="work-average-count">
+                                    de {reviewStats.ratingsCount} {reviewStats.ratingsCount === 1 ? 'valoración' : 'valoraciones'}
+                                </span>
+                            </span>
                         </span>
                     </div>
                     <div className="stat-item">
@@ -362,29 +369,37 @@ export default function WorkPage({ mediaType }) {
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                                 {recentReviews.map(log => (
-                                    <div key={log.id} className="review-card">
-                                        <Link to={`/profile/${log.profiles?.username}`} className="review-poster-link">
-                                            <div 
-                                                className="review-poster" 
-                                                style={{ backgroundImage: `url(${log.profiles?.avatar_url || 'https://via.placeholder.com/48'})`, borderRadius: '50%', width: '48px', height: '48px' }}
-                                            ></div>
-                                        </Link>
-                                        <div className="review-content">
-                                            <div className="review-header">
-                                                <Link to={`/profile/${log.profiles?.username}`} className="review-title">
-                                                    {log.profiles?.display_name || log.profiles?.username}
+                                    <div key={log.id} className="review-card work-review-layout">
+                                        <div className="review-user-heading">
+                                            <div className="review-user-identity">
+                                                <Link to={`/profile/${log.profiles?.username}`} className="review-poster-link">
+                                                    <div
+                                                        className="review-poster"
+                                                        style={{ backgroundImage: `url(${log.profiles?.avatar_url || 'https://via.placeholder.com/48'})`, borderRadius: '50%', width: '48px', height: '48px', border: `2px solid ${log.profiles?.theme_color || 'var(--brand-primary)'}`, boxSizing: 'border-box' }}
+                                                    ></div>
                                                 </Link>
-                                                {log.profiles?.featured_badge && BADGES_MAP[log.profiles?.featured_badge] && (
-                                                    <span style={{ color: BADGES_MAP[log.profiles.featured_badge].color, marginLeft: '6px', display: 'inline-flex' }} title={BADGES_MAP[log.profiles.featured_badge].title}>
-                                                        {BADGES_MAP[log.profiles.featured_badge].icon}
-                                                    </span>
-                                                )}
-                                            </div>
-                                            {log.rating && (
-                                                <div className="review-metadata">
-                                                    {renderRatingStars(log.rating)}
+                                                <div className="review-author-name-group">
+                                                    <Link to={`/profile/${log.profiles?.username}`} className="review-title">
+                                                        {log.profiles?.display_name || log.profiles?.username}
+                                                    </Link>
+                                                    {log.profiles?.featured_badge && BADGES_MAP[log.profiles?.featured_badge] && (
+                                                        <span style={{ color: BADGES_MAP[log.profiles.featured_badge].color, display: 'inline-flex' }} title={BADGES_MAP[log.profiles.featured_badge].title}>
+                                                            {BADGES_MAP[log.profiles.featured_badge].icon}
+                                                        </span>
+                                                    )}
                                                 </div>
-                                            )}
+                                            </div>
+                                            <time className="work-review-date" dateTime={log.created_at}>
+                                                {formatRelativeDate(log.created_at)}
+                                            </time>
+                                        </div>
+                                        {log.rating != null && (
+                                            <div className="work-review-rating-line">
+                                                {renderRatingStars(log.rating)}
+                                                <span>{Number(log.rating).toFixed(1)}</span>
+                                            </div>
+                                        )}
+                                        <div className="review-content">
                                             <p className="review-text">
                                                 {log.contains_spoiler && !revealedSpoilers[log.id] ? (
                                                     <span className="spoiler-warning" onClick={() => toggleSpoiler(log.id)}>
@@ -502,47 +517,24 @@ export default function WorkPage({ mediaType }) {
                     <h3 className="work-section-title" style={{ marginBottom: '1rem', borderBottom: 'none', paddingBottom: 0 }}>
                         Espacios relacionados
                     </h3>
-                    <div className="spaces-list work-page-spaces" style={{ maxWidth: '100%', margin: '0' }}>
+                    <div className="work-page-spaces">
                         {relatedSpaces.map(space => (
-                            <div key={space.id} className="space-card-list-item">
-                                <div className="space-card-avatar">
-                                    {space.avatar_url ? (
-                                        <img src={space.avatar_url} alt={space.name} />
+                            <Link key={space.id} to={`/spaces/${space.id}`} className="work-space-card">
+                                <span className="work-space-artwork">
+                                    {space.avatar_url || space.banner_url ? (
+                                        <img src={space.avatar_url || space.banner_url} alt="" loading="lazy" />
                                     ) : (
-                                        <div className="space-avatar-placeholder">
-                                            {space.name.charAt(0).toUpperCase()}
-                                        </div>
+                                        <span className="work-space-fallback" aria-hidden="true">{space.name.charAt(0).toUpperCase()}</span>
                                     )}
-                                </div>
-                                <div className="space-card-body">
-                                    <div className="space-card-header">
-                                        <h3 className="space-name">
-                                            {space.name}
-                                            {space.is_verified && (
-                                                <span className="verified-badge" title="Comunidad Verificada" style={{ color: '#1d9bf0' }}>
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-                                                        <path d="M22.5 12.5l-2.43 2.8.57 3.65-3.6.86-2.07 3.14-3.47-1.5-3.47 1.5-2.07-3.14-3.6-.86.57-3.65L.5 12.5l2.43-2.8-.57-3.65 3.6-.86 2.07-3.14 3.47 1.5 3.47-1.5 2.07 3.14 3.6.86-.57 3.65 2.43 2.8zM10.1 17.6l7.7-7.7-1.4-1.4-6.3 6.3-3-3-1.4 1.4 4.4 4.4z"/>
-                                                    </svg>
-                                                </span>
-                                            )}
-                                        </h3>
-                                        <span className="space-members">
-                                            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                                                <path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                                                <circle cx="10" cy="7" r="4" />
-                                                <path d="M20 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
-                                            </svg>
-                                            <span>{space.member_count}</span>
-                                        </span>
-                                    </div>
-                                    <p className="space-desc">{space.description || 'Sin descripción.'}</p>
-                                </div>
-                                <div className="space-card-actions">
-                                    <Link to={`/spaces/${space.id}`} className="btn-enter">
-                                        Entrar a la comunidad
-                                    </Link>
-                                </div>
-                            </div>
+                                </span>
+                                <span className="work-space-title-line">
+                                    <strong className="work-space-title">{space.name}</strong>
+                                    {space.is_verified && <span className="work-space-verified" title="Espacio verificado" aria-label="Espacio verificado">
+                                        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#1d9bf0" d="M22.5 12.5l-2.43 2.8.57 3.65-3.6.86-2.07 3.14-3.47-1.5-3.47 1.5-2.07-3.14-3.6-.86.57-3.65L.5 12.5l2.43-2.8-.57-3.65 3.6-.86 2.07-3.14 3.47-1.5 3.47 1.5 2.07 3.14 3.6.86-.57 3.65z"/><path fill="#fff" d="M10.1 17.6l7.7-7.7-1.4-1.4-6.3 6.3-3-3-1.4 1.4 4.4 4.4z"/></svg>
+                                    </span>}
+                                </span>
+                                <small className="work-space-members">{space.member_count ?? 0} {space.member_count === 1 ? 'usuario' : 'usuarios'}</small>
+                            </Link>
                         ))}
                     </div>
                 </div>

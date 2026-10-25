@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { getWorkById } from '../lib/workPageService'
-import { getWorkReviews } from '../lib/libraryService'
+import { getWorkReviews, getWorkRatings, getWorkReviewStats } from '../lib/libraryService'
+import { formatRelativeDate } from '../lib/formatRelativeDate'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ReviewLikeButton from '../components/ReviewLikeButton'
 import { BADGES_MAP } from '../lib/badges'
@@ -12,9 +13,18 @@ export default function WorkReviews({ mediaType }) {
     const { id } = useParams()
     const [work, setWork] = useState(null)
     const [reviews, setReviews] = useState([])
+    const [ratings, setRatings] = useState([])
     const [loading, setLoading] = useState(true)
     const [page, setPage] = useState(1)
     const [totalCount, setTotalCount] = useState(0)
+    const [filteredReviewCount, setFilteredReviewCount] = useState(0)
+    const [averageRating, setAverageRating] = useState(null)
+    const [totalRatings, setTotalRatings] = useState(0)
+    const [filteredRatingsCount, setFilteredRatingsCount] = useState(0)
+    const [activeTab, setActiveTab] = useState('reviews')
+    const [ratingFilter, setRatingFilter] = useState(null)
+    const [showStarFilter, setShowStarFilter] = useState(false)
+    const [hoverRating, setHoverRating] = useState(null)
     const limit = 10
 
     const [revealedSpoilers, setRevealedSpoilers] = useState({})
@@ -37,9 +47,21 @@ export default function WorkReviews({ mediaType }) {
                     const workData = await getWorkById(mediaType, parseInt(id))
                     setWork(workData)
                 }
-                const { data, count } = await getWorkReviews(id, mediaType, page, limit)
-                setReviews(data)
-                setTotalCount(count)
+                if (activeTab === 'reviews') {
+                    const { data, count } = await getWorkReviews(id, mediaType, page, limit, ratingFilter)
+                    setReviews(data)
+                    setFilteredReviewCount(count)
+                    if (page === 1 && ratingFilter == null) {
+                        const stats = await getWorkReviewStats(id, mediaType)
+                        setAverageRating(stats.average)
+                        setTotalCount(stats.count)
+                        setTotalRatings(stats.ratingsCount)
+                    }
+                } else {
+                    const { data, count } = await getWorkRatings(id, mediaType, page, limit, ratingFilter)
+                    setRatings(data)
+                    setFilteredRatingsCount(count)
+                }
             } catch (error) {
                 console.error(error)
             } finally {
@@ -47,17 +69,17 @@ export default function WorkReviews({ mediaType }) {
             }
         }
         fetchData()
-    }, [id, mediaType, page])
+    }, [id, mediaType, page, activeTab, ratingFilter])
 
     const renderStars = (rating) => {
-        if (!rating) return null;
+        const roundedRating = rating == null ? 0 : Math.round(rating * 2) / 2
         const stars = [];
         for (let i = 1; i <= 5; i++) {
             let fill = "transparent";
-            if (rating >= i) fill = "var(--brand-primary)";
-            else if (rating === i - 0.5) fill = "url(#halfStarSmall)";
+            if (roundedRating >= i) fill = "var(--brand-primary)";
+            else if (roundedRating === i - 0.5) fill = `url(#halfStar-${i})`;
             stars.push(
-                <svg key={i} viewBox="0 0 24 24" width="14" height="14">
+                <svg key={i} viewBox="0 0 24 24" width="20" height="20">
                     <defs>
                         <linearGradient id={`halfStar-${i}`} x1="0" x2="100%" y1="0" y2="0">
                             <stop offset="50%" stopColor="var(--brand-primary)" />
@@ -66,7 +88,7 @@ export default function WorkReviews({ mediaType }) {
                     </defs>
                     <path 
                         d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
-                        fill={rating === i - 0.5 ? `url(#halfStar-${i})` : fill}
+                        fill={roundedRating === i - 0.5 ? `url(#halfStar-${i})` : fill}
                         stroke="var(--brand-primary)"
                         strokeWidth="1.5"
                         strokeLinejoin="round"
@@ -74,12 +96,94 @@ export default function WorkReviews({ mediaType }) {
                 </svg>
             )
         }
-        return <div className="activity-stars">{stars}</div>
+        return <div className="wr-rating-stars" aria-label={`${rating == null ? 'Sin puntuación' : `${rating.toFixed(1)} de 5`} estrellas`}>{stars}</div>
     }
 
-    if (loading && reviews.length === 0) return <LoadingSpinner />
+    const visibleEntries = activeTab === 'reviews' ? reviews : ratings
+    const visibleCount = activeTab === 'reviews' ? filteredReviewCount : filteredRatingsCount
+    if (loading && !work && reviews.length === 0 && ratings.length === 0) return <LoadingSpinner />
 
-    const totalPages = Math.ceil(totalCount / limit)
+    const totalPages = Math.ceil(visibleCount / limit)
+
+    const handleTabClick = (tab) => {
+        if (activeTab === tab) {
+            setShowStarFilter(open => !open)
+            return
+        }
+
+        setActiveTab(tab)
+        setPage(1)
+        setShowStarFilter(false)
+    }
+
+    const selectRatingFilter = (rating) => {
+        setRatingFilter(rating)
+        setPage(1)
+        setShowStarFilter(false)
+        setHoverRating(null)
+    }
+
+    const renderStarFilter = (label) => {
+        const previewRating = hoverRating ?? ratingFilter ?? 0
+
+        return (
+            <div className="wr-star-filter" role="dialog" aria-label={`Filtrar ${label} por estrellas`}>
+                <div className="wr-star-filter-heading">
+                    <div>
+                        <div className="wr-star-filter-title">Filtrar por estrellas</div>
+                        <div className="wr-star-filter-current">
+                            {previewRating > 0 ? `${previewRating.toFixed(1)} de 5` : 'Todas las puntuaciones'}
+                        </div>
+                    </div>
+                    <button type="button" className="wr-star-filter-clear" onClick={() => selectRatingFilter(null)}>
+                        Todas
+                    </button>
+                </div>
+                <div className="wr-star-picker" onMouseLeave={() => setHoverRating(null)}>
+                    {[1, 2, 3, 4, 5].map(star => {
+                        const fill = previewRating >= star
+                            ? 'var(--brand-primary)'
+                            : previewRating >= star - 0.5
+                                ? `url(#wr-filter-half-${star})`
+                                : 'transparent'
+
+                        return (
+                            <span className="wr-star-choice" key={star}>
+                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                    <defs>
+                                        <linearGradient id={`wr-filter-half-${star}`} x1="0" x2="100%" y1="0" y2="0">
+                                            <stop offset="50%" stopColor="var(--brand-primary)" />
+                                            <stop offset="50%" stopColor="transparent" />
+                                        </linearGradient>
+                                    </defs>
+                                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill={fill} stroke="var(--brand-primary)" strokeWidth="1.5" strokeLinejoin="round" />
+                                </svg>
+                                <button
+                                    type="button"
+                                    className="wr-star-half-hit"
+                                    aria-label={`${star - 0.5} estrellas`}
+                                    aria-pressed={ratingFilter === star - 0.5}
+                                    onMouseEnter={() => setHoverRating(star - 0.5)}
+                                    onFocus={() => setHoverRating(star - 0.5)}
+                                    onClick={() => selectRatingFilter(star - 0.5)}
+                                />
+                                <button
+                                    type="button"
+                                    className="wr-star-full-hit"
+                                    aria-label={`${star} ${star === 1 ? 'estrella' : 'estrellas'}`}
+                                    aria-pressed={ratingFilter === star}
+                                    onMouseEnter={() => setHoverRating(star)}
+                                    onFocus={() => setHoverRating(star)}
+                                    onClick={() => selectRatingFilter(star)}
+                                />
+                            </span>
+                        )
+                    })}
+                </div>
+                <div className="wr-star-filter-hint">Pulsa la mitad izquierda o derecha de una estrella</div>
+            </div>
+        )
+    }
 
     const bannerUrl = work ? (mediaType === 'game' ? work.banner_url || work.cover_url : work.banner_url || work.image_url) : '';
     const posterUrl = work ? (mediaType === 'game' ? work.cover_url : work.image_url) : '';
@@ -109,48 +213,112 @@ export default function WorkReviews({ mediaType }) {
                     )}
                     <div className="wr-info">
                         <h1 className="wr-title">
-                            Reseñas de <Link to={`/${mediaType}/${id}`}>{title}</Link>
-                            {releaseYear && <span className="wr-year">{releaseYear}</span>}
+                            <Link to={`/${mediaType}/${id}`}>{title}</Link>
                         </h1>
-                        <div className="wr-stats">
-                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
-                            </svg>
-                            {totalCount} {totalCount === 1 ? 'reseña' : 'reseñas'}
+                        {releaseYear && <div className="wr-release-date">{releaseYear}</div>}
+                        <div className="wr-rating-summary">
+                            <span className="wr-average">{averageRating == null ? '—' : averageRating.toFixed(1)}</span>
+                            <div className="wr-rating-detail">
+                                {renderStars(averageRating)}
+                                <span className="wr-review-count">de {totalRatings} {totalRatings === 1 ? 'valoración' : 'valoraciones'}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div className="reviews-list-container" style={{ maxWidth: '900px', margin: '0 auto', padding: '0 5%' }}>
-                {reviews.length === 0 ? (
-                    <div className="activity-empty">No hay reseñas para esta obra todavía.</div>
+                <div className="wr-tabs" role="tablist" aria-label="Contenido de la obra">
+                    <div className="wr-tab-item">
+                        <button
+                            type="button"
+                            role="tab"
+                            aria-selected={activeTab === 'reviews'}
+                            className={`wr-tab ${activeTab === 'reviews' ? 'active' : ''}`}
+                            onClick={() => handleTabClick('reviews')}
+                        >
+                            Reviews <span>{totalCount}</span>
+                        </button>
+                        {activeTab === 'reviews' && showStarFilter && (
+                            renderStarFilter('reviews')
+                        )}
+                    </div>
+                    <div className="wr-tab-item">
+                        <button
+                            type="button"
+                            role="tab"
+                            aria-selected={activeTab === 'ratings'}
+                            className={`wr-tab ${activeTab === 'ratings' ? 'active' : ''}`}
+                            onClick={() => handleTabClick('ratings')}
+                        >
+                            Valoraciones <span>{totalRatings}</span>
+                        </button>
+                        {activeTab === 'ratings' && showStarFilter && (
+                            renderStarFilter('valoraciones')
+                        )}
+                    </div>
+                </div>
+
+                {visibleEntries.length === 0 ? (
+                    <div className="activity-empty">{activeTab === 'reviews' ? 'No hay reseñas para esta obra todavía.' : 'Todavía no hay valoraciones para esta obra.'}</div>
+                ) : activeTab === 'ratings' ? (
+                    <div className="wr-ratings-grid">
+                        {ratings.map(log => (
+                            <div key={log.id} className="review-card wr-rating-card">
+                                <Link
+                                    to={`/profile/${log.profiles?.username}`}
+                                    className="wr-rating-avatar-link"
+                                    title={log.profiles?.display_name || log.profiles?.username || 'Usuario'}
+                                >
+                                    <div
+                                        className="wr-user-avatar"
+                                        style={{
+                                            backgroundImage: `url(${log.profiles?.avatar_url || 'https://via.placeholder.com/48'})`,
+                                            borderColor: log.profiles?.theme_color || 'var(--brand-primary)'
+                                        }}
+                                    />
+                                </Link>
+                                <div className="wr-rating-card-score" aria-label={`${Number(log.rating).toFixed(1)} de 5 estrellas`}>
+                                    {renderStars(log.rating)}
+                                    <span>{Number(log.rating).toFixed(1)}</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 ) : (
                     <div className="reviews-list-stack">
                         {reviews.map(log => (
-                            <div key={log.id} className="review-card">
-                                <Link to={`/profile/${log.profiles?.username}`} className="review-poster-link">
-                                    <div 
-                                        className="review-poster" 
-                                        style={{ backgroundImage: `url(${log.profiles?.avatar_url || 'https://via.placeholder.com/48'})`, borderRadius: '50%', width: '48px', height: '48px' }}
-                                    ></div>
-                                </Link>
-                                <div className="review-content">
-                                    <div className="review-header">
-                                        <Link to={`/profile/${log.profiles?.username}`} className="review-title">
-                                            {log.profiles?.display_name || log.profiles?.username}
+                            <div key={log.id} className="review-card work-review-layout">
+                                <div className="review-user-heading">
+                                    <div className="review-user-identity">
+                                        <Link to={`/profile/${log.profiles?.username}`} className="review-poster-link">
+                                            <div
+                                                className="review-poster"
+                                                style={{ backgroundImage: `url(${log.profiles?.avatar_url || 'https://via.placeholder.com/48'})`, borderRadius: '50%', width: '48px', height: '48px', border: `2px solid ${log.profiles?.theme_color || 'var(--brand-primary)'}`, boxSizing: 'border-box' }}
+                                            ></div>
                                         </Link>
-                                        {log.profiles?.featured_badge && BADGES_MAP[log.profiles?.featured_badge] && (
-                                            <span style={{ color: BADGES_MAP[log.profiles.featured_badge].color, marginLeft: '6px', display: 'inline-flex' }} title={BADGES_MAP[log.profiles.featured_badge].title}>
-                                                {BADGES_MAP[log.profiles.featured_badge].icon}
-                                            </span>
-                                        )}
-                                    </div>
-                                    {log.rating && (
-                                        <div className="review-metadata">
-                                            {renderStars(log.rating)}
+                                        <div className="review-author-name-group">
+                                            <Link to={`/profile/${log.profiles?.username}`} className="review-title">
+                                                {log.profiles?.display_name || log.profiles?.username}
+                                            </Link>
+                                            {log.profiles?.featured_badge && BADGES_MAP[log.profiles?.featured_badge] && (
+                                                <span style={{ color: BADGES_MAP[log.profiles.featured_badge].color, display: 'inline-flex' }} title={BADGES_MAP[log.profiles.featured_badge].title}>
+                                                    {BADGES_MAP[log.profiles.featured_badge].icon}
+                                                </span>
+                                            )}
                                         </div>
-                                    )}
+                                    </div>
+                                    <time className="work-review-date" dateTime={log.created_at}>
+                                        {formatRelativeDate(log.created_at)}
+                                    </time>
+                                </div>
+                                {log.rating != null && (
+                                    <div className="work-review-rating-line">
+                                        {renderStars(log.rating)}
+                                        <span>{Number(log.rating).toFixed(1)}</span>
+                                    </div>
+                                )}
+                                <div className="review-content">
                                     <p className="review-text">
                                         {log.contains_spoiler && !revealedSpoilers[log.id] ? (
                                             <span className="spoiler-warning" onClick={() => toggleSpoiler(log.id)}>

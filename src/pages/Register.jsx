@@ -7,6 +7,7 @@ import './Auth.css'
 
 export default function Register() {
     const [step, setStep] = useState(1)
+    const steps = ['Tu perfil', 'Tu correo', 'Seguridad']
     
     const [username, setUsername] = useState('')
     const [email, setEmail] = useState('')
@@ -80,14 +81,21 @@ export default function Register() {
             </div>
 
             <div className="auth-container-wrapper">
-                <div className="auth-container onboarding-container">
-                    <div className="onboarding-progress">
-                        <div className={`progress-bar ${step >= 1 ? 'active' : ''}`}></div>
-                        <div className={`progress-bar ${step >= 2 ? 'active' : ''}`}></div>
-                        <div className={`progress-bar ${step >= 3 ? 'active' : ''}`}></div>
+                <div className="auth-container onboarding-container register-container">
+                    <div className="register-stepper" aria-label={`Paso ${step} de 3`}>
+                        {steps.map((label, index) => {
+                            const stepNumber = index + 1
+                            const state = stepNumber < step ? 'complete' : stepNumber === step ? 'current' : ''
+                            return (
+                                <div className={`register-step ${state}`} key={label} aria-current={stepNumber === step ? 'step' : undefined}>
+                                    <span className="register-step-number">{stepNumber < step ? '✓' : `0${stepNumber}`}</span>
+                                    <span className="register-step-label">{label}</span>
+                                </div>
+                            )
+                        })}
                     </div>
 
-                    <div className="auth-header" style={{ textAlign: 'left', marginBottom: '2rem' }}>
+                    <div className="auth-header register-header">
                         {step === 1 && <h1 className="auth-title">¿Cómo te llamamos?</h1>}
                         {step === 2 && <h1 className="auth-title">¿Cuál es tu correo?</h1>}
                         {step === 3 && <h1 className="auth-title">Protege tu cuenta</h1>}
@@ -105,7 +113,9 @@ export default function Register() {
                         
                         {step === 1 && (
                             <div className="input-group slide-in">
+                                <label className="input-label" htmlFor="register-username">Nombre de usuario</label>
                                 <input
+                                    id="register-username"
                                     type="text"
                                     className="input auth-input"
                                     placeholder="Ej: xX_Sephiroth_Xx"
@@ -114,12 +124,15 @@ export default function Register() {
                                     autoFocus
                                     required
                                 />
+                                <span className="register-field-hint">Tu identificador único. Puedes usar letras, números y _</span>
                             </div>
                         )}
 
                         {step === 2 && (
                             <div className="input-group slide-in">
+                                <label className="input-label" htmlFor="register-email">Correo electrónico</label>
                                 <input
+                                    id="register-email"
                                     type="email"
                                     className="input auth-input"
                                     placeholder="tu@correo.com"
@@ -128,12 +141,15 @@ export default function Register() {
                                     autoFocus
                                     required
                                 />
+                                <span className="register-field-hint">Te enviaremos un enlace para confirmar tu cuenta.</span>
                             </div>
                         )}
 
                         {step === 3 && (
                             <div className="input-group slide-in">
+                                <label className="input-label" htmlFor="register-password">Contraseña</label>
                                 <input
+                                    id="register-password"
                                     type="password"
                                     className="input auth-input"
                                     placeholder="Mínimo 6 caracteres"
@@ -142,12 +158,13 @@ export default function Register() {
                                     autoFocus
                                     required
                                 />
+                                <span className="register-field-hint">Usa al menos 6 caracteres para mantener tu cuenta protegida.</span>
                             </div>
                         )}
 
-                        <div className="auth-actions-row">
+                        <div className="auth-actions-row register-actions">
                             {step > 1 && (
-                                <button type="button" className="btn btn-ghost" onClick={() => setStep(step - 1)}>
+                                <button type="button" className="btn btn-ghost register-back" onClick={() => setStep(step - 1)}>
                                     Atrás
                                 </button>
                             )}
@@ -161,9 +178,10 @@ export default function Register() {
                         </div>
                     </form>
 
-                    <div style={{ marginTop: '2.5rem', textAlign: 'left' }}>
-                        <Link to="/login" style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-                            ¿Ya tienes cuenta? <span style={{ color: 'var(--text-secondary)' }}>Inicia sesión</span>
+                    <div className="register-footer">
+                        <span>¿Ya tienes cuenta?</span>
+                        <Link to="/login">
+                            Inicia sesión <span aria-hidden="true">→</span>
                         </Link>
                     </div>
                 </div>

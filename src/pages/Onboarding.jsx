@@ -1,14 +1,19 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ImageCropperModal from '../components/ImageCropperModal'
+import { STATIC_COVERS } from '../lib/constants'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, rectSortingStrategy } from '@dnd-kit/sortable';
 import { SortableFavoriteItem } from '../components/profile/SortableFavoriteItem';
 
 import './Onboarding.css'
+
+const THEME_COLORS = ['#14b8a6', '#3b82f6', '#8b5cf6', '#f43f5e', '#f59e0b', '#10b981', '#6366f1', '#ec4899']
 
 export default function Onboarding() {
     const { user, refreshProfile, signOut } = useAuth()
@@ -21,8 +26,10 @@ export default function Onboarding() {
     // Form State
     const [displayName, setDisplayName] = useState('')
     const [bio, setBio] = useState('')
+    const [bioMode, setBioMode] = useState('write')
+    const textareaRef = useRef(null)
     const [pronouns, setPronouns] = useState('')
-    const [platforms, setPlatforms] = useState([])
+    const [themeColor, setThemeColor] = useState('#14b8a6')
     
     // Files
     const [avatarFile, setAvatarFile] = useState(null)
@@ -49,6 +56,18 @@ export default function Onboarding() {
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
     )
+
+    const insertMarkdown = (prefix, suffix) => {
+        const textarea = textareaRef.current
+        if (!textarea) return
+        const { selectionStart, selectionEnd } = textarea
+        const nextBio = bio.slice(0, selectionStart) + prefix + bio.slice(selectionStart, selectionEnd) + suffix + bio.slice(selectionEnd)
+        setBio(nextBio)
+        setTimeout(() => {
+            textarea.focus()
+            textarea.setSelectionRange(selectionStart + prefix.length, selectionEnd + prefix.length)
+        }, 0)
+    }
 
     useEffect(() => {
         // Pre-fill from auth metadata if available
@@ -82,18 +101,52 @@ export default function Onboarding() {
     }, [animeSearchQuery])
 
     const selectGame = (game) => {
-        if (favorite_games.length >= 4) return
-        setFavoriteGames(prev => [...prev, { id: game.id, name: game.name, cover_url: game.cover_url || game.image_url }])
+        const selectedGame = { id: game.id, name: game.name, cover_url: game.cover_url || game.image_url }
+        setFavoriteGames(prev => {
+            if (activeGameSlot === null) return prev.length < 4 ? [...prev, selectedGame] : prev
+            if (activeGameSlot < prev.length) {
+                const next = [...prev]
+                next[activeGameSlot] = selectedGame
+                return next
+            }
+            return prev.length < 4 ? [...prev, selectedGame] : prev
+        })
+        setActiveGameSlot(null)
         setGameSearchQuery(''); setGameSearchResults([])
     }
     const removeGame = (index) => setFavoriteGames(prev => { const n = [...prev]; n.splice(index,1); return n; })
+    const handleDragEndGames = ({ active, over }) => {
+        if (!over || active.id === over.id) return
+        setFavoriteGames(current => {
+            const oldIndex = current.findIndex(game => game.id === active.id)
+            const newIndex = current.findIndex(game => game.id === over.id)
+            return oldIndex < 0 || newIndex < 0 ? current : arrayMove(current, oldIndex, newIndex)
+        })
+    }
 
     const selectAnime = (anime) => {
-        if (favorite_animes.length >= 4) return
-        setFavoriteAnimes(prev => [...prev, { id: anime.id, title: anime.title, cover_url: anime.cover_url || anime.image_url }])
+        const selectedAnime = { id: anime.id, title: anime.title, cover_url: anime.cover_url || anime.image_url }
+        setFavoriteAnimes(prev => {
+            if (activeAnimeSlot === null) return prev.length < 4 ? [...prev, selectedAnime] : prev
+            if (activeAnimeSlot < prev.length) {
+                const next = [...prev]
+                next[activeAnimeSlot] = selectedAnime
+                return next
+            }
+            return prev.length < 4 ? [...prev, selectedAnime] : prev
+        })
+        setActiveAnimeSlot(null)
         setAnimeSearchQuery(''); setAnimeSearchResults([])
     }
     const removeAnime = (index) => setFavoriteAnimes(prev => { const n = [...prev]; n.splice(index,1); return n; })
+    const handleDragEndAnimes = ({ active, over }) => {
+        if (!over || active.id === over.id) return
+        setFavoriteAnimes(current => {
+            const oldIndex = current.findIndex(anime => anime.id === active.id)
+            const newIndex = current.findIndex(anime => anime.id === over.id)
+            return oldIndex < 0 || newIndex < 0 ? current : arrayMove(current, oldIndex, newIndex)
+        })
+    }
 
     const handleFileChange = (e, type) => {
         const file = e.target.files[0]
@@ -200,7 +253,8 @@ export default function Onboarding() {
                     avatar_url: finalAvatarUrl,
                     banner_url: finalBannerUrl,
                     pronouns,
-                    platforms,
+                    platforms: [],
+                    theme_color: themeColor,
                     favorite_games,
                     favorite_animes,
                     onboarding_completed: true
@@ -224,24 +278,45 @@ export default function Onboarding() {
     }
 
     return (
-        <div className="onboarding-page" style={{ '--theme': '#14b8a6' }}>
-            <div className="onboarding-container">
-                <div className="onboarding-header">
-                    <h2>Bienvenido a GeekSphere</h2>
-                    <p>Vamos a configurar tu perfil de usuario antes de entrar.</p>
+        <div className="onboarding-page" style={{ '--brand-primary': themeColor, '--brand-dark': themeColor }}>
+            <aside className="onboarding-brand-panel" aria-label="GeekSphere">
+                <div className="onboarding-brand-mosaic" aria-hidden="true">
+                    {STATIC_COVERS.slice(0, 16).map((cover, index) => (
+                        <div key={`${cover}-${index}`} className="onboarding-mosaic-tile" style={{ backgroundImage: `url(${cover})` }} />
+                    ))}
                 </div>
-                
-                <div className="onboarding-progress">
-                    <div className={`progress-bar ${step >= 1 ? 'active' : ''}`}></div>
-                    <div className={`progress-bar ${step >= 2 ? 'active' : ''}`}></div>
+                <div className="onboarding-brand-overlay" />
+                <div className="onboarding-brand-copy"><h1>Te damos la<br /><span>bienvenida</span></h1></div>
+                <div className="onboarding-brand-footer">
+                    <span className="onboarding-brand-mark"><img src="/icons/logo.png" alt="" /></span>
+                    <span className="onboarding-brand-name">GeekSphere</span>
                 </div>
+            </aside>
+
+            <main className="onboarding-container">
+                <div className="onboarding-card-topline">
+                    <span>CONFIGURACIÓN DE PERFIL</span>
+                    <span className="onboarding-step-count">0{step}<i>/</i>03</span>
+                </div>
+
+                <nav className="onboarding-stepper" aria-label={`Paso ${step} de 3`}>
+                    {['Identidad', 'Apariencia', 'Favoritos'].map((label, index) => {
+                        const stepNumber = index + 1
+                        const state = stepNumber < step ? 'complete' : stepNumber === step ? 'current' : ''
+                        return (
+                            <div className={`onboarding-step-item ${state}`} key={label} aria-current={stepNumber === step ? 'step' : undefined}>
+                                <span className="onboarding-step-dot">{stepNumber < step ? '✓' : `0${stepNumber}`}</span>
+                                <span className="onboarding-step-label">{label}</span>
+                            </div>
+                        )
+                    })}
+                </nav>
 
                 {error && <div className="onboarding-error">{error}</div>}
 
+                <div key={step} className={`onboarding-stage onboarding-stage-${step}`}>
                 {step === 1 && (
-                    <div className="onboarding-step step-1 fade-in">
-                        <h3>Tu Identidad</h3>
-                        
+                    <div className="onboarding-step step-1">
                         <div className="form-group">
                             <label>Nombre a mostrar</label>
                             <input 
@@ -254,7 +329,7 @@ export default function Onboarding() {
                             />
                         </div>
 
-                        <div className="form-group" style={{ marginTop: '1.5rem' }}>
+                        <div className="form-group">
                             <label>Pronombres (Opcional)</label>
                             <input 
                                 type="text" 
@@ -266,27 +341,47 @@ export default function Onboarding() {
                             />
                         </div>
 
-                        <div className="form-group" style={{ marginTop: '1.5rem' }}>
-                            <label>Biografía (Opcional)</label>
-                            <textarea 
-                                className="input" 
-                                value={bio}
-                                onChange={(e) => setBio(e.target.value)}
-                                placeholder="Unas palabras sobre ti..."
-                                rows={4}
-                                maxLength={500}
-                            ></textarea>
-                            <div style={{ textAlign: 'right', fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                                {bio.length}/500
+                        <div className="form-group">
+                            <div className="ep-bio-header onboarding-bio-header">
+                                <label className="input-label" htmlFor="onboarding-bio">Biografía <span className="ep-optional">Markdown compatible</span></label>
+                                <div className="ep-bio-tabs">
+                                    <button type="button" className={`ep-bio-tab ${bioMode === 'write' ? 'active' : ''}`} onClick={() => setBioMode('write')}>Escribir</button>
+                                    <button type="button" className={`ep-bio-tab ${bioMode === 'preview' ? 'active' : ''}`} onClick={() => setBioMode('preview')}>Vista previa</button>
+                                </div>
                             </div>
+
+                            {bioMode === 'write' ? (
+                                <>
+                                    <div className="ep-md-toolbar">
+                                        <button type="button" className="ep-md-btn" title="Negrita" aria-label="Insertar negrita" onClick={() => insertMarkdown('**', '**')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z" /><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z" /></svg></button>
+                                        <button type="button" className="ep-md-btn" title="Cursiva" aria-label="Insertar cursiva" onClick={() => insertMarkdown('*', '*')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="19" y1="4" x2="10" y2="4" /><line x1="14" y1="20" x2="5" y2="20" /><line x1="15" y1="4" x2="9" y2="20" /></svg></button>
+                                        <button type="button" className="ep-md-btn" title="Enlace" aria-label="Insertar enlace" onClick={() => insertMarkdown('[', '](url)')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></button>
+                                    </div>
+                                    <textarea
+                                        id="onboarding-bio"
+                                        ref={textareaRef}
+                                        className="ep-input ep-textarea onboarding-bio-editor"
+                                        value={bio}
+                                        onChange={e => setBio(e.target.value)}
+                                        placeholder="Cuéntanos sobre ti..."
+                                        maxLength={500}
+                                        rows={6}
+                                    />
+                                    <span className="ep-char-count">{bio.length}/500</span>
+                                </>
+                            ) : (
+                                <div className="ep-bio-preview markdown-content onboarding-bio-preview">
+                                    {bio
+                                        ? <ReactMarkdown remarkPlugins={[remarkGfm]}>{bio}</ReactMarkdown>
+                                        : <span className="onboarding-bio-empty">Nada que previsualizar...</span>}
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
 
                 {step === 2 && (
-                    <div className="onboarding-step step-2 fade-in">
-                        <h3>Personaliza tu Perfil</h3>
-                        
+                    <div className="onboarding-step step-2">
                         <div className="onboarding-visuals">
                             <label 
                                 className="banner-upload"
@@ -314,31 +409,101 @@ export default function Onboarding() {
                             </div>
                         </div>
 
-                        <div className="form-group" style={{ marginTop: '3rem' }}>
-                            <label>Plataformas de Juego</label>
-                            <div className="platforms-grid" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
-                                {['PC', 'PlayStation', 'Xbox', 'Nintendo', 'Mobile'].map(platform => {
-                                    const isSelected = platforms.includes(platform)
+                        <div className="ep-field onboarding-theme-field">
+                            <label className="ep-label">Color del Tema</label>
+                            <div className="ep-color-grid">
+                                {THEME_COLORS.map(color => (
+                                    <button
+                                        type="button"
+                                        key={color}
+                                        className={`ep-color-btn ${themeColor === color ? 'selected' : ''}`}
+                                        style={{ backgroundColor: color }}
+                                        onClick={() => setThemeColor(color)}
+                                        title={color}
+                                        aria-label={`Elegir color ${color}`}
+                                    />
+                                ))}
+                                <div className="ep-custom-color">
+                                    <input
+                                        type="color"
+                                        value={THEME_COLORS.includes(themeColor) ? '#ffffff' : themeColor}
+                                        onChange={e => setThemeColor(e.target.value)}
+                                        aria-label="Elegir un color personalizado"
+                                    />
+                                    <div
+                                        className={`ep-color-btn ${!THEME_COLORS.includes(themeColor) ? 'selected' : ''}`}
+                                        style={{
+                                            backgroundColor: !THEME_COLORS.includes(themeColor) ? themeColor : 'transparent',
+                                            border: `2px dashed ${!THEME_COLORS.includes(themeColor) ? 'transparent' : 'var(--border-subtle)'}`
+                                        }}
+                                    >
+                                        {!THEME_COLORS.includes(themeColor) ? '' : '+'}
+                                    </div>
+                                </div>
+                            </div>
+                            <p className="ep-hint">Elige el color principal que destacará en tu perfil.</p>
+                        </div>
+                    </div>
+                )}
+
+                {step === 3 && (
+                    <div className="onboarding-step step-3">
+                        <div className="ep-field onboarding-favorite-field">
+                            <label className="ep-label">
+                                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 12a10 10 0 0 1 10-10h0a10 10 0 0 1 10 10v0a10 10 0 0 1-10 10h0a10 10 0 0 1-10-10v0z"></path><path d="M12 2a10 10 0 0 0-10 10h20a10 10 0 0 0-10-10z"></path><path d="M6 12h4"></path><path d="M8 10v4"></path><path d="M15 11h.01"></path><path d="M17 13h.01"></path></svg>
+                                    Juegos favoritos (Top 4)
+                                </span>
+                            </label>
+                            <div className="ep-favorites-grid">
+                                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEndGames}>
+                                    <SortableContext items={favorite_games.map(game => game.id)} strategy={rectSortingStrategy}>
+                                        {favorite_games.map((game, index) => (
+                                            <SortableFavoriteItem
+                                                key={game.id}
+                                                item={game}
+                                                onRemove={() => removeGame(index)}
+                                                onClick={() => setActiveGameSlot(index)}
+                                            />
+                                        ))}
+                                    </SortableContext>
+                                </DndContext>
+                                {Array.from({ length: 4 - favorite_games.length }).map((_, index) => {
+                                    const slot = favorite_games.length + index
                                     return (
-                                        <button
-                                            key={platform}
-                                            className={`platform-badge ${isSelected ? 'selected' : ''}`}
-                                            onClick={() => setPlatforms(prev => 
-                                                prev.includes(platform) ? prev.filter(p => p !== platform) : [...prev, platform]
-                                            )}
-                                            style={{
-                                                padding: '6px 12px',
-                                                borderRadius: '20px',
-                                                border: `1px solid ${isSelected ? 'var(--brand-primary)' : 'var(--border-subtle)'}`,
-                                                background: isSelected ? 'rgba(20, 184, 166, 0.1)' : 'transparent',
-                                                color: isSelected ? 'var(--brand-primary)' : 'var(--text-primary)',
-                                                cursor: 'pointer',
-                                                transition: 'all 0.2s',
-                                                fontFamily: 'var(--font-body)',
-                                                fontWeight: isSelected ? '600' : '400'
-                                            }}
-                                        >
-                                            {platform}
+                                        <button key={`game-slot-${slot}`} type="button" className={`ep-empty-slot ${activeGameSlot === slot ? 'active' : ''}`} aria-label="Añadir juego favorito" onClick={() => { setGameSearchQuery(''); setGameSearchResults([]); setActiveGameSlot(slot) }}>
+                                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                                        </button>
+                                    )
+                                })}
+                            </div>
+                        </div>
+
+                        <div className="ep-field onboarding-favorite-field">
+                            <label className="ep-label">
+                                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg>
+                                    Animes favoritos (Top 4)
+                                </span>
+                            </label>
+                            <div className="ep-favorites-grid">
+                                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEndAnimes}>
+                                    <SortableContext items={favorite_animes.map(anime => anime.id)} strategy={rectSortingStrategy}>
+                                        {favorite_animes.map((anime, index) => (
+                                            <SortableFavoriteItem
+                                                key={anime.id}
+                                                item={{ ...anime, name: anime.title }}
+                                                onRemove={() => removeAnime(index)}
+                                                onClick={() => setActiveAnimeSlot(index)}
+                                            />
+                                        ))}
+                                    </SortableContext>
+                                </DndContext>
+                                {Array.from({ length: 4 - favorite_animes.length }).map((_, index) => {
+                                    const slot = favorite_animes.length + index
+                                    return (
+                                        <button key={`anime-slot-${slot}`} type="button" className={`ep-empty-slot ${activeAnimeSlot === slot ? 'active' : ''}`} aria-label="Añadir anime favorito" onClick={() => { setAnimeSearchQuery(''); setAnimeSearchResults([]); setActiveAnimeSlot(slot) }}>
+                                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
                                         </button>
                                     )
                                 })}
@@ -346,99 +511,7 @@ export default function Onboarding() {
                         </div>
                     </div>
                 )}
-
-                {step === 3 && (
-                    <div className="onboarding-step animate-slide-up">
-                        <div className="step-header">
-                            <h3>Tus Favoritos (Opcional)</h3>
-                            <p>¡Muéstrale al mundo tus 4 juegos y animes favoritos! Podrás cambiarlos más tarde.</p>
-                        </div>
-
-                        {/* Favorite Games */}
-                        <div className="form-group" style={{ marginBottom: '24px' }}>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 12a10 10 0 0 1 10-10h0a10 10 0 0 1 10 10v0a10 10 0 0 1-10 10h0a10 10 0 0 1-10-10v0z"></path><path d="M12 2a10 10 0 0 0-10 10h20a10 10 0 0 0-10-10z"></path><path d="M6 12h4"></path><path d="M8 10v4"></path><path d="M15 11h.01"></path><path d="M17 13h.01"></path></svg>
-                                Juegos favoritos (Top 4)
-                            </label>
-                            
-                            <div className="ep-favorites-grid" style={{ marginTop: '12px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
-                                {favorite_games.map((g, idx) => (
-                                    <div key={idx} className="ep-favorite-item" style={{ position: 'relative', aspectRatio: '2/3', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-default)' }}>
-                                        {g.cover_url && <img src={g.cover_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
-                                        <button onClick={() => removeGame(idx)} style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(239, 68, 68, 0.9)', color: 'white', border: 'none', borderRadius: '50%', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-
-                            {favorite_games.length < 4 && (
-                                <div style={{ marginTop: '12px' }}>
-                                    <input
-                                        type="text"
-                                        placeholder="Buscar juego..."
-                                        value={gameSearchQuery}
-                                        onChange={e => setGameSearchQuery(e.target.value)}
-                                        style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-default)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
-                                    />
-                                    {isSearchingGames && <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '4px' }}>Buscando...</p>}
-                                    {gameSearchResults.length > 0 && (
-                                        <div style={{ marginTop: '8px', background: 'var(--bg-tertiary)', borderRadius: '8px', border: '1px solid var(--border-default)', overflow: 'hidden' }}>
-                                            {gameSearchResults.slice(0, 5).map(game => (
-                                                <button key={game.id} onClick={() => selectGame(game)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left', borderBottom: '1px solid var(--border-subtle)' }}>
-                                                    {(game.cover_url || game.image_url) && <img src={game.cover_url || game.image_url} alt="" style={{ width: '32px', height: '48px', objectFit: 'cover', borderRadius: '4px' }} />}
-                                                    <span style={{ color: 'var(--text-primary)', fontSize: '0.9rem' }}>{game.name}</span>
-                                                </button>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Favorite Anime */}
-                        <div className="form-group">
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg>
-                                Animes favoritos (Top 4)
-                            </label>
-                            
-                            <div className="ep-favorites-grid" style={{ marginTop: '12px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
-                                {favorite_animes.map((a, idx) => (
-                                    <div key={idx} className="ep-favorite-item" style={{ position: 'relative', aspectRatio: '2/3', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-default)' }}>
-                                        {a.cover_url && <img src={a.cover_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
-                                        <button onClick={() => removeAnime(idx)} style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(239, 68, 68, 0.9)', color: 'white', border: 'none', borderRadius: '50%', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-
-                            {favorite_animes.length < 4 && (
-                                <div style={{ marginTop: '12px' }}>
-                                    <input
-                                        type="text"
-                                        placeholder="Buscar anime..."
-                                        value={animeSearchQuery}
-                                        onChange={e => setAnimeSearchQuery(e.target.value)}
-                                        style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-default)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
-                                    />
-                                    {isSearchingAnime && <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '4px' }}>Buscando...</p>}
-                                    {animeSearchResults.length > 0 && (
-                                        <div style={{ marginTop: '8px', background: 'var(--bg-tertiary)', borderRadius: '8px', border: '1px solid var(--border-default)', overflow: 'hidden' }}>
-                                            {animeSearchResults.slice(0, 5).map(anime => (
-                                                <button key={anime.id} onClick={() => selectAnime(anime)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left', borderBottom: '1px solid var(--border-subtle)' }}>
-                                                    {(anime.cover_url || anime.image_url) && <img src={anime.cover_url || anime.image_url} alt="" style={{ width: '32px', height: '48px', objectFit: 'cover', borderRadius: '4px' }} />}
-                                                    <span style={{ color: 'var(--text-primary)', fontSize: '0.9rem' }}>{anime.title}</span>
-                                                </button>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
+                </div>
 
                 <div className="onboarding-actions">
                     {step > 1 ? (
@@ -446,16 +519,16 @@ export default function Onboarding() {
                             Atrás
                         </button>
                     ) : (
-                        <button className="btn btn-ghost" onClick={signOut} disabled={loading} style={{ color: 'var(--error)' }}>
-                            Cancelar y Salir
+                        <button className="btn btn-ghost onboarding-exit" onClick={signOut} disabled={loading}>
+                            Salir
                         </button>
                     )}
                     
-                    <button className="btn btn-primary" onClick={handleNextStep} disabled={loading} style={{ backgroundColor: 'var(--brand-primary)', borderColor: 'var(--brand-primary)', color: '#000' }}>
-                        {loading ? <LoadingSpinner size="sm" /> : (step === 3 ? 'Finalizar y Entrar' : 'Siguiente')}
+                    <button className="btn btn-primary onboarding-next" onClick={handleNextStep} disabled={loading}>
+                        {loading ? <LoadingSpinner size="sm" /> : (step === 3 ? 'Finalizar y entrar' : 'Continuar')}
                     </button>
                 </div>
-            </div>
+            </main>
             
             {cropModal.isOpen && (
                 <ImageCropperModal 
@@ -469,7 +542,7 @@ export default function Onboarding() {
             {/* Top 4 Modals */}
             {activeGameSlot !== null && (
                 <div className="ep-overlay" style={{ zIndex: 9999 }} onClick={() => setActiveGameSlot(null)}>
-                    <div className="ep-modal" style={{ width: '400px', height: 'auto', maxHeight: '80vh' }} onClick={e => e.stopPropagation()}>
+                    <div className="ep-modal" style={{ width: 'min(400px, calc(100vw - 32px))', height: 'auto', maxHeight: '80vh' }} onClick={e => e.stopPropagation()}>
                         <div className="ep-modal-header">
                             <h3 className="ep-modal-title">Elige un Juego</h3>
                             <button className="ep-close-btn" onClick={() => setActiveGameSlot(null)} type="button">
@@ -502,7 +575,7 @@ export default function Onboarding() {
             )}
             {activeAnimeSlot !== null && (
                 <div className="ep-overlay" style={{ zIndex: 9999 }} onClick={() => setActiveAnimeSlot(null)}>
-                    <div className="ep-modal" style={{ width: '400px', height: 'auto', maxHeight: '80vh' }} onClick={e => e.stopPropagation()}>
+                    <div className="ep-modal" style={{ width: 'min(400px, calc(100vw - 32px))', height: 'auto', maxHeight: '80vh' }} onClick={e => e.stopPropagation()}>
                         <div className="ep-modal-header">
                             <h3 className="ep-modal-title">Elige un Anime</h3>
                             <button className="ep-close-btn" onClick={() => setActiveAnimeSlot(null)} type="button">

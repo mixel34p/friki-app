@@ -11,7 +11,7 @@ const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
 /**
  * Call IGDB via our Edge Function proxy
  */
-async function callIgdbProxy(endpoint, body) {
+async function callIgdbProxy(endpoint, body, signal) {
     const response = await fetch(`${SUPABASE_URL}/functions/v1/igdb-proxy`, {
         method: 'POST',
         headers: {
@@ -19,7 +19,8 @@ async function callIgdbProxy(endpoint, body) {
             'apikey': SUPABASE_ANON_KEY,
             'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
         },
-        body: JSON.stringify({ endpoint, body })
+        body: JSON.stringify({ endpoint, body }),
+        signal
     })
 
     if (!response.ok) {
@@ -36,7 +37,7 @@ async function callIgdbProxy(endpoint, body) {
  * @param {number} limit - Max results (default 20)
  * @returns {Promise<Array>} Array of game objects
  */
-export async function searchGamesIGDB(query, limit = 20) {
+export async function searchGamesIGDB(query, limit = 20, signal) {
     if (!query || query.length < 2) return []
 
     try {
@@ -47,7 +48,7 @@ export async function searchGamesIGDB(query, limit = 20) {
               limit 50;
         `
 
-        let games = await callIgdbProxy('/games', body)
+        let games = await callIgdbProxy('/games', body, signal)
 
         // Advanced filter: Remove DLCs and garbage, but keep main games and popular expansions like Persona 5 Royal
         games = games.filter(game => {

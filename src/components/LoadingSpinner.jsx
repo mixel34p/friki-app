@@ -1,31 +1,18 @@
-import { useEffect, useState } from 'react'
+import './LoadingSpinner.css'
 
-const GIFS = [
-    '/loadinggifs/luigidancing.gif',
-    '/loadinggifs/krisguitar.gif',
-    '/loadinggifs/shinjicup.gif',
-    '/loadinggifs/sonicwaiting.gif',
-]
+const SIZES = {
+    sm: '18px',
+    md: '32px',
+    lg: '48px',
+}
 
-export default function LoadingSpinner() {
-    const [gif, setGif] = useState(GIFS[0])
-
-    useEffect(() => {
-        const randomGif = GIFS[Math.floor(Math.random() * GIFS.length)]
-        setGif(randomGif)
-    }, [])
-
+export default function LoadingSpinner({ size = 'md', label = '' }) {
     return (
-        <img
-            src={gif}
-            alt="Loading..."
+        <span
             className="loading-spinner-component"
-            style={{
-                width: '80px',
-                height: '80px',
-                objectFit: 'contain',
-                display: 'block'
-            }}
+            role="status"
+            aria-label={label || 'Cargando'}
+            style={{ '--loader-size': SIZES[size] || SIZES.md }}
         />
     )
 }

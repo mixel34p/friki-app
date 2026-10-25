@@ -245,7 +245,8 @@ export default function UserTierlists() {
                                                         backgroundSize: 'cover', 
                                                         backgroundPosition: 'center',
                                                         width: '100%',
-                                                        height: '100%'
+                                                        height: '100%',
+                                                        gridColumn: images.length === 3 && i === 2 ? '1 / -1' : undefined
                                                     }} />
                                                 ))}
                                             </div>

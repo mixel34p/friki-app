@@ -7,6 +7,18 @@ import { useAuth } from '../../context/AuthContext';
 import ImageCropperModal from '../../components/ImageCropperModal';
 import GlobalSearchModal from '../../components/GlobalSearchModal';
 import './SpacesExplore.css';
+import './SpacesDiscover.css';
+import '../DiscoverWorks.css';
+import '../Search.css';
+
+function shuffleSpaces(items) {
+  const shuffled = [...items];
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+    [shuffled[index], shuffled[randomIndex]] = [shuffled[randomIndex], shuffled[index]];
+  }
+  return shuffled;
+}
 
 export default function SpacesExplore() {
   const [spaces, setSpaces] = useState([]);
@@ -41,7 +53,7 @@ export default function SpacesExplore() {
     setIsLoading(true);
     try {
       const data = await getSpaces();
-      setSpaces(data);
+      setSpaces(shuffleSpaces(data));
       setFetchError(null);
     } catch (error) {
       console.error('Error loading spaces:', error);
@@ -185,29 +197,19 @@ export default function SpacesExplore() {
   };
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState('recent'); // 'recent' | 'popular'
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
 
-  // Reset to page 1 whenever search or sort changes
+  // Reset to page 1 whenever the search changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, sortBy]);
+  }, [searchTerm]);
 
   const filteredSpaces = spaces
     .filter(s =>
       s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (s.description && s.description.toLowerCase().includes(searchTerm.toLowerCase()))
-    )
-    .sort((a, b) => {
-      if (sortBy === 'popular') {
-        const aCount = a.space_members?.[0]?.count || 0;
-        const bCount = b.space_members?.[0]?.count || 0;
-        return bCount - aCount;
-      }
-      // 'recent': sort by created_at desc (already comes from DB ordered, but enforce client-side too)
-      return new Date(b.created_at) - new Date(a.created_at);
-    });
+    );
 
   const totalPages = Math.ceil(filteredSpaces.length / ITEMS_PER_PAGE);
   const pagedSpaces = filteredSpaces.slice(
@@ -215,58 +217,18 @@ export default function SpacesExplore() {
     currentPage * ITEMS_PER_PAGE
   );
 
-  // Portadas estáticas para el mosaico del fondo (estilo Landing)
-  const heroCovers = [
-    'https://images.igdb.com/igdb/image/upload/t_cover_big/co1r7f.jpg',
-    'https://images.igdb.com/igdb/image/upload/t_cover_big/co2lbd.jpg',
-    'https://images.igdb.com/igdb/image/upload/t_cover_big/co1yy9.jpg',
-    'https://images.igdb.com/igdb/image/upload/t_cover_big/co2v0n.jpg',
-    'https://images.igdb.com/igdb/image/upload/t_cover_big/co1tmu.jpg',
-    'https://images.igdb.com/igdb/image/upload/t_cover_big/co2mvt.jpg',
-    'https://images.igdb.com/igdb/image/upload/t_cover_big/co1qkx.jpg',
-    'https://images.igdb.com/igdb/image/upload/t_cover_big/co2ro6.jpg',
-    'https://images.igdb.com/igdb/image/upload/t_cover_big/co399o.jpg',
-    'https://images.igdb.com/igdb/image/upload/t_cover_big/co2vdg.jpg',
-    'https://images.igdb.com/igdb/image/upload/t_cover_big/co4ap2.jpg',
-    'https://images.igdb.com/igdb/image/upload/t_cover_big/co28h8.jpg',
-  ];
-
-  // Multiplicamos las portadas para asegurar que llenen todo el ancho y alto de la pantalla
-  const backgroundGridCovers = Array(5).fill(heroCovers).flat();
-
   return (
-    <div className="spaces-explore-container">
-      
-      {/* Hero Section */}
-      <div className="spaces-hero">
-        <div className="spaces-hero-bg">
-          {backgroundGridCovers.map((url, i) => (
-            <img key={i} src={url} alt="" />
-          ))}
+    <main className="discover-works-page spaces-discover-page">
+      <header className="discover-works-header spaces-catalog-header">
+        <div className="discover-title-group">
+          <button type="button" className="discover-back-button" onClick={() => navigate('/discover')} aria-label="Volver">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          </button>
+          <h1>Espacios</h1>
         </div>
-        <div className="spaces-hero-content">
-          <h1>Descubre Comunidades</h1>
-          <p>Únete a espacios creados por fans y chatea en tiempo real.</p>
-          <div className="spaces-hero-actions" style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <button
-              className="btn-primary"
-              onClick={() => {
-                if (!user) return navigate('/login');
-                setIsModalOpen(true);
-              }}
-            >
-              + Crear nuevo espacio
-            </button>
-            {user && (
-              <Link to="/spaces" className="btn-secondary" style={{ backgroundColor: 'rgba(0,0,0,0.6)', color: 'white', border: '1px solid rgba(255,255,255,0.2)' }}>
-                Ver Mis Comunidades
-              </Link>
-            )}
-          </div>
-        </div>
-      </div>
+      </header>
 
-      <div className="spaces-main-content">
+      <div className="spaces-discover-content">
 
         {/* Toolbar: búsqueda + ordenación */}
         <div className="spaces-toolbar">
@@ -278,27 +240,18 @@ export default function SpacesExplore() {
             <input
               type="text"
               className="spaces-search-input"
-              placeholder="Buscar por nombre o descripción..."
+              aria-label="Buscar espacios"
+              placeholder="Buscar espacios..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <div className="spaces-sort-buttons">
-            <button
-              className={`sort-btn ${sortBy === 'recent' ? 'active' : ''}`}
-              onClick={() => setSortBy('recent')}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-              Más recientes
-            </button>
-            <button
-              className={`sort-btn ${sortBy === 'popular' ? 'active' : ''}`}
-              onClick={() => setSortBy('popular')}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
-              Más populares
-            </button>
-          </div>
+          <button className="spaces-create-button" type="button" aria-label="Crear espacio" title="Crear espacio" onClick={() => {
+            if (!user) return navigate('/login');
+            setIsModalOpen(true);
+          }}>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          </button>
         </div>
 
         {/* Error */}
@@ -310,8 +263,9 @@ export default function SpacesExplore() {
           </div>
         )}
 
-        {/* Grid */}
-        <div className="spaces-grid">
+        {/* Search-style space catalog */}
+        <section className="search-result-section spaces spaces-discover-results" aria-label="Espacios en Geeksphere" aria-live="polite">
+        <div className="spaces-grid search-result-grid">
           {isLoading ? (
             Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="space-card space-card-skeleton">
@@ -328,10 +282,10 @@ export default function SpacesExplore() {
             ))
           ) : pagedSpaces.length > 0 ? (
             pagedSpaces.map(space => {
-              const memberCount = space.space_members?.[0]?.count || 0;
+              const memberCount = space.space_members?.[0]?.count ?? space.member_count ?? 0;
               const themeColor = space.theme_color || '#14b8a6';
               return (
-                <Link key={space.id} to={`/spaces/${space.id}`} className="space-card" style={{ '--tc': themeColor }}>
+                <Link key={space.id} to={`/spaces/${space.id}`} className="space-card search-result-card" style={{ '--tc': themeColor }}>
                   {/* Banner */}
                   <div
                     className="space-card-banner"
@@ -362,19 +316,19 @@ export default function SpacesExplore() {
                   {/* Info */}
                   <div className="space-card-info">
                     <div className="space-card-title-row">
-                      <h3 className="space-name">
-                        {space.name}
+                      <span className="search-space-title-line">
+                        <strong>{space.name}</strong>
                         {space.is_verified && (
-                          <span className="verified-badge" title="Comunidad Verificada" style={{ color: '#1d9bf0' }}>
+                          <span className="search-space-verified" title="Espacio verificado" aria-label="Espacio verificado">
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                               <path d="M22.5 12.5l-2.43 2.8.57 3.65-3.6.86-2.07 3.14-3.47-1.5-3.47 1.5-2.07-3.14-3.6-.86.57-3.65L.5 12.5l2.43-2.8-.57-3.65 3.6.86 2.07-3.14 3.47 1.5 3.47-1.5 2.07 3.14 3.6.86-.57 3.65 2.43 2.8zM10.1 17.6l7.7-7.7-1.4-1.4-6.3 6.3-3-3-1.4 1.4 4.4 4.4z"/>
                             </svg>
                           </span>
                         )}
-                      </h3>
+                      </span>
                       <span className="space-members-pill">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
-                        {memberCount}
+                        {memberCount} {memberCount === 1 ? 'usuario' : 'usuarios'}
                       </span>
                     </div>
                     <p className="space-desc">{space.description || 'Sin descripción.'}</p>
@@ -400,6 +354,7 @@ export default function SpacesExplore() {
             </div>
           )}
         </div>
+        </section>
 
         {/* Paginación */}
         {!isLoading && totalPages > 1 && (
@@ -659,6 +614,6 @@ export default function SpacesExplore() {
           }}
         />
       )}
-    </div>
+    </main>
   );
 }

@@ -39,7 +39,7 @@ export default function Layout() {
   const [activityOpen, setActivityOpen] = useState(false)
   const [notifications, setNotifications] = useState([])
   const [unreadCount, setUnreadCount] = useState(0)
-  const [searchOpen, setSearchOpen] = useState(false)
+  const [registerSearchOpen, setRegisterSearchOpen] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
   const [shareClosing, setShareClosing] = useState(false)
   const [listsOpen, setListsOpen] = useState(false)
@@ -124,6 +124,7 @@ export default function Layout() {
   const active = path => location.pathname === path || (path !== '/home' && location.pathname.startsWith(path))
   const isProfilePage = location.pathname === '/profile' || /^\/profile\/[^/]+$/.test(location.pathname)
   const isWorkPage = /^\/(game|anime)\/[^/]+(\/reviews)?$/.test(location.pathname)
+  const mobileNavIndex = shareOpen ? 2 : active('/home') ? 0 : active('/search') ? 1 : active('/spaces') ? 3 : -1
 
   return (
     <div className="layout" style={{ '--profile-theme-color': profile?.theme_color || 'var(--brand-primary)' }}>
@@ -137,7 +138,7 @@ export default function Layout() {
         <nav className="sidebar-nav">
           <Link className={`sidebar-link ${active('/home') ? 'active current-page' : ''}`} to="/home" aria-label="Inicio" aria-current={active('/home') ? 'page' : undefined}><Icon name="home"/><span className="sidebar-label" style={active('/home') ? { fontWeight: 800 } : undefined}>Inicio</span></Link>
           <Link className={`sidebar-link ${active('/spaces') ? 'active current-page' : ''}`} to="/spaces" aria-label="Espacios" aria-current={active('/spaces') ? 'page' : undefined}><Icon name="spaces"/><span className="sidebar-label" style={active('/spaces') ? { fontWeight: 800 } : undefined}>Espacios</span></Link>
-          <button className="sidebar-link" type="button" aria-label="Buscar" onClick={() => setSearchOpen(true)}><Icon name="search"/><span>Buscar</span></button>
+          <Link className={`sidebar-link ${active('/search') ? 'active current-page' : ''}`} to="/search" aria-label="Buscar" aria-current={active('/search') ? 'page' : undefined}><Icon name="search"/><span>Buscar</span></Link>
           <button className="sidebar-link" type="button" aria-label="Compartir" onClick={openShareMenu}><Icon name="share"/><span>Compartir</span></button>
           <div className="sidebar-popover-anchor" ref={activityRef}>
             <button className={`sidebar-link ${activityOpen ? 'active' : ''}`} type="button" aria-label="Actividad" aria-expanded={activityOpen} onClick={openActivity}>
@@ -176,43 +177,25 @@ export default function Layout() {
       </header>
 
       <nav className="mobile-bottom-nav" ref={mobileNavRef} aria-label="Navegación principal">
-        <Link className={`mobile-nav-item ${active('/home') ? 'active' : ''}`} to="/home" aria-label="Inicio"><Icon name="home"/><span>Inicio</span></Link>
-        <Link className={`mobile-nav-item ${active('/spaces') ? 'active' : ''}`} to="/spaces" aria-label="Espacios"><Icon name="spaces"/><span>Espacios</span></Link>
-        <button className="mobile-nav-item" type="button" aria-label="Buscar" onClick={() => { setSearchOpen(true); setActivityOpen(false); setMoreOpen(false) }}><Icon name="search"/><span>Buscar</span></button>
-        <button className="mobile-nav-item mobile-share-item" type="button" aria-label="Compartir" onClick={() => { openShareMenu(); setActivityOpen(false); setMoreOpen(false) }}><Icon name="share"/><span>Compartir</span></button>
-        <div className="mobile-nav-anchor">
-          <button className={`mobile-nav-item ${activityOpen ? 'active' : ''}`} type="button" aria-label="Actividad" aria-expanded={activityOpen} onClick={openActivity}>
-            <Icon name="activity"/><span>Actividad</span>{unreadCount > 0 && <i className="mobile-unread-dot"/>}
-          </button>
-          {activityOpen && <section className="sidebar-popover mobile-action-popover" aria-label="Actividad reciente">
-            <div className="popover-heading"><strong>Actividad</strong><button type="button" aria-label="Cerrar" onClick={() => setActivityOpen(false)}><Icon name="close"/></button></div>
-            {notifications.length ? notifications.map(item => <Link className="activity-row" key={item.id} to={notificationTarget(item)} onClick={() => setActivityOpen(false)}>
-              {item.actor?.avatar_url ? <img src={item.actor.avatar_url} alt=""/> : <span className="activity-avatar">{item.actor?.username?.[0]?.toUpperCase() || '•'}</span>}
-              <span><b>{item.actor?.username || 'Alguien'}</b> {item.message || item.type?.replaceAll('_', ' ') || 'ha interactuado contigo'}<small>{item.created_at ? new Date(item.created_at).toLocaleDateString() : ''}</small></span>
-            </Link>) : <p className="popover-empty">No hay actividad reciente.</p>}
-          </section>}
+        <div className="mobile-nav-dock">
+          {mobileNavIndex >= 0 && <span className="mobile-nav-indicator" style={{ '--active-index': mobileNavIndex }} aria-hidden="true" />}
+          <Link className={`mobile-nav-item ${active('/home') ? 'active' : ''}`} to="/home" aria-label="Inicio" aria-current={active('/home') ? 'page' : undefined}><Icon name="home"/></Link>
+          <Link className={`mobile-nav-item ${active('/search') ? 'active' : ''}`} to="/search" aria-label="Buscar" aria-current={active('/search') ? 'page' : undefined} onClick={() => { setActivityOpen(false); setMoreOpen(false) }}><Icon name="search"/></Link>
+          <button className={`mobile-nav-item mobile-share-item ${shareOpen ? 'active' : ''}`} type="button" aria-label="Compartir" aria-pressed={shareOpen} onClick={() => { openShareMenu(); setActivityOpen(false); setMoreOpen(false) }}><Icon name="share"/></button>
+          <Link className={`mobile-nav-item ${active('/spaces') ? 'active' : ''}`} to="/spaces" aria-label="Espacios" aria-current={active('/spaces') ? 'page' : undefined}><Icon name="spaces"/></Link>
         </div>
-        <Link className={`mobile-nav-item ${active('/profile') && !location.pathname.endsWith('/reviews') ? 'active' : ''}`} to="/profile" aria-label="Mi perfil">
+        <Link className={`mobile-profile-link ${isProfilePage ? 'active' : ''}`} to={profilePath} aria-label="Mi perfil" aria-current={isProfilePage ? 'page' : undefined}>
           {image ? <img className="mobile-nav-avatar" src={image} alt=""/> : <span className="mobile-nav-avatar mobile-nav-avatar-placeholder">{username?.[0]?.toUpperCase() || 'U'}</span>}
-          <span>Mi perfil</span>
         </Link>
-        <div className="mobile-nav-anchor mobile-more-anchor">
-          <button className={`mobile-nav-item ${moreOpen ? 'active' : ''}`} type="button" aria-label="Más" aria-expanded={moreOpen} onClick={() => { setMoreOpen(v => !v); setActivityOpen(false) }}><Icon name="more"/><span>Más</span></button>
-          {moreOpen && <section className="sidebar-popover mobile-action-popover mobile-more-popover" aria-label="Más opciones">
-            <Link className="more-option" to={profilePath} onClick={() => setMoreOpen(false)}>Mi perfil <Icon name="arrow"/></Link>
-            <Link className="more-option" to="/profile?edit=true" onClick={() => setMoreOpen(false)}>Editar perfil <Icon name="arrow"/></Link>
-            <button className="more-option" type="button" onClick={async () => { setMoreOpen(false); await signOut(); navigate('/login') }}>Cerrar sesión <Icon name="logout"/></button>
-          </section>}
-        </div>
       </nav>
 
-      <main className={`main ${isProfilePage ? 'profile-main' : ''} ${isWorkPage ? 'work-main' : ''} ${location.pathname === '/spaces/explore' ? 'spaces-explore-main' : ''} ${location.pathname === '/spaces' ? 'my-spaces-main' : ''}`}><Outlet /></main>
+      <main className={`main ${isProfilePage ? 'profile-main' : ''} ${isWorkPage ? 'work-main' : ''} ${location.pathname.startsWith('/discover/anime') || location.pathname.startsWith('/discover/games') ? 'discover-works-main' : ''} ${location.pathname === '/discover/spaces' || location.pathname === '/spaces/explore' ? 'spaces-explore-main' : ''} ${location.pathname === '/spaces' ? 'my-spaces-main' : ''}`}><Outlet /></main>
 
       {shareOpen && <div className={`fullscreen-create-overlay ${shareClosing ? 'closing' : ''}`} onClick={() => closeShareMenu()}>
         <button className="close-fullscreen" aria-label="Cerrar" onClick={event => { event.stopPropagation(); closeShareMenu() }}>&times;</button>
         <div className="fullscreen-create-content" onClick={event => event.stopPropagation()}>
           <h2 className="create-glow-title">Crear Nuevo...</h2>
-          <button className="create-huge-btn" type="button" onClick={() => closeShareMenu(() => setSearchOpen(true))}>
+          <button className="create-huge-btn" type="button" onClick={() => closeShareMenu(() => setRegisterSearchOpen(true))}>
             <div className="huge-btn-bg game-bg" />
             <div className="huge-btn-content">
               <h3><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" className="icon-gradient"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>Registrar Obra</h3>
@@ -228,7 +211,7 @@ export default function Layout() {
           </button>
         </div>
       </div>}
-      <GlobalSearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
+      <GlobalSearchModal isOpen={registerSearchOpen} onClose={() => setRegisterSearchOpen(false)} />
       {listsOpen && <ListsEntryModal onClose={() => setListsOpen(false)} />}
     </div>
   )

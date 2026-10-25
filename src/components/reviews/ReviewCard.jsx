@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { toggleReaction, getReviewComments, postReviewComment, deleteReview } from '../../lib/reviewService'
+import { formatRelativeDate } from '../../lib/formatRelativeDate'
 import { Link } from 'react-router-dom'
 import './Reviews.css'
 
@@ -145,11 +146,6 @@ export default function ReviewCard({ review, myReaction, onReactionUpdate, onEdi
                             {review.profiles?.display_name || 'Usuario'}
                         </span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-                            <span className="review-date">
-                                {new Date(review.created_at).toLocaleDateString(undefined, {
-                                    year: 'numeric', month: 'long', day: 'numeric'
-                                })}
-                            </span>
                             {isOwner && (
                                 <div className="review-owner-actions" style={{ display: 'flex', gap: '0.5rem', fontSize: '0.85rem' }}>
                                     <button
@@ -170,7 +166,12 @@ export default function ReviewCard({ review, myReaction, onReactionUpdate, onEdi
                     </div>
                 </div>
 
-                {renderStars(review.rating)}
+                <div className="review-card-rating-meta">
+                    <time className="review-date" dateTime={review.created_at}>
+                        {formatRelativeDate(review.created_at)}
+                    </time>
+                    {renderStars(review.rating)}
+                </div>
             </div>
 
             {review.title && <h3 className="review-title">{review.title}</h3>}

@@ -7,7 +7,6 @@ import { getRecommendations } from '../lib/recommendationService'
 import { searchGames } from '../lib/gameService'
 import { searchAnime } from '../lib/animeService'
 import RecommendationCard from '../components/RecommendationCard'
-import LoadingSpinner from '../components/LoadingSpinner'
 import './Discover.css'
 
 export default function Discover() {
@@ -301,8 +300,26 @@ export default function Discover() {
 
     if (loading && users.length === 0 && tierlists.length === 0 && recommendations.length === 0 && searchResults.length === 0) {
         return (
-            <div className="discover-loading">
-                <LoadingSpinner />
+            <div className="discover discover-loading" role="status" aria-busy="true" aria-label="Cargando contenido">
+                <div className="container">
+                    <div className="discover-header">
+                        <div className="discover-skeleton discover-skeleton-title" />
+                        <div className="discover-skeleton discover-skeleton-search" />
+                    </div>
+                    <div className="discover-skeleton-controls">
+                        <div className="discover-skeleton discover-skeleton-tabs" />
+                        <div className="discover-skeleton discover-skeleton-filters" />
+                    </div>
+                    <div className="discover-skeleton-grid" aria-hidden="true">
+                        {Array.from({ length: 8 }, (_, index) => (
+                            <div className="discover-skeleton-card" key={index}>
+                                <div className="discover-skeleton discover-skeleton-poster" />
+                                <div className="discover-skeleton discover-skeleton-line" />
+                                <div className="discover-skeleton discover-skeleton-line short" />
+                            </div>
+                        ))}
+                    </div>
+                </div>
             </div>
         )
     }
@@ -595,3 +612,6 @@ export default function Discover() {
         </div>
     )
 }
+
+
+

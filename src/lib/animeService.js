@@ -16,7 +16,7 @@ const ANILIST_API_URL = 'https://graphql.anilist.co'
  * @param {number} limit - Max results
  * @returns {Promise<Array>} Array of anime objects
  */
-export async function searchAnime(query, limit = 20) {
+export async function searchAnime(query, limit = 20, { signal } = {}) {
     if (!query || query.length < 2) return []
 
     try {
@@ -26,6 +26,7 @@ export async function searchAnime(query, limit = 20) {
             .select('*')
             .ilike('title', `%${query}%`)
             .limit(limit)
+            .abortSignal(signal)
 
         if (error) {
             console.error('Local DB anime search error:', error)
@@ -71,6 +72,7 @@ export async function searchAnime(query, limit = 20) {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
             },
+            signal,
             body: JSON.stringify({
                 query: graphqlQuery,
                 variables: { search: query, limit: limit }

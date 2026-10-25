@@ -83,6 +83,17 @@
     color: #fff;
 }
 
+.log-review-age {
+    position: absolute;
+    top: 1.45rem;
+    right: 4rem;
+    z-index: 10;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    line-height: 1.2rem;
+    white-space: nowrap;
+}
+
 /* -- Header -- */
 .log-header-compact {
     position: relative;
@@ -291,6 +302,16 @@
 
 .log-star-hitbox {
     flex: 1;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    appearance: none;
+}
+.log-star-hitbox:focus-visible {
+    outline: 2px solid var(--brand-primary);
+    outline-offset: -2px;
 }
 
 .log-star-divider {

@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import Cropper from 'react-easy-crop'
 
 // Helper function to create the cropped image
@@ -69,23 +70,23 @@ export default function ImageCropperModal({ imageSrc, aspect, onCropComplete, on
         }
     }
 
-    return (
+    return createPortal((
         <div 
             className="modal-overlay" 
-            style={{ zIndex: 10005 }}
+            style={{ zIndex: 11000, overscrollBehavior: 'contain' }}
             onClick={(e) => {
                 if (e.target === e.currentTarget) {
                     onCancel()
                 }
             }}
         >
-            <div className="modal" style={{ width: '600px', maxWidth: '95%', padding: '0', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
+            <div className="modal" style={{ width: '600px', maxWidth: '95%', maxHeight: '90dvh', padding: '0', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
                 <div className="modal-header" style={{ padding: 'var(--space-md)' }}>
                     <h3 style={{ margin: 0, fontFamily: 'var(--font-display)' }}>Ajustar Imagen</h3>
                     <button type="button" className="modal-close" onClick={(e) => { e.stopPropagation(); onCancel(); }}>&times;</button>
                 </div>
                 
-                <div style={{ position: 'relative', height: '400px', background: '#111', width: '100%' }}>
+                <div style={{ position: 'relative', height: 'min(400px, 48dvh)', minHeight: '220px', background: '#111', width: '100%', touchAction: 'none' }}>
                     <Cropper
                         image={imageSrc}
                         crop={crop}
@@ -120,5 +121,5 @@ export default function ImageCropperModal({ imageSrc, aspect, onCropComplete, on
                 </div>
             </div>
         </div>
-    )
+    ), document.body)
 }

@@ -178,6 +178,71 @@
     border-color: var(--border-strong);
 }
 
+.work-review-layout {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.7rem;
+}
+
+.work-review-layout .review-user-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    width: 100%;
+}
+
+.work-review-layout .review-user-identity {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+}
+
+.work-review-layout .review-author-name-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.work-review-layout .work-review-date {
+    flex: 0 0 auto;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    white-space: nowrap;
+}
+
+.work-review-layout .work-review-rating-line {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    white-space: nowrap;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    line-height: 1;
+}
+
+.work-review-layout .work-review-rating-line .wr-rating-stars {
+    flex: 0 0 auto;
+    justify-content: flex-start;
+}
+
+.work-review-layout .work-review-rating-line .wr-rating-stars svg {
+    width: 17px;
+    height: 17px;
+}
+
+.work-review-layout .review-content {
+    min-width: 0;
+    text-align: left;
+    width: 100%;
+}
+
+.work-review-layout .review-text {
+    text-align: left;
+}
+
 .review-poster-link {
     flex-shrink: 0;
 }

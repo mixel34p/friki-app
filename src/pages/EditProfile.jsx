@@ -227,6 +227,31 @@ export default function EditProfile({ onClose }) {
     const [customTagInput, setCustomTagInput] = useState('')
     const [isAddingSocial, setIsAddingSocial] = useState(false)
 
+    useEffect(() => {
+        const scrollY = window.scrollY;
+        const body = document.body;
+        const previousStyles = {
+            position: body.style.position,
+            top: body.style.top,
+            left: body.style.left,
+            right: body.style.right,
+            width: body.style.width,
+            overflow: body.style.overflow,
+        };
+
+        body.style.position = 'fixed';
+        body.style.top = `-${scrollY}px`;
+        body.style.left = '0';
+        body.style.right = '0';
+        body.style.width = '100%';
+        body.style.overflow = 'hidden';
+
+        return () => {
+            Object.assign(body.style, previousStyles);
+            window.scrollTo(0, scrollY);
+        };
+    }, []);
+
     // Blocked users
     const [blockedUsers, setBlockedUsers] = useState([])
     const [loadingBlocked, setLoadingBlocked] = useState(false)

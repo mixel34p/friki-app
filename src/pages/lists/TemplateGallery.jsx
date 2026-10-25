@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { getTemplates, getRandomTemplatePreviewCovers } from '../../lib/listService';
+import { getTemplates } from '../../lib/listService';
 import { useAuth } from '../../context/AuthContext';
 import CreateTemplateModal from './CreateTemplateModal';
 import './TemplateGallery.css';
@@ -11,7 +11,7 @@ const MEDIA_LABELS = { game: 'Videojuegos', anime: 'Anime' };
 export default function TemplateGallery() {
     const { user } = useAuth();
     const navigate = useNavigate();
-    const [searchParams, setSearchParams] = useSearchParams();
+    const [searchParams] = useSearchParams();
     const [templates, setTemplates] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filterType, setFilterType] = useState(null);
@@ -19,43 +19,22 @@ export default function TemplateGallery() {
     const [searchQuery, setSearchQuery] = useState('');
     const [showModal, setShowModal] = useState(searchParams.get('new') === '1');
 
-    const fetchTemplates = async () => {
+    const fetchTemplates = useCallback(async () => {
         setLoading(true);
         try {
             const data = await getTemplates({ type: filterType, mediaType: filterMedia, query: searchQuery });
-            const missingByMedia = data.reduce((counts, template) => {
-                if (!template.default_items?.length && ['game', 'anime'].includes(template.media_type)) {
-                    counts[template.media_type] = (counts[template.media_type] || 0) + 1;
-                }
-                return counts;
-            }, {});
-            const sampledCovers = Object.fromEntries(await Promise.all(
-                Object.entries(missingByMedia).map(async ([mediaType, count]) => [
-                    mediaType,
-                    await getRandomTemplatePreviewCovers(mediaType, count * 5)
-                ])
-            ));
-            const coverIndexes = { game: 0, anime: 0 };
-            const templatesWithPreviews = data.map(template => {
-                if (template.default_items?.length || !sampledCovers[template.media_type]?.length) return template;
-                const covers = sampledCovers[template.media_type];
-                const start = coverIndexes[template.media_type] || 0;
-                const preview_covers = Array.from({ length: 5 }, (_, index) => covers[(start + index) % covers.length]);
-                coverIndexes[template.media_type] = start + 5;
-                return { ...template, preview_covers };
-            });
-            setTemplates(templatesWithPreviews);
+            setTemplates(data);
         } catch (error) {
             console.error('Error fetching templates:', error);
         } finally {
             setLoading(false);
         }
-    };
+    }, [filterType, filterMedia, searchQuery]);
 
     useEffect(() => {
         const id = setTimeout(fetchTemplates, 300);
         return () => clearTimeout(id);
-    }, [filterType, filterMedia, searchQuery]);
+    }, [fetchTemplates]);
 
     const handleModalSuccess = (result) => {
         setShowModal(false);
@@ -140,13 +119,8 @@ export default function TemplateGallery() {
 function TemplateCard({ tpl, index }) {
     const isAnonymous = !tpl.profiles?.username;
     
-    // Determine which items to show
-    let previewItems = [];
-    if (tpl.default_items && tpl.default_items.length > 0) {
-        previewItems = tpl.default_items.slice(0, 5).map(i => i.image_url || i.cover_url).filter(Boolean);
-    } else {
-        previewItems = tpl.preview_covers || [];
-    }
+    const selectedCovers = tpl.cover_items?.length ? tpl.cover_items : tpl.default_items || [];
+    const previewItems = selectedCovers.slice(0, 5).map(item => typeof item === 'string' ? item : item.image_url || item.cover_url).filter(Boolean);
     
     return (
         <div className="tg-card" style={{ animationDelay: `${index * 0.05}s` }}>
@@ -159,9 +133,13 @@ function TemplateCard({ tpl, index }) {
                 </div>
                 
                 <div className="tg-card-preview-items">
-                    {previewItems.map((url, idx) => (
+                    {previewItems.length ? previewItems.map((url, idx) => (
                         <img key={idx} src={url} alt="Cover" className="tg-preview-img" loading="lazy" />
-                    ))}
+                    )) : <span className="tg-card-type-icon" aria-hidden="true">
+                        {tpl.list_type === 'ranking' ? <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                            : tpl.list_type === 'grid' ? <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                                : <svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>}
+                    </span>}
                 </div>
             </div>
 

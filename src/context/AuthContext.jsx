@@ -78,6 +78,8 @@ export function AuthProvider({ children }) {
     }
 
     const signUp = async (email, password, username) => {
+        const normalizedEmail = email.trim()
+
         // Check if username is already taken
         const { data: existingUser } = await supabase
             .from('profiles')
@@ -90,14 +92,25 @@ export function AuthProvider({ children }) {
         }
 
         const { data, error } = await supabase.auth.signUp({
-            email,
+            email: normalizedEmail,
             password,
             options: {
                 data: { username } // Store in metadata
             }
         })
 
-        if (error) throw error
+        if (error) {
+            if (/already registered|already exists/i.test(error.message)) {
+                throw new Error('Este correo ya está registrado. Inicia sesión o recupera tu contraseña.')
+            }
+            throw error
+        }
+
+        // Supabase hides whether an email exists when email confirmations are enabled.
+        // In that case it returns a user with no identities instead of an error.
+        if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+            throw new Error('Este correo ya está registrado. Inicia sesión o recupera tu contraseña.')
+        }
 
         return data
     }

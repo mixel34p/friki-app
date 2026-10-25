@@ -5,6 +5,25 @@ import { logWork, deleteWorkLog } from '../lib/libraryService'
 import LoadingSpinner from './LoadingSpinner'
 import './LogModal.css'
 
+function formatReviewAge(dateValue) {
+    const date = new Date(dateValue)
+    if (Number.isNaN(date.getTime())) return ''
+
+    const elapsedSeconds = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000))
+    if (elapsedSeconds < 60) return `hace ${elapsedSeconds} ${elapsedSeconds === 1 ? 'segundo' : 'segundos'}`
+
+    const elapsedMinutes = Math.floor(elapsedSeconds / 60)
+    if (elapsedMinutes < 60) return `hace ${elapsedMinutes} ${elapsedMinutes === 1 ? 'minuto' : 'minutos'}`
+
+    const elapsedHours = Math.floor(elapsedMinutes / 60)
+    if (elapsedHours < 24) return `hace ${elapsedHours} ${elapsedHours === 1 ? 'hora' : 'horas'}`
+
+    const elapsedDays = Math.floor(elapsedHours / 24)
+    if (elapsedDays < 7) return `hace ${elapsedDays} ${elapsedDays === 1 ? 'día' : 'días'}`
+
+    return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
 export default function LogModal({ isOpen, onClose, work, existingLog, onSaveComplete }) {
     const { user } = useAuth()
     
@@ -50,8 +69,8 @@ export default function LogModal({ isOpen, onClose, work, existingLog, onSaveCom
                 finished_date: finishedDate || null
             }
             
-            await logWork(user.id, work.id, work.type, logData)
-            if (onSaveComplete) onSaveComplete()
+            const savedLog = await logWork(user.id, work.id, work.type, logData)
+            if (onSaveComplete) onSaveComplete(savedLog)
         } catch (err) {
             setError(err.message)
         } finally {
@@ -65,7 +84,7 @@ export default function LogModal({ isOpen, onClose, work, existingLog, onSaveCom
         setError(null)
         try {
             await deleteWorkLog(user.id, work.id, work.type)
-            if (onSaveComplete) onSaveComplete()
+            if (onSaveComplete) onSaveComplete(null)
         } catch (err) {
             setError(err.message)
         } finally {
@@ -114,15 +133,20 @@ export default function LogModal({ isOpen, onClose, work, existingLog, onSaveCom
                 <div className="log-star-visuals">
                     {stars}
                 </div>
-                {/* 10 invisible blocks overlaid on top as hover zones */}
+                {/* Cada estrella tiene una zona izquierda y otra derecha para elegir medias estrellas. */}
                 <div className="log-star-hitboxes">
                     {[0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5].map(val => (
-                        <div 
+                        <button
                             key={val} 
+                            type="button"
                             className="log-star-hitbox" 
+                            aria-label={`${val.toFixed(1)} ${val === 1 ? 'estrella' : 'estrellas'}`}
+                            title={`${val.toFixed(1)} ${val === 1 ? 'estrella' : 'estrellas'}`}
                             onMouseEnter={() => setHoverRating(val)}
-                            onClick={() => setRating(prev => prev === val ? 0 : val)}
-                        ></div>
+                            onFocus={() => setHoverRating(val)}
+                            onBlur={() => setHoverRating(0)}
+                            onClick={() => setRating(val)}
+                        />
                     ))}
                 </div>
                 <div className="log-star-divider" />
@@ -138,6 +162,11 @@ export default function LogModal({ isOpen, onClose, work, existingLog, onSaveCom
             <div className="log-modal-compact" onClick={event => event.stopPropagation()}>
                 
                 <button className="log-close-btn" onClick={onClose}>&times;</button>
+                {existingLog?.created_at && (
+                    <time className="log-review-age" dateTime={existingLog.created_at}>
+                        {formatReviewAge(existingLog.created_at)}
+                    </time>
+                )}
                 
                 <div className="log-header-compact">
                     <div className="log-header-bg" style={{ backgroundImage: `url(${work.banner_url || work.image})` }}></div>

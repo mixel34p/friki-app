@@ -25,6 +25,7 @@
     position: fixed;
     inset: 0;
     z-index: 10000;
+    overscroll-behavior: none;
     background: rgba(0, 0, 0, 0.78);
     backdrop-filter: blur(10px);
     display: flex;
@@ -104,6 +105,7 @@
     background: var(--bg-secondary);
     flex-shrink: 0;
     overflow-x: auto;
+    overscroll-behavior: contain;
     scrollbar-width: none;
 }
 
@@ -145,7 +147,10 @@
 /* ── Scrollable body ── */
 .ep-modal-body {
     flex: 1;
+    min-height: 0;
     overflow-y: auto;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
     padding: var(--space-xl);
     scrollbar-width: thin;
     scrollbar-color: var(--border-default) transparent;

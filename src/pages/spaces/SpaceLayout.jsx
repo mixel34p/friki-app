@@ -175,7 +175,7 @@ export default function SpaceLayout() {
       await deleteSpace(spaceId);
       setIsDeleteModalOpen(false);
       setIsSettingsModalOpen(false);
-      navigate('/spaces/explore');
+      navigate('/discover/spaces');
     } catch (err) {
       console.error('Error deleting space:', err);
       setDeleteError(`Error al eliminar: ${err.message || err.details || JSON.stringify(err)}`);

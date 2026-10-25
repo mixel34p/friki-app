@@ -8,13 +8,18 @@
  * @param {Object} logData - Datos del log { rating, review_text, finished_date, contains_spoiler }
  */
 export async function logWork(userId, workId, workType, logData) {
+    const rating = logData.rating == null ? null : Number(logData.rating)
+    if (rating != null && (!Number.isFinite(rating) || rating < 0.5 || rating > 5 || Math.round(rating * 2) !== rating * 2)) {
+        throw new Error('La valoración debe estar entre 0,5 y 5 estrellas, en pasos de media estrella.')
+    }
+
     const { data, error } = await supabase
         .from('library_entries')
         .upsert({
             user_id: userId,
             work_id: String(workId),
             work_type: workType,
-            rating: logData.rating || null,
+            rating,
             review_text: logData.review_text || null,
             contains_spoiler: logData.contains_spoiler || false,
             finished_date: logData.finished_date || null,
@@ -94,24 +99,110 @@ export async function deleteWorkLog(userId, workId, workType) {
 }
 
 // Obtener reseñas (library_entries) de una obra con paginación
-export async function getWorkReviews(workId, workType, page = 1, limit = 3) {
+export async function getWorkReviews(workId, workType, page = 1, limit = 3, rating = null) {
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
-    const { data, count, error } = await supabase
+    let query = supabase
         .from('library_entries')
         .select('*', { count: 'exact' })
         .eq('work_id', String(workId))
         .eq('work_type', workType)
         .not('review_text', 'is', null)
+
+    if (rating != null) {
+        query = query.eq('rating', rating)
+    }
+
+    const { data, count, error } = await query
         .order('created_at', { ascending: false })
-        .range(from, to);
+        .range(from, to)
 
     if (error) {
         console.error('Error fetching work reviews:', error);
         return { data: [], count: 0 };
     }
-    if (!data || data.length === 0) return { data: [], count: count || 0 }; const userIds = [...new Set(data.map(e => e.user_id))]; const { data: profiles } = await supabase.from('profiles').select('id, username, avatar_url, display_name, featured_badge').in('id', userIds); const pMap = {}; if (profiles) profiles.forEach(p => pMap[p.id] = p); return { data: data.map(e => ({...e, profiles: pMap[e.user_id] || null})), count: count || 0 };
+    if (!data || data.length === 0) return { data: [], count: count || 0 }
+    const userIds = [...new Set(data.map(entry => entry.user_id))]
+    const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, username, avatar_url, display_name, featured_badge, theme_color')
+        .in('id', userIds)
+    const profilesById = Object.fromEntries((profiles || []).map(profile => [profile.id, profile]))
+    return {
+        data: data.map(entry => ({ ...entry, profiles: profilesById[entry.user_id] || null })),
+        count: count || 0
+    }
+}
+
+// Obtener todas las valoraciones, tengan o no texto, con paginación
+export async function getWorkRatings(workId, workType, page = 1, limit = 10, rating = null) {
+    const from = (page - 1) * limit
+    const to = from + limit - 1
+    let query = supabase
+        .from('library_entries')
+        .select('*', { count: 'exact' })
+        .eq('work_id', String(workId))
+        .eq('work_type', workType)
+        .not('rating', 'is', null)
+
+    if (rating != null) {
+        query = query.eq('rating', rating)
+    }
+
+    const { data, count, error } = await query
+        .order('created_at', { ascending: false })
+        .range(from, to)
+
+    if (error) {
+        console.error('Error fetching work ratings:', error)
+        return { data: [], count: 0 }
+    }
+    if (!data || data.length === 0) return { data: [], count: count || 0 }
+
+    const userIds = [...new Set(data.map(entry => entry.user_id))]
+    const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, username, avatar_url, display_name, featured_badge, theme_color')
+        .in('id', userIds)
+    const profilesById = Object.fromEntries((profiles || []).map(profile => [profile.id, profile]))
+    return {
+        data: data.map(entry => ({ ...entry, profiles: profilesById[entry.user_id] || null })),
+        count: count || 0
+    }
+}
+
+// Obtener el promedio de puntuación y el número total de reseñas de una obra
+export async function getWorkReviewStats(workId, workType) {
+    const [{ data: ratingData, count: ratingsCount, error: ratingsError }, { count: reviewCount, error: reviewsError }] = await Promise.all([
+        supabase
+        .from('library_entries')
+        .select('rating', { count: 'exact' })
+        .eq('work_id', String(workId))
+        .eq('work_type', workType)
+        .not('rating', 'is', null),
+        supabase
+            .from('library_entries')
+            .select('id', { count: 'exact', head: true })
+            .eq('work_id', String(workId))
+            .eq('work_type', workType)
+            .not('review_text', 'is', null)
+    ])
+
+    if (ratingsError || reviewsError) {
+        console.error('Error fetching work review stats:', ratingsError || reviewsError)
+        return { average: null, count: 0, ratingsCount: 0 }
+    }
+
+    const ratings = (ratingData || [])
+        .filter(entry => entry.rating != null)
+        .map(entry => Number(entry.rating))
+        .filter(Number.isFinite)
+    const average = ratings.length
+        ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length
+        : null
+
+    return { average, count: reviewCount || 0, ratingsCount: ratingsCount || 0 }
 }
 
 

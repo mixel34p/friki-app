@@ -1380,6 +1380,7 @@ export default function LiveChat() {
                                 <EmojiPicker 
                                     style={{ display: isEmojiPickerOpen ? 'flex' : 'none' }}
                                     isOpen={isEmojiPickerOpen}
+                                    currentSpaceId={space?.id}
                                     onSelectGif={handleSendGif}
                                     onSelect={(emoji) => {
                                         const isCustom = emoji.startsWith(':') && emoji.endsWith(':');
@@ -1425,6 +1426,7 @@ export default function LiveChat() {
                     {hasOpenedMainPicker && (
                         <EmojiPicker
                             isOpen={isEmojiPickerOpen}
+                            currentSpaceId={space?.id}
                             onSelectGif={handleSendGif}
                             onSelect={(emoji) => {
                                 const isCustom = emoji.startsWith(':') && emoji.endsWith(':');
@@ -1537,6 +1539,7 @@ export default function LiveChat() {
                     style={{ ...reactionPickerStyle, zIndex: 100000, display: reactionPickerMsgId ? 'flex' : 'none' }}
                     disableMediaTabs={true}
                     isOpen={!!reactionPickerMsgId}
+                    currentSpaceId={space?.id}
                     onSelect={(emoji) => {
                         if (reactionPickerMsgId) {
                             handleToggleReaction(reactionPickerMsgId, emoji);

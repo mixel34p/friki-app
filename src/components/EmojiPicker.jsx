@@ -53,9 +53,6 @@ const CATEGORY_ICONS = {
     ),
 };
 
-// Module-level cache — survives re-mounts, cleared on user change
-let _customEmojiCache = null;
-let _customEmojiCacheUserId = null;
 const _gifSearchCache = new Map();
 const GIF_SEARCH_CACHE_LIMIT = 20;
 const TWEMOJI_BASE_URL = 'https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/svg';
@@ -194,7 +191,7 @@ const GifItem = memo(function GifItem({ gif, onSelectGifRef }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Main EmojiPicker
 // ─────────────────────────────────────────────────────────────────────────────
-export default function EmojiPicker({ onSelect, onSelectGif, onClose, style, disableMediaTabs = false, isOpen = true }) {
+export default function EmojiPicker({ onSelect, onSelectGif, onClose, style, disableMediaTabs = false, isOpen = true, currentSpaceId = null }) {
     const { user } = useAuth();
     const [customEmojisGrouped, setCustomEmojisGrouped] = useState([]);
     const [recentEmojis, setRecentEmojis] = useState(() => {
@@ -243,46 +240,44 @@ export default function EmojiPicker({ onSelect, onSelectGif, onClose, style, dis
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [onClose]);
 
-    // ── Load custom emojis (module-level cache) ──
+    // ── Load custom emojis from joined spaces and the current space ──
     useEffect(() => {
-        if (!user) return;
-        if (_customEmojiCache && _customEmojiCacheUserId === user.id) {
-            setCustomEmojisGrouped(_customEmojiCache);
-            return;
-        }
+        if (!user || !isOpen) return;
+        let active = true;
         setLoading(true);
         (async () => {
             try {
                 const { data: memberSpaces } = await supabase
                     .from('space_members').select('space_id').eq('user_id', user.id);
-                const spaceIds = memberSpaces?.map(m => m.space_id) ?? [];
+                const spaceIds = [...new Set([
+                    currentSpaceId,
+                    ...(memberSpaces?.map(m => m.space_id) ?? []),
+                ].filter(Boolean))];
                 if (!spaceIds.length) {
-                    _customEmojiCache = [];
-                    _customEmojiCacheUserId = user.id;
-                    setCustomEmojisGrouped([]);
+                    if (active) setCustomEmojisGrouped([]);
                     return;
                 }
-                const { data } = await supabase
+                const { data, error } = await supabase
                     .from('custom_emojis')
                     .select('id, name, image_url, space_id, space:spaces(name, avatar_url)')
                     .in('space_id', spaceIds);
+                if (error) throw error;
                 const grouped = {};
                 (data || []).forEach(e => {
-                    const key = e.space?.name || 'Global';
-                    if (!grouped[key]) grouped[key] = { name: key, avatar: e.space?.avatar_url ?? null, emojis: [] };
+                    const key = e.space_id || e.space?.name || 'Global';
+                    if (!grouped[key]) grouped[key] = { id: key, name: e.space?.name || 'Espacio', avatar: e.space?.avatar_url ?? null, emojis: [] };
                     grouped[key].emojis.push(e);
                 });
                 const result = Object.values(grouped);
-                _customEmojiCache = result;
-                _customEmojiCacheUserId = user.id;
-                setCustomEmojisGrouped(result);
+                if (active) setCustomEmojisGrouped(result);
             } catch (err) {
                 console.error('EmojiPicker:', err);
             } finally {
-                setLoading(false);
+                if (active) setLoading(false);
             }
         })();
-    }, [user]);
+        return () => { active = false; };
+    }, [user, currentSpaceId, isOpen]);
 
     const [gifError, setGifError] = useState(false);
 

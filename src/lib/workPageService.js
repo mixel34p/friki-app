@@ -381,12 +381,14 @@ export async function getWorkStats(mediaType, mediaId) {
             .eq('work_id', String(mediaId))
             
         let membersCount = 0
+        let ratingsCount = 0
         let avgRating = 0
         let recentMembers = []
         
         if (entries && entries.length > 0) {
             membersCount = entries.length
             const ratings = entries.filter(e => e.rating != null).map(e => e.rating)
+            ratingsCount = ratings.length
             if (ratings.length > 0) {
                 const sum = ratings.reduce((acc, curr) => acc + curr, 0)
                 avgRating = sum / ratings.length
@@ -428,12 +430,13 @@ export async function getWorkStats(mediaType, mediaId) {
 
         return {
             membersCount: membersCount,
+            ratingsCount,
             avgRating: avgRating > 0 ? avgRating.toFixed(1) : 0,
             recentMembers
         }
     } catch (error) {
         console.error('getWorkStats error:', error)
-        return { membersCount: 0, avgRating: 0, recentMembers: [] }
+        return { membersCount: 0, ratingsCount: 0, avgRating: 0, recentMembers: [] }
     }
 }
 

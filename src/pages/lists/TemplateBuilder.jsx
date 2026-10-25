@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
 import {
     getTemplateById,
     updateTemplate,
@@ -22,7 +21,6 @@ const IconX = () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" 
 export default function TemplateBuilder() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { user } = useAuth();
     
     const [template, setTemplate] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -36,9 +34,13 @@ export default function TemplateBuilder() {
 
     // Items Pool
     const [itemsPool, setItemsPool] = useState([]);
+    const [coverItems, setCoverItems] = useState([]);
+    const [showCoverPrompt, setShowCoverPrompt] = useState(false);
+    const [coverPromptResolved, setCoverPromptResolved] = useState(false);
 
     // Search Modal State
     const [showSearchModal, setShowSearchModal] = useState(false);
+    const [searchMode, setSearchMode] = useState('items'); // 'items' | 'covers'
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
@@ -71,6 +73,7 @@ export default function TemplateBuilder() {
             if (!tpl) { navigate('/templates'); return; }
             setTemplate(tpl);
             setItemsPool(tpl.default_items || []);
+            setCoverItems(tpl.cover_items || []);
             
             if (tpl.list_type === 'tierlist') {
                 setTiers(tpl.type_config?.tiers || DEFAULT_TIER_CONFIG.tierlist.tiers);
@@ -98,7 +101,7 @@ export default function TemplateBuilder() {
                 const fn = template.media_type === 'game' ? searchGames : searchAnime;
                 const results = await fn(searchQuery);
                 setSearchResults(results || []);
-            } catch (e) {
+            } catch {
                 setSearchResults([]);
             } finally {
                 setIsSearching(false);
@@ -115,6 +118,34 @@ export default function TemplateBuilder() {
         setItemsPool(itemsPool.filter(x => x.id !== itemId));
     };
 
+    const openItemSearch = () => {
+        setSearchMode('items');
+        setItemTab('search');
+        setSearchQuery('');
+        setShowSearchModal(true);
+    };
+
+    const openCoverSearch = () => {
+        if (itemsPool.length > 0) return;
+        setSearchMode('covers');
+        setItemTab('search');
+        setSearchQuery('');
+        setShowSearchModal(true);
+    };
+
+    const handleToggleCover = (item) => {
+        const image = item.image_url || item.cover_url || item.cover_image;
+        if (!image) return;
+        const cover = { id: item.id, name: item.name || item.title || 'Portada', image_url: image, cover_url: image };
+        setCoverItems(current => current.some(existing => String(existing.id) === String(cover.id))
+            ? current.filter(existing => String(existing.id) !== String(cover.id))
+            : current.length < 4 ? [...current, cover] : current);
+    };
+
+    const handleRemoveCover = (coverId) => {
+        setCoverItems(current => current.filter(cover => String(cover.id) !== String(coverId)));
+    };
+
     const handleAddGridCell = () => {
         setGridCells([...gridCells, { id: 'c_' + Date.now(), label: `Grid ${gridCells.length + 1}` }]);
     };
@@ -125,7 +156,7 @@ export default function TemplateBuilder() {
         setGridCells(gridCells.map(c => c.id === cellId ? { ...c, label: newLabel } : c));
     };
 
-    const handleSave = async () => {
+    const persistTemplate = async () => {
         try {
             setSaving(true);
             let type_config = {};
@@ -133,7 +164,7 @@ export default function TemplateBuilder() {
             if (template.list_type === 'ranking') type_config.max_items = maxItems;
             if (template.list_type === 'grid') { type_config.cells = gridCells; type_config.columns = gridColumns; }
 
-            await updateTemplate(id, { type_config, default_items: itemsPool });
+            await updateTemplate(id, { type_config, default_items: itemsPool, cover_items: coverItems });
             navigate(`/templates/${id}`);
         } catch (err) {
             console.error(err);
@@ -141,6 +172,14 @@ export default function TemplateBuilder() {
         } finally {
             setSaving(false);
         }
+    };
+
+    const handleSave = () => {
+        if (!itemsPool.length && !coverItems.length && !coverPromptResolved) {
+            setShowCoverPrompt(true);
+            return;
+        }
+        persistTemplate();
     };
 
     if (loading) return <div className="tb-loading">Cargando constructor...</div>;
@@ -163,13 +202,14 @@ export default function TemplateBuilder() {
                     <button className="tb-header-btn-secondary" onClick={() => navigate(`/templates/${id}`)}>
                         Cancelar
                     </button>
-                    <button className="tb-header-btn-primary" onClick={handleSave} disabled={saving}>
-                        {saving ? 'Guardando...' : (
-                            <>
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-                                Guardar
-                            </>
-                        )}
+                    <button type="button" className="tb-header-btn-secondary tb-cover-header-btn" onClick={openCoverSearch} disabled={itemsPool.length > 0} aria-label={itemsPool.length ? 'No se pueden editar las portadas mientras haya elementos predefinidos' : 'Elegir portadas'} title={itemsPool.length ? 'Quita los elementos predefinidos para editar las portadas' : 'Elegir portadas'}>
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 17.5h7M17.5 14v7"/></svg>
+                    </button>
+                    <button className="tb-header-btn-primary tb-save-template-btn" onClick={handleSave} disabled={saving} aria-label={saving ? 'Guardando plantilla' : 'Guardar plantilla'} title={saving ? 'Guardando plantilla' : 'Guardar plantilla'}>
+                        {saving
+                            ? <svg className="tb-save-spinner" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="3" strokeDasharray="40 20"/></svg>
+                            : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>}
+                        <span className="tb-save-button-label">{saving ? 'Guardando...' : 'Guardar'}</span>
                     </button>
                 </div>
             </header>
@@ -314,7 +354,7 @@ export default function TemplateBuilder() {
                                 </div>
                             </div>
                             <div className="tb-live-grid-cells" style={{ gridTemplateColumns: `repeat(${gridColumns}, minmax(0, 1fr))`, maxWidth: `${gridColumns * 120}px` }}>
-                                {gridCells.map((cell, idx) => (
+                                {gridCells.map(cell => (
                                     <div key={cell.id} className="tb-grid-cell">
                                         <div className="tb-grid-cell-img-ph">Add Item</div>
                                         <button className="tb-grid-del" onClick={() => handleRemoveGridCell(cell.id)} title="Eliminar celda"><IconX /></button>
@@ -360,7 +400,7 @@ export default function TemplateBuilder() {
                                             </div>
                                         </div>
                                     ))}
-                                    <button className="tb-tray-add-more" onClick={() => setShowSearchModal(true)}>
+                                    <button className="tb-tray-add-more" onClick={openItemSearch}>
                                         <IconPlus />
                                         <span>Añadir</span>
                                     </button>
@@ -372,7 +412,7 @@ export default function TemplateBuilder() {
                                     </div>
                                     <h4>Sin ítems predefinidos</h4>
                                     <p>El usuario final usará el buscador para añadir los que quiera libremente. Si quieres, puedes dejar algunos ya puestos.</p>
-                                    <button className="tb-add-items-btn" onClick={() => setShowSearchModal(true)}>
+                                    <button className="tb-add-items-btn" onClick={openItemSearch}>
                                         <IconPlus /> Buscar y añadir ítems
                                     </button>
                                 </div>
@@ -383,31 +423,48 @@ export default function TemplateBuilder() {
                 </div>
             </div>
 
+            {showCoverPrompt && (
+                <div className="tb-modal-overlay tb-cover-prompt-overlay" onClick={() => setShowCoverPrompt(false)}>
+                    <div className="tb-modal tb-cover-prompt" role="dialog" aria-modal="true" aria-labelledby="tb-cover-prompt-title" onClick={e => e.stopPropagation()}>
+                        <div className="tb-modal-header">
+                            <h3 id="tb-cover-prompt-title">Esta plantilla no tiene elementos predefinidos</h3>
+                            <button className="tb-modal-close" onClick={() => setShowCoverPrompt(false)} aria-label="Cerrar"><IconX /></button>
+                        </div>
+                        <p>¿Quieres poner portadas por defecto?</p>
+                        <div className="tb-cover-prompt-actions">
+                            <button className="tb-header-btn-secondary" onClick={() => { setCoverPromptResolved(true); setShowCoverPrompt(false); persistTemplate(); }}>Guardar sin portadas</button>
+                            <button className="tb-header-btn-primary" onClick={() => { setCoverPromptResolved(true); setShowCoverPrompt(false); openCoverSearch(); }}>Elegir portadas</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* ── Search Modal ── */}
             {showSearchModal && (
                 <div className="tb-modal-overlay" onClick={() => setShowSearchModal(false)}>
-                    <div className="tb-modal" onClick={e => e.stopPropagation()}>
+                    <div className={`tb-modal${searchMode === 'covers' ? ' tb-cover-selection-mode' : ''}`} onClick={e => e.stopPropagation()}>
                         <div className="tb-modal-header">
-                            <h3>Añadir ítems</h3>
+                            <h3>{searchMode === 'covers' ? 'Elegir portadas' : 'Añadir ítems'}</h3>
                             <button className="tb-modal-close" onClick={() => setShowSearchModal(false)}><IconX /></button>
                         </div>
-                        
-                        <div className="tb-modal-tabs">
-                            <button 
-                                className={`tb-modal-tab ${itemTab === 'search' ? 'active' : ''}`}
-                                onClick={() => setItemTab('search')}
-                            >
-                                Buscar
-                            </button>
-                            <button 
-                                className={`tb-modal-tab ${itemTab === 'custom' ? 'active' : ''}`}
-                                onClick={() => setItemTab('custom')}
-                            >
-                                Ítem Custom
-                            </button>
-                        </div>
 
-                        {itemTab === 'search' ? (
+                        {searchMode === 'items' && <div className="tb-modal-tabs">
+                            <button className={`tb-modal-tab ${itemTab === 'search' ? 'active' : ''}`} onClick={() => setItemTab('search')}>Buscar</button>
+                            <button className={`tb-modal-tab ${itemTab === 'custom' ? 'active' : ''}`} onClick={() => setItemTab('custom')}>Ítem Custom</button>
+                        </div>}
+
+                        {searchMode === 'covers' && <p className="tb-cover-picker-hint">Elige hasta 4 portadas. No se añadirán a los elementos predefinidos.</p>}
+                        {searchMode === 'covers' && <div className="tb-cover-selected">
+                            <div className="tb-cover-selected-heading"><span>Portadas elegidas</span><small>{coverItems.length}/4</small></div>
+                            {coverItems.length ? <div className="tb-cover-selected-grid">
+                                {coverItems.map(cover => <div className="tb-cover-selected-item" key={cover.id}>
+                                    <img src={cover.image_url || cover.cover_url} alt={cover.name || 'Portada elegida'} />
+                                    <button type="button" onClick={() => handleRemoveCover(cover.id)} aria-label={`Quitar ${cover.name || 'portada'}`} title="Quitar portada"><IconX /></button>
+                                </div>)}
+                            </div> : <p className="tb-cover-selected-empty">Aún no has elegido portadas.</p>}
+                        </div>}
+
+                        {searchMode === 'covers' || itemTab === 'search' ? (
                             <>
                                 <div className="tb-search-wrap">
                                     <span className="tb-search-icon"><IconSearch /></span>
@@ -425,12 +482,19 @@ export default function TemplateBuilder() {
                                         <div className="tb-hint">Buscando...</div>
                                     ) : searchResults.length > 0 ? (
                                         searchResults.map(item => {
-                                            const isAdded = itemsPool.some(x => x.id === item.id);
+                                            const isAdded = searchMode === 'covers'
+                                                ? coverItems.some(cover => String(cover.id) === String(item.id))
+                                                : itemsPool.some(x => String(x.id) === String(item.id));
+                                            const coverLimitReached = searchMode === 'covers' && coverItems.length >= 4 && !isAdded;
                                             return (
-                                                <div key={item.id} className={`tb-result-item ${isAdded ? 'added' : ''}`} onClick={() => !isAdded && handleAddItem(item)}>
+                                                <div key={item.id} className={`tb-result-item ${isAdded ? 'added' : ''} ${coverLimitReached ? 'disabled' : ''}`} onClick={() => {
+                                                    if (searchMode === 'covers') {
+                                                        if (!coverLimitReached) handleToggleCover(item);
+                                                    } else if (!isAdded) handleAddItem(item);
+                                                }}>
                                                     <img src={item.image_url || item.cover_url} alt={item.name} className="tb-result-img" />
                                                     <span className="tb-result-name">{item.name}</span>
-                                                    <button className="tb-add-btn">
+                                                    <button className="tb-add-btn" type="button" disabled={coverLimitReached} aria-label={isAdded ? 'Quitar selección' : 'Seleccionar'}>
                                                         {isAdded ? <IconCheck /> : <IconPlus />}
                                                     </button>
                                                 </div>

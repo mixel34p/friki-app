@@ -165,6 +165,11 @@
     color: var(--text-primary);
     border-color: var(--border-strong);
 }
+.tb-header-btn-secondary.tb-cover-header-btn { width: 38px; height: 38px; flex: 0 0 38px; padding: 0; }
+.tb-cover-header-btn:disabled { opacity: .4; cursor: not-allowed; }
+.tb-cover-header-btn svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.tb-save-spinner { animation: tb-save-spin .8s linear infinite; }
+@keyframes tb-save-spin { to { transform: rotate(360deg); } }
 
 /* ════════════════════════════
    BODY — Single Column
@@ -865,6 +870,25 @@
 }
 .tb-tray-item-del:hover { transform: scale(1.15); }
 
+/* Template cover selection stays inside the save flow modal. */
+.tb-cover-picker-hint { margin: 0; padding: var(--space-sm) var(--space-md) 0; color: var(--text-secondary); font-size: var(--text-sm); }
+.tb-cover-selected { padding: var(--space-sm) var(--space-md); border-bottom: 1px solid var(--border-subtle); }
+.tb-cover-selected-heading { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-bottom: .55rem; color: var(--text-secondary); font-size: var(--text-xs); font-weight: 700; }
+.tb-cover-selected-heading small { color: var(--text-muted); font-size: var(--text-xs); font-weight: 600; }
+.tb-cover-selected-grid { display: flex; flex-wrap: wrap; gap: .45rem; }
+.tb-cover-selected-item { position: relative; width: 48px; height: 66px; overflow: hidden; border: 1px solid var(--border-default); border-radius: var(--radius-sm); background: var(--bg-tertiary); }
+.tb-cover-selected-item img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.tb-cover-selected-item button { position: absolute; top: 3px; right: 3px; display: grid; width: 19px; height: 19px; place-items: center; padding: 0; border: 1px solid rgba(255,255,255,.25); border-radius: 50%; color: #fff; background: rgba(0,0,0,.72); cursor: pointer; }
+.tb-cover-selected-item button svg { width: 10px; height: 10px; }
+.tb-cover-selected-empty { margin: 0; color: var(--text-muted); font-size: var(--text-xs); }
+.tb-cover-selection-mode .tb-result-item.added { opacity: 1; border-color: var(--border-brand); color: var(--brand-primary); background: var(--brand-glow); cursor: pointer; }
+.tb-cover-selection-mode .tb-result-item.disabled { opacity: .4; cursor: not-allowed; }
+.tb-result-item.disabled { opacity: .42; cursor: not-allowed; }
+.tb-cover-prompt { padding-bottom: var(--space-lg); }
+.tb-cover-prompt > p { margin: var(--space-md) var(--space-lg) var(--space-lg); color: var(--text-secondary); font-size: var(--text-sm); line-height: 1.5; }
+.tb-cover-prompt-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: var(--space-sm); padding: 0 var(--space-lg); }
+.tb-cover-prompt-actions button { min-height: 38px; }
+
 .tb-tray-add-more {
     aspect-ratio: 2/3;
     border-radius: var(--radius-md);
@@ -1211,6 +1235,9 @@
     .tb-top-area { padding: 0 var(--space-md); }
     .tb-top-area h2 { font-size: var(--text-base); }
     .tb-top-area-actions .tb-header-btn-secondary { display: none; }
+    .tb-top-area-actions .tb-cover-header-btn { display: inline-flex; }
+    .tb-top-area-actions .tb-save-template-btn { width: 38px; height: 38px; padding: 0; gap: 0; }
+    .tb-save-button-label { display: none; }
     .tb-editor-col { padding: var(--space-lg) var(--space-md); }
     .tb-live-tier-label { width: 64px; font-size: 1.1rem; }
     .tb-tier-popover {
