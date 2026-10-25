@@ -26,6 +26,8 @@ import DiscoverWorks from './pages/DiscoverWorks'
 import DiscoverLists from './pages/DiscoverLists'
 import DiscoverUsers from './pages/DiscoverUsers'
 import WishlistPage from './pages/WishlistPage'
+import ActivityPage from './pages/ActivityPage'
+import ViewTierlist from './pages/ViewTierlist'
 import Chat from './pages/Chat'
 import './index.css'
 
@@ -145,6 +147,7 @@ function App() {
 
           {/* Protected routes with Layout */}
           <Route element={<Layout />}>
+            <Route path="/activity" element={<ProtectedRoute><ActivityPage /></ProtectedRoute>} />
             <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
             <Route path="/search/results" element={<ProtectedRoute><Search /></ProtectedRoute>} />
             <Route path="/home" element={<ProtectedRoute><Placeholder title="Inicio (Home)" /></ProtectedRoute>} />
@@ -157,7 +160,7 @@ function App() {
             
             {/* OLD TIERLIST REDIRECTS */}
             <Route path="/create-tierlist" element={<Navigate to="/home?createlist=true" replace />} />
-            <Route path="/tierlist/:id" element={<Navigate to="/lists/:id" replace />} />
+            <Route path="/tierlist/:id" element={<ProtectedRoute><ViewTierlist /></ProtectedRoute>} />
             <Route path="/edit-tierlist/:id" element={<Navigate to="/lists/:id/edit" replace />} />
             
             {/* NEW LISTS SYSTEM RUTAS */}

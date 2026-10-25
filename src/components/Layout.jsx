@@ -23,29 +23,19 @@ const Icon = ({ name }) => {
   return <svg {...common}>{paths[name]}</svg>
 }
 
-function notificationTarget(item) {
-  if (item.type === 'follow') return `/profile/${item.actor?.username}`
-  if (item.type === 'like' || item.type === 'comment') return item.resource_id ? `/lists/${item.resource_id}` : '/home'
-  if (item.type === 'connection_request') return '/connections?tab=requests'
-  if (item.type === 'connection_accepted') return item.resource_id ? `/chat/${item.resource_id}` : '/chat'
-  return '/home'
-}
-
 export default function Layout() {
   const { user, profile, signOut } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
   const [moreOpen, setMoreOpen] = useState(false)
-  const [activityOpen, setActivityOpen] = useState(false)
-  const [notifications, setNotifications] = useState([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [registerSearchOpen, setRegisterSearchOpen] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
   const [shareClosing, setShareClosing] = useState(false)
   const [listsOpen, setListsOpen] = useState(false)
   const menuRef = useRef(null)
-  const activityRef = useRef(null)
   const mobileNavRef = useRef(null)
+  const mobileTopbarRef = useRef(null)
 
   const openShareMenu = () => {
     setShareClosing(false)
@@ -67,32 +57,17 @@ export default function Layout() {
 
   const loadUnread = useCallback(async () => {
     if (!user?.id) return
-    const { count } = await supabase.from('notifications').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('is_read', false)
-    setUnreadCount(count || 0)
+    const [allUnread, followUnread, followRows] = await Promise.all([
+      supabase.from('notifications').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('is_read', false),
+      supabase.from('notifications').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('is_read', false).eq('type', 'follow'),
+      supabase.from('notifications').select('actor_id').eq('user_id', user.id).eq('is_read', false).eq('type', 'follow').limit(1000),
+    ])
+    const uniqueFollowActors = new Set((followRows.data || []).map(row => row.actor_id).filter(Boolean)).size
+    setUnreadCount(Math.max(0, (allUnread.count || 0) - (followUnread.count || 0) + uniqueFollowActors))
   }, [user?.id])
-
-  const openActivity = async () => {
-    setActivityOpen(v => !v)
-    setMoreOpen(false)
-    if (activityOpen || !user?.id) return
-    const { data } = await supabase.from('notifications').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10)
-    const rows = data || []
-    const actorIds = [...new Set(rows.map(row => row.actor_id).filter(Boolean))]
-    let actors = {}
-    if (actorIds.length) {
-      const { data: profiles } = await supabase.from('profiles').select('id, username, avatar_url').in('id', actorIds)
-      actors = Object.fromEntries((profiles || []).map(actor => [actor.id, actor]))
-    }
-    setNotifications(rows.map(row => ({ ...row, actor: actors[row.actor_id] })))
-    if (rows.some(row => !row.is_read)) {
-      await supabase.from('notifications').update({ is_read: true }).eq('user_id', user.id).eq('is_read', false)
-      setUnreadCount(0)
-    }
-  }
 
   useEffect(() => {
     setMoreOpen(false)
-    setActivityOpen(false)
   }, [location.pathname])
 
   useEffect(() => {
@@ -112,10 +87,10 @@ export default function Layout() {
   useEffect(() => {
     const handlePointer = event => {
       const inMobileNav = mobileNavRef.current?.contains(event.target)
-      if (!inMobileNav && menuRef.current && !menuRef.current.contains(event.target)) setMoreOpen(false)
-      if (!inMobileNav && activityRef.current && !activityRef.current.contains(event.target)) setActivityOpen(false)
+      const inMobileTopbar = mobileTopbarRef.current?.contains(event.target)
+      if (!inMobileNav && !inMobileTopbar && menuRef.current && !menuRef.current.contains(event.target)) setMoreOpen(false)
     }
-    const handleEscape = event => { if (event.key === 'Escape') { setMoreOpen(false); setActivityOpen(false); closeShareMenu() } }
+    const handleEscape = event => { if (event.key === 'Escape') { setMoreOpen(false); closeShareMenu() } }
     document.addEventListener('pointerdown', handlePointer)
     document.addEventListener('keydown', handleEscape)
     return () => { document.removeEventListener('pointerdown', handlePointer); document.removeEventListener('keydown', handleEscape) }
@@ -140,18 +115,9 @@ export default function Layout() {
           <Link className={`sidebar-link ${active('/spaces') ? 'active current-page' : ''}`} to="/spaces" aria-label="Espacios" aria-current={active('/spaces') ? 'page' : undefined}><Icon name="spaces"/><span className="sidebar-label" style={active('/spaces') ? { fontWeight: 800 } : undefined}>Espacios</span></Link>
           <Link className={`sidebar-link ${active('/search') ? 'active current-page' : ''}`} to="/search" aria-label="Buscar" aria-current={active('/search') ? 'page' : undefined}><Icon name="search"/><span>Buscar</span></Link>
           <button className="sidebar-link" type="button" aria-label="Compartir" onClick={openShareMenu}><Icon name="share"/><span>Compartir</span></button>
-          <div className="sidebar-popover-anchor" ref={activityRef}>
-            <button className={`sidebar-link ${activityOpen ? 'active' : ''}`} type="button" aria-label="Actividad" aria-expanded={activityOpen} onClick={openActivity}>
-              <Icon name="activity"/><span>Actividad</span>{unreadCount > 0 && <span className="sidebar-unread">{unreadCount > 99 ? '99+' : unreadCount}</span>}
-            </button>
-            {activityOpen && <section className="sidebar-popover activity-popover" aria-label="Actividad reciente">
-              <div className="popover-heading"><strong>Actividad</strong><button type="button" aria-label="Cerrar" onClick={() => setActivityOpen(false)}><Icon name="close"/></button></div>
-              {notifications.length ? notifications.map(item => <Link className="activity-row" key={item.id} to={notificationTarget(item)} onClick={() => setActivityOpen(false)}>
-                {item.actor?.avatar_url ? <img src={item.actor.avatar_url} alt=""/> : <span className="activity-avatar">{item.actor?.username?.[0]?.toUpperCase() || '•'}</span>}
-                <span><b>{item.actor?.username || 'Alguien'}</b> {item.message || item.type?.replaceAll('_', ' ') || 'ha interactuado contigo'}<small>{item.created_at ? new Date(item.created_at).toLocaleDateString() : ''}</small></span>
-              </Link>) : <p className="popover-empty">No hay actividad reciente.</p>}
-            </section>}
-          </div>
+          <Link className={`sidebar-link ${active('/activity') ? 'active current-page' : ''}`} to="/activity" aria-label="Actividad" aria-current={active('/activity') ? 'page' : undefined}>
+            <Icon name="activity"/><span>Actividad</span>{unreadCount > 0 && <span className="sidebar-unread">{unreadCount > 99 ? '99+' : unreadCount}</span>}
+          </Link>
         </nav>
 
         <Link className={`sidebar-link sidebar-profile ${isProfilePage ? 'active current-page' : ''}`} to={profilePath} aria-label="Mi perfil" aria-current={isProfilePage ? 'page' : undefined}>
@@ -160,7 +126,7 @@ export default function Layout() {
         </Link>
         <div className="sidebar-bottom-space" />
         <div className="sidebar-popover-anchor more-anchor" ref={menuRef}>
-          <button className={`sidebar-link more-link ${moreOpen ? 'active' : ''}`} type="button" aria-label="Más" aria-expanded={moreOpen} onClick={() => { setMoreOpen(v => !v); setActivityOpen(false) }}><Icon name="more"/><span>Más</span></button>
+          <button className={`sidebar-link more-link ${moreOpen ? 'active' : ''}`} type="button" aria-label="Más" aria-expanded={moreOpen} onClick={() => setMoreOpen(v => !v)}><Icon name="more"/><span>Más</span></button>
           {moreOpen && <section className="sidebar-popover more-popover" aria-label="Más opciones">
             <Link className="more-option" to={profilePath} onClick={() => setMoreOpen(false)}>Mi perfil <Icon name="arrow"/></Link>
             <Link className="more-option" to="/profile?edit=true" onClick={() => setMoreOpen(false)}>Editar perfil <Icon name="arrow"/></Link>
@@ -169,19 +135,35 @@ export default function Layout() {
         </div>
       </aside>
 
-      <header className="mobile-topbar">
+      <header className="mobile-topbar" ref={mobileTopbarRef}>
         <Link className="mobile-brand" to="/home" aria-label="GeekSphere, inicio">
           <img src="/icons/logo.png" alt="" />
           <span>GeekSphere</span>
         </Link>
+        <div className="mobile-topbar-actions">
+          <div className="mobile-topbar-anchor">
+            <Link className={`mobile-topbar-button ${active('/activity') ? 'active' : ''}`} to="/activity" aria-label="Notificaciones" aria-current={active('/activity') ? 'page' : undefined}>
+              <Icon name="activity" />
+              {unreadCount > 0 && <i className="mobile-topbar-unread-dot" />}
+            </Link>
+          </div>
+          <div className="mobile-topbar-anchor">
+            <button className={`mobile-topbar-button ${moreOpen ? 'active' : ''}`} type="button" aria-label="Abrir menú" aria-expanded={moreOpen} onClick={() => setMoreOpen(v => !v)}><Icon name="more"/></button>
+            {moreOpen && <section className="sidebar-popover mobile-topbar-popover mobile-topbar-menu" aria-label="Menú">
+              <Link className="more-option" to={profilePath} onClick={() => setMoreOpen(false)}>Mi perfil <Icon name="arrow"/></Link>
+              <Link className="more-option" to="/profile?edit=true" onClick={() => setMoreOpen(false)}>Editar perfil <Icon name="arrow"/></Link>
+              <button className="more-option" type="button" onClick={async () => { setMoreOpen(false); await signOut(); navigate('/login') }}>Cerrar sesión <Icon name="logout"/></button>
+            </section>}
+          </div>
+        </div>
       </header>
 
       <nav className="mobile-bottom-nav" ref={mobileNavRef} aria-label="Navegación principal">
         <div className="mobile-nav-dock">
           {mobileNavIndex >= 0 && <span className="mobile-nav-indicator" style={{ '--active-index': mobileNavIndex }} aria-hidden="true" />}
           <Link className={`mobile-nav-item ${active('/home') ? 'active' : ''}`} to="/home" aria-label="Inicio" aria-current={active('/home') ? 'page' : undefined}><Icon name="home"/></Link>
-          <Link className={`mobile-nav-item ${active('/search') ? 'active' : ''}`} to="/search" aria-label="Buscar" aria-current={active('/search') ? 'page' : undefined} onClick={() => { setActivityOpen(false); setMoreOpen(false) }}><Icon name="search"/></Link>
-          <button className={`mobile-nav-item mobile-share-item ${shareOpen ? 'active' : ''}`} type="button" aria-label="Compartir" aria-pressed={shareOpen} onClick={() => { openShareMenu(); setActivityOpen(false); setMoreOpen(false) }}><Icon name="share"/></button>
+          <Link className={`mobile-nav-item ${active('/search') ? 'active' : ''}`} to="/search" aria-label="Buscar" aria-current={active('/search') ? 'page' : undefined} onClick={() => setMoreOpen(false)}><Icon name="search"/></Link>
+          <button className={`mobile-nav-item mobile-share-item ${shareOpen ? 'active' : ''}`} type="button" aria-label="Compartir" aria-pressed={shareOpen} onClick={() => { openShareMenu(); setMoreOpen(false) }}><Icon name="share"/></button>
           <Link className={`mobile-nav-item ${active('/spaces') ? 'active' : ''}`} to="/spaces" aria-label="Espacios" aria-current={active('/spaces') ? 'page' : undefined}><Icon name="spaces"/></Link>
         </div>
         <Link className={`mobile-profile-link ${isProfilePage ? 'active' : ''}`} to={profilePath} aria-label="Mi perfil" aria-current={isProfilePage ? 'page' : undefined}>

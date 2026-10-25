@@ -1354,6 +1354,31 @@
     }
     .mobile-brand { display: inline-flex; align-items: center; gap: 10px; color: #f5f3f8; text-decoration: none; font: 750 1.06rem/1 var(--font-display); letter-spacing: -.035em; }
     .mobile-brand img { width: 30px; height: 30px; object-fit: contain; }
+    .mobile-topbar-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+    .mobile-topbar-anchor { position: relative; display: flex; }
+    .mobile-topbar-button {
+        position: relative;
+        display: grid;
+        place-items: center;
+        width: 40px;
+        height: 40px;
+        padding: 0;
+        color: #d0cdd5;
+        background: transparent;
+        border: 0;
+        border-radius: 50%;
+        text-decoration: none;
+        cursor: pointer;
+        transition: color 180ms ease, background 180ms ease, transform 180ms ease;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .mobile-topbar-button svg { width: 21px; height: 21px; stroke-width: 2; }
+    .mobile-topbar-button:hover, .mobile-topbar-button.active { color: var(--brand-primary); background: rgba(255,255,255,.07); }
+    .mobile-topbar-button:active { transform: scale(.91); }
+    .mobile-topbar-button:focus-visible { outline: 2px solid var(--brand-primary); outline-offset: 2px; }
+    .mobile-topbar-unread-dot { position: absolute; top: 7px; right: 7px; width: 8px; height: 8px; border: 1.5px solid #09090b; border-radius: 50%; background: #e879f9; }
+    .mobile-topbar-popover { top: calc(100% + 9px); right: 0; bottom: auto; left: auto; width: min(340px, calc(100vw - 24px)); max-height: min(65vh, 520px); }
+    .mobile-topbar-menu { width: min(230px, calc(100vw - 24px)); padding: 6px; }
     .mobile-bottom-nav {
         position: fixed;
         left: 0;
@@ -1469,6 +1494,7 @@
 @keyframes mobile-popover-arrive { from { opacity: 0; translate: 0 7px; } to { opacity: 1; translate: 0 0; } }
 @media (prefers-reduced-motion: reduce) {
     .sidebar-popover, .mobile-topbar, .mobile-bottom-nav { animation: none; }
+    .mobile-topbar-button { transition-duration: .01ms !important; }
     .mobile-nav-item, .mobile-nav-indicator, .mobile-nav-item svg, .mobile-profile-link { transition-duration: .01ms !important; }
 }
 

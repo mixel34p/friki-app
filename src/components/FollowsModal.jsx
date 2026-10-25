@@ -63,7 +63,7 @@ export default function FollowsModal({ isOpen, onClose, type, userId, themeColor
 
             const { data: profiles } = await supabase
                 .from('profiles')
-                .select('id, username, display_name, avatar_url, bio, featured_badge')
+                .select('id, username, display_name, avatar_url, bio, featured_badge, theme_color')
                 .in('id', ids)
 
             setUsers(profiles || [])
@@ -158,9 +158,9 @@ export default function FollowsModal({ isOpen, onClose, type, userId, themeColor
                                 >
                                     <div className="follows-user-info">
                                         {u.avatar_url ? (
-                                            <img src={u.avatar_url} alt="" className="follows-user-avatar" />
+                                            <img src={u.avatar_url} alt="" className="follows-user-avatar" style={{ borderColor: u.theme_color || 'var(--brand-primary)' }} />
                                         ) : (
-                                            <div className="follows-user-placeholder">
+                                            <div className="follows-user-placeholder" style={{ borderColor: u.theme_color || 'var(--brand-primary)' }}>
                                                 {u.display_name?.charAt(0).toUpperCase() || '?'}
                                             </div>
                                         )}
