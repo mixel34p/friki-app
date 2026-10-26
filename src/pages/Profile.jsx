@@ -479,7 +479,7 @@ export default function Profile() {
                     
                     
                     <div className="profile-header-columns">
-                        <div className="profile-identity">
+                        <div className={`profile-identity ${profile.location ? 'has-location' : 'no-location'}`}>
                             
                         <div className="profile-name-row" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                             <h1 className="profile-display-name" style={{ margin: 0 }}>{profile.display_name}</h1>
@@ -536,8 +536,6 @@ export default function Profile() {
                             </div>
                         )}
 
-                        {renderSongPlayer('profile-song-pill')}
-
                         {hasSocials && (
                             <div className="profile-socials">
                                 {Object.entries(profile.social_links).map(([platform, value]) => {
@@ -574,6 +572,8 @@ export default function Profile() {
                                 })}
                             </div>
                         )}
+
+                        {renderSongPlayer('profile-song-pill')}
 
                     </div>
                         
