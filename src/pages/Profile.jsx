@@ -459,46 +459,20 @@ export default function Profile() {
 
             {/* ─── Header card ─── */}
             <div className="profile-header-card">
-
-                {/* Avatar: posición absoluta, sobresale hacia el banner */}
-                <div className="profile-avatar-wrapper">
-                    {profile.avatar_url ? (
-                        <img
-                            src={profile.avatar_url}
-                            alt={profile.display_name}
-                            className="profile-avatar"
-                        />
-                    ) : (
-                        <div className="profile-avatar-placeholder">
-                            {profile.display_name?.charAt(0).toUpperCase() || '?'}
-                        </div>
-                    )}
-                </div>
-
                 <div className="profile-header-inner">
-
-                    {/* Fila 1: espacio para el avatar (izq) + botones (der) */}
-                    <div className="profile-actions-row">
-                        <div className="desktop-song-wrapper">
-                            {renderSongPlayer('desktop-song-pill')}
-                        </div>
-                        <div className="profile-actions">
-                            {isOwnProfile ? (
-                                <button onClick={() => setSearchParams({ edit: 'true' })} className="btn btn-secondary profile-edit-button">
-                                    <IconEdit /> Editar perfil
-                                </button>
-                            ) : (
-                                <button
-                                    className={`btn ${isFollowing ? 'btn-secondary' : 'btn-primary'}${isFollowing && isFollowedBy ? ' profile-friends-button' : ''}`}
-                                    onClick={handleFollow}
-                                >
-                                    {isFollowing
-                                        ? <><IconUserCheck /> {followLabel}</>
-                                        : <><IconUserPlus /> {followLabel}</>
-                                    }
-                                </button>
-                            )}
-                        </div>
+                    {/* El avatar comparte el ancho centrado del contenido del perfil. */}
+                    <div className="profile-avatar-wrapper">
+                        {profile.avatar_url ? (
+                            <img
+                                src={profile.avatar_url}
+                                alt={profile.display_name}
+                                className="profile-avatar"
+                            />
+                        ) : (
+                            <div className="profile-avatar-placeholder">
+                                {profile.display_name?.charAt(0).toUpperCase() || '?'}
+                            </div>
+                        )}
                     </div>
 
                     {/* Fila 2: Identidad — nombre, @user, bio, stats, plataformas, socials */}
@@ -525,6 +499,23 @@ export default function Profile() {
                             {profile.pronouns && (
                                 <span className="profile-pronouns">{profile.pronouns}</span>
                             )}
+                            <div className="profile-actions">
+                                {isOwnProfile ? (
+                                    <button onClick={() => setSearchParams({ edit: 'true' })} className="btn btn-secondary profile-edit-button">
+                                        <IconEdit /> Editar perfil
+                                    </button>
+                                ) : (
+                                    <button
+                                        className={`btn ${isFollowing ? 'btn-secondary' : 'btn-primary'}${isFollowing && isFollowedBy ? ' profile-friends-button' : ''}`}
+                                        onClick={handleFollow}
+                                    >
+                                        {isFollowing
+                                            ? <><IconUserCheck /> {followLabel}</>
+                                            : <><IconUserPlus /> {followLabel}</>
+                                        }
+                                    </button>
+                                )}
+                            </div>
                         </div>
 
                         <div className="profile-meta-row" style={{ display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--text-muted)' }}>
@@ -544,6 +535,8 @@ export default function Profile() {
                                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{profile.bio}</ReactMarkdown>
                             </div>
                         )}
+
+                        {renderSongPlayer('profile-song-pill')}
 
                         {hasSocials && (
                             <div className="profile-socials">
@@ -582,10 +575,6 @@ export default function Profile() {
                             </div>
                         )}
 
-                        
-                            <div className="mobile-song-wrapper">
-                            {renderSongPlayer('mobile-song-pill')}
-                        </div>
                     </div>
                         
                                                 <div className="profile-header-favorites">

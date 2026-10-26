@@ -181,7 +181,7 @@ export default function EditProfile({ onClose }) {
         display_name:    profile?.display_name    || '',
         pronouns:        profile?.pronouns        || '',
         location:        profile?.location        || '',
-        bio:             profile?.bio             || '',
+        bio:             (profile?.bio             || '').slice(0, 100),
         profile_song:    profile?.profile_song    || '',
         favorite_genres: profile?.favorite_genres || [],
         anime_tags:      profile?.anime_tags      || [],
@@ -336,7 +336,7 @@ export default function EditProfile({ onClose }) {
 
     /* ── Handlers ── */
     const handleChange = (field, value) =>
-        setFormData(prev => ({ ...prev, [field]: value }))
+        setFormData(prev => ({ ...prev, [field]: field === 'bio' ? value.slice(0, 100) : value }))
 
     const handleUsernameChange = async (value) => {
         const clean = value.toLowerCase().replace(/[^a-z0-9_]/g, '')
@@ -734,10 +734,10 @@ export default function EditProfile({ onClose }) {
                                                 value={formData.bio}
                                                 onChange={e => handleChange('bio', e.target.value)}
                                                 placeholder="Cuéntanos sobre ti..."
-                                                maxLength={500}
+                                                maxLength={100}
                                                 rows={6}
                                             />
-                                            <span className="ep-char-count">{formData.bio.length}/500</span>
+                                            <span className="ep-char-count">{formData.bio.length}/100</span>
                                         </>
                                     ) : (
                                         <div className="ep-bio-preview markdown-content">
