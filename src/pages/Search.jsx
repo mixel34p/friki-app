@@ -191,10 +191,15 @@ export default function Search() {
   const urlQuery = params.get('q') || ''
   const filter = FILTER_IDS.has(params.get('filter')) ? params.get('filter') : 'all'
   const [localQuery, setLocalQuery] = useState(urlQuery)
-  const query = isResults ? urlQuery : localQuery
+  const [resultsDraft, setResultsDraft] = useState(urlQuery)
+  const query = isResults ? resultsDraft : localQuery
+  const searchTerm = isResults ? urlQuery : localQuery
   const [debouncedQuery, setDebouncedQuery] = useState(urlQuery)
+  const [debouncedResultsDraft, setDebouncedResultsDraft] = useState(urlQuery)
   const [data, setData] = useState({ works: [], spaces: [], users: [], lists: [], errors: {} })
+  const [draftData, setDraftData] = useState({ works: [], spaces: [], users: [], lists: [], errors: {} })
   const [loading, setLoading] = useState(urlQuery.trim().length >= 2)
+  const [draftLoading, setDraftLoading] = useState(false)
   const [highlightData, setHighlightData] = useState({})
   const [isFocused, setIsFocused] = useState(false)
   const [activeIndex, setActiveIndex] = useState(-1)
@@ -202,9 +207,34 @@ export default function Search() {
   const rootRef = useRef(null)
   const listRef = useRef(null)
   const requestRef = useRef(0)
-  const previewOpen = isFocused && debouncedQuery.trim().length >= 2
+  const previewQuery = isResults ? debouncedResultsDraft : debouncedQuery
+  const draftPreviewActive = isResults && previewQuery.trim() !== urlQuery.trim()
+  const previewData = draftPreviewActive ? draftData : data
+  const previewLoading = draftPreviewActive ? draftLoading : loading
+  const previewOpen = isFocused && previewQuery.trim().length >= 2
 
-  useEffect(() => { const timer = window.setTimeout(() => setDebouncedQuery(query.trim()), 300); return () => window.clearTimeout(timer) }, [query])
+  useEffect(() => { const timer = window.setTimeout(() => setDebouncedQuery(searchTerm.trim()), 300); return () => window.clearTimeout(timer) }, [searchTerm])
+  useEffect(() => { const timer = window.setTimeout(() => setDebouncedResultsDraft(resultsDraft.trim()), 300); return () => window.clearTimeout(timer) }, [resultsDraft])
+
+  useEffect(() => { setResultsDraft(urlQuery) }, [urlQuery])
+
+  useEffect(() => {
+    const term = debouncedResultsDraft.trim()
+    if (!isResults || term.length < 2 || term === urlQuery.trim()) {
+      setDraftData({ works: [], spaces: [], users: [], lists: [], errors: {} })
+      setDraftLoading(false)
+      return undefined
+    }
+    let cancelled = false
+    const controller = new AbortController()
+    setDraftLoading(true)
+    searchPlatform(term, 8, controller.signal).then(result => {
+      if (!cancelled) setDraftData(result)
+    }).catch(error => {
+      if (!cancelled) setDraftData({ works: [], spaces: [], users: [], lists: [], errors: { all: error } })
+    }).finally(() => { if (!cancelled) setDraftLoading(false) })
+    return () => { cancelled = true; controller.abort() }
+  }, [debouncedResultsDraft, isResults, urlQuery])
 
   useEffect(() => {
     if (debouncedQuery.trim().length < 2) return undefined
@@ -231,7 +261,7 @@ export default function Search() {
     return () => document.removeEventListener('pointerdown', onPointer)
   }, [])
 
-  const flatResults = useMemo(() => [...data.works.slice(0, 8), ...data.spaces.slice(0, 8), ...data.lists.slice(0, 8), ...data.users.slice(0, 8)], [data])
+  const flatResults = useMemo(() => [...previewData.works.slice(0, 8), ...previewData.spaces.slice(0, 8), ...previewData.lists.slice(0, 8), ...previewData.users.slice(0, 8)], [previewData])
   const viewAll = useCallback(() => {
     const next = new URLSearchParams({ q: query.trim(), filter: 'all' })
     setIsFocused(false)
@@ -239,15 +269,15 @@ export default function Search() {
     navigate(`/search/results?${next.toString()}`)
   }, [navigate, query])
   const onInputChange = value => {
-    requestRef.current += 1
     setActiveIndex(-1)
-    if (value.trim().length < 2) setLoading(false)
-    else setLoading(true)
     if (isResults) {
-      const next = new URLSearchParams(params)
-      value.trim() ? next.set('q', value) : next.delete('q')
-      setParams(next, { replace: true })
-    } else setLocalQuery(value)
+      setResultsDraft(value)
+    } else {
+      requestRef.current += 1
+      if (value.trim().length < 2) setLoading(false)
+      else setLoading(true)
+      setLocalQuery(value)
+    }
   }
   const onInputKeyDown = event => {
     if (event.key === 'Escape') { setIsFocused(false); setActiveIndex(-1); inputRef.current?.blur(); return }
@@ -279,15 +309,15 @@ export default function Search() {
     : undefined
 
   return <div className={`search-page${isResults ? ' results-page' : ''}`} ref={rootRef}>
-    <SEO title={isResults ? `Buscar «${urlQuery}»` : 'Buscar'} description="Encuentra obras, espacios, personas y listas en GeekSphere." />
+    <SEO title="Busca tus aficiones" description="Encuentra obras, espacios, personas y listas en GeekSphere." />
     <section className={`search-universal${previewOpen ? ' has-preview' : ''}`} aria-label="Búsqueda global">
       <SearchInput value={query} onChange={onInputChange} onFocus={() => setIsFocused(true)} onKeyDown={onInputKeyDown} inputRef={inputRef} resultsId="search-preview" isOpen={previewOpen} activeDescendant={activeDescendant} />
-      {previewOpen && <Preview query={debouncedQuery} data={data} loading={loading} error={Object.keys(data.errors || {}).length > 0} activeIndex={activeIndex} onSelect={() => setIsFocused(false)} onViewAll={viewAll} listRef={listRef} />}
+      {previewOpen && <Preview query={previewQuery} data={previewData} loading={previewLoading} error={Object.keys(previewData.errors || {}).length > 0} activeIndex={activeIndex} onSelect={() => setIsFocused(false)} onViewAll={viewAll} listRef={listRef} />}
     </section>
 
     {isResults ? <section className="search-results-content" aria-live="polite">
       <nav className="search-filters" aria-label="Filtrar resultados" style={{ '--filter-index': FILTERS.findIndex(item => item.id === filter), '--filter-count': FILTERS.length }}>
-        {FILTERS.map(item => <button type="button" key={item.id} className={filter === item.id ? 'active' : ''} aria-pressed={filter === item.id} onClick={() => { const next = new URLSearchParams(params); next.set('filter', item.id); if (query.trim()) next.set('q', query.trim()); setParams(next) }}>{item.label}</button>)}
+        {FILTERS.map(item => <button type="button" key={item.id} className={filter === item.id ? 'active' : ''} aria-pressed={filter === item.id} onClick={() => { setResultsDraft(urlQuery); const next = new URLSearchParams(params); next.set('filter', item.id); if (urlQuery.trim()) next.set('q', urlQuery.trim()); setParams(next) }}>{item.label}</button>)}
       </nav>
       {urlQuery.trim().length < 2 ? <div className="search-full-empty"><span>⌕</span><h2>Empieza con dos letras o más</h2><p>Busca títulos, espacios y usuarios.</p></div>
         : loading && !data.works.length && !data.spaces.length && !data.users.length && !data.lists.length ? <SearchSkeleton />

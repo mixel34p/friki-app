@@ -50,7 +50,7 @@ export default function Landing() {
     return (
         <div className="landing-page">
             <SEO
-                title="GeekSphere — Tu vida en videojuegos y anime"
+                title="Tu vida en videojuegos y anime"
                 description="Registra lo que juegas y ves, escribe reseñas, crea tierlists y descubre gente con tus mismos gustos en la mejor red social friki."
                 keywords="geek, anime, videojuegos, tierlists, comunidad, letterboxd para juegos"
             />

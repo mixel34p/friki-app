@@ -5,6 +5,7 @@ import { getWorkReviews, getWorkRatings, getWorkReviewStats } from '../lib/libra
 import { formatRelativeDate } from '../lib/formatRelativeDate'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ReviewLikeButton from '../components/ReviewLikeButton'
+import SEO from '../components/SEO'
 import { BADGES_MAP } from '../lib/badges'
 import '../components/LibraryGrid.css'
 import './WorkReviews.css'
@@ -201,6 +202,7 @@ export default function WorkReviews({ mediaType }) {
 
     return (
         <div className="work-reviews-page">
+            <SEO title={`${title} (${mediaType === 'game' ? 'Videojuego' : 'Anime'})`} description={`${title}, ${mediaType === 'game' ? 'videojuego' : 'anime'} en GeekSphere.`} />
             <div className="wr-header">
                 {bannerUrl && <div className="wr-backdrop" style={{ backgroundImage: `url(${bannerUrl})` }}></div>}
                 <div className="wr-overlay"></div>

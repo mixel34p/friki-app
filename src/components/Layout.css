@@ -1519,3 +1519,14 @@
     .app-sidebar .sidebar-link.active svg { color: var(--brand-primary); }
     .app-sidebar .sidebar-link.current-page > .sidebar-label { font-weight: 800 !important; }
 }
+
+@media (min-width: 961px) {
+    .app-sidebar .sidebar-profile.active,
+    .app-sidebar .sidebar-profile.active:hover {
+        color: #e7e7e7;
+        background: color-mix(in srgb, var(--profile-theme-color, var(--brand-primary)) 8%, transparent);
+        border: 0;
+        box-shadow: none;
+        transform: none;
+    }
+}

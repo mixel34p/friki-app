@@ -2,7 +2,7 @@ import { Helmet } from 'react-helmet-async';
 
 const SEO = ({ title, description, keywords, ogTitle, ogDescription, ogImage, twitterCard }) => {
     const siteName = 'GeekSphere';
-    const fullTitle = title ? `${title} | ${siteName}` : siteName;
+    const fullTitle = title ? `${title} · ${siteName}` : siteName;
 
     return (
         <Helmet>

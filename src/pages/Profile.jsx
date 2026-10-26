@@ -16,6 +16,7 @@ import ListLikeButton from '../components/ListLikeButton'
 import LoadingSpinner from '../components/LoadingSpinner'
 import './Profile.css'
 import { SocialIcons } from '../components/SocialIcons'
+import SEO from '../components/SEO'
 
 /* ── SVG icons ── */
 const IconEdit = () => (
@@ -415,6 +416,7 @@ export default function Profile() {
             '--profile-accent-text': accentTextColor,
             '--profile-accent-visible': visibleAccent
         }}>
+            <SEO title={`${profile.display_name || profile.username} (@${profile.username})`} description={`Perfil de ${profile.display_name || profile.username} en GeekSphere.`} />
 
             {/* Mobile Topbar */}
             <div className={`profile-mobile-nav ${isScrolled ? 'scrolled' : ''}`}>

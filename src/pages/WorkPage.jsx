@@ -13,6 +13,7 @@ import { getSpacesByWork } from '../lib/spaceService'
 import LogModal from '../components/LogModal'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ReviewLikeButton from '../components/ReviewLikeButton'
+import SEO from '../components/SEO'
 import { BADGES_MAP } from '../lib/badges'
 import '../components/LibraryGrid.css'
 import './spaces/SpacesExplore.css'
@@ -229,6 +230,7 @@ export default function WorkPage({ mediaType }) {
 
     return (
         <div className="work-page-cinematic">
+            <SEO title={`${title} (${mediaType === 'game' ? 'Videojuego' : 'Anime'})`} description={`${title}, ${mediaType === 'game' ? 'videojuego' : 'anime'} en GeekSphere.`} />
             
             {/* 1. Backdrop */}
             <div className={`work-backdrop ${hasRealBanner ? 'has-banner' : ''}`}>

@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext'
 import { ToastProvider } from './components/Toast'
 import Layout from './components/Layout'
 import LoadingSpinner from './components/LoadingSpinner'
+import SEO from './components/SEO'
 import Landing from './pages/Landing'
 import Login from './pages/Login'
 import Register from './pages/Register'
@@ -33,6 +34,39 @@ import './index.css'
 
 import { useLocation } from 'react-router-dom'
 import Onboarding from './pages/Onboarding'
+
+function getPageTitle(pathname) {
+  const parts = pathname.split('/').filter(Boolean)
+  const [section, identifier, subpage] = parts
+  const exact = {
+    '/': 'GeekSphere', '/home': 'Inicio', '/activity': 'Actividad', '/spaces': 'Espacios',
+    '/search': 'Busca tus aficiones', '/search/results': 'Busca tus aficiones',
+    '/connections': 'Conexiones', '/templates': 'Plantillas', '/old-library': 'Biblioteca',
+    '/onboarding': 'Configura tu perfil', '/lists/new': 'Crear lista',
+  }
+  if (exact[pathname]) return exact[pathname]
+  if (section === 'profile') {
+    const names = { reviews: 'Reseñas', diary: 'Diario', tierlists: 'Tierlists', templates: 'Plantillas', wishlist: 'Lista de deseos' }
+    return subpage ? `${names[subpage] || 'Perfil'} de ${identifier || 'usuario'}` : `Perfil de ${identifier || 'usuario'}`
+  }
+  if (section === 'game' || section === 'anime') return identifier && parts[2] === 'reviews' ? `Reseñas de ${section === 'game' ? 'videojuegos' : 'anime'}` : section === 'game' ? 'Videojuego' : 'Anime'
+  if (section === 'spaces' && identifier) return 'Espacio'
+  if (section === 'lists' && identifier) return parts[2] === 'edit' ? 'Editar lista' : 'Lista'
+  if (section === 'templates' && identifier) return parts[2] === 'edit' ? 'Editar plantilla' : 'Plantilla'
+  if (section === 'tierlist' && identifier) return 'Tierlist'
+  if (section === 'compare') return 'Comparar perfiles'
+  if (section === 'discover') {
+    const labels = { anime: 'animes', games: 'juegos', users: 'usuarios', spaces: 'espacios', lists: 'listas' }
+    return identifier === 'users' && subpage === 'all' ? 'Todos los usuarios' : `Descubrir ${labels[identifier] || ''}`.trim()
+  }
+  if (section === 'chat') return 'Chat'
+  return section ? section.replace(/-/g, ' ').replace(/^./, letter => letter.toLocaleUpperCase()) : 'GeekSphere'
+}
+
+function RouteTitle() {
+  const location = useLocation()
+  return <SEO title={getPageTitle(location.pathname)} />
+}
 
 // Lists System imports
 import TemplateGallery from './pages/lists/TemplateGallery'
@@ -124,6 +158,7 @@ function App() {
     <AuthProvider>
       <ToastProvider>
         <BrowserRouter>
+        <RouteTitle />
         <Routes>
           {/* Public routes */}
           <Route path="/" element={<PublicOnlyRoute><Landing /></PublicOnlyRoute>} />
