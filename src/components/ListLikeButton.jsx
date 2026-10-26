@@ -63,7 +63,7 @@ export default function ListLikeButton({ listId, compact = false }) {
             title={user ? (liked ? 'Quitar like' : 'Dar like') : 'Inicia sesión para dar like'}
             aria-label={user ? (liked ? 'Quitar like' : 'Dar like') : 'Inicia sesión para dar like'}
         >
-            <svg viewBox="0 0 24 24" width="16" height="16" fill={liked ? 'var(--brand-primary)' : 'none'} stroke={liked ? 'var(--brand-primary)' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill={liked ? 'var(--profile-accent-visible, var(--brand-primary))' : 'none'} stroke={liked ? 'var(--profile-accent-visible, var(--brand-primary))' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
             </svg>
             {(count > 0 || !compact) && <span>{count > 0 ? count : 'Like'}</span>}

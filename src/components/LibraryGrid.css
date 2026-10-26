@@ -515,7 +515,7 @@
 }
 
 .review-like-btn.liked {
-    color: var(--brand-primary);
+    color: var(--profile-accent-visible, var(--brand-primary));
 }
 
 .review-like-btn:active:not(:disabled) {

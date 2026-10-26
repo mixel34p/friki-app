@@ -72,8 +72,9 @@
 .activity-list-poster.count-three img:nth-child(3) { grid-column: 1 / -1; }
 .activity-content-preview { display: block; width: 64px; height: 84px; object-fit: cover; border-radius: 7px; background: rgba(255,255,255,.06); }
 .activity-content-placeholder { display: grid; place-items: center; width: 64px; height: 84px; color: #a8a5af; background: rgba(255,255,255,.06); border-radius: 7px; font-size: 1.2rem; }
-.activity-follow-action { flex: 0 0 auto; margin-left: 0; white-space: nowrap; }
+.activity-follow-action { flex: 0 0 auto; margin-left: 0; padding: 6px 14px; font-size: .85rem; white-space: nowrap; }
 .activity-follow-action:disabled { cursor: wait; opacity: .65; }
+.activity-friends-button { border-radius: 999px !important; }
 .activity-loading { display: grid; place-items: center; min-height: 180px; }
 .activity-error { margin: 12px 0; color: #fca5a5; font-size: .84rem; }
 .activity-empty { padding: 36px 2px; color: #a09da7; }

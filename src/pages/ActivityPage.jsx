@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import LoadingSpinner from '../components/LoadingSpinner'
-import '../components/FollowsModal.css'
 import './ActivityPage.css'
 
 function notificationTarget(item) {
@@ -181,6 +180,7 @@ export default function ActivityPage() {
   const [hasMore, setHasMore] = useState(false)
   const [error, setError] = useState('')
   const [followingIds, setFollowingIds] = useState(() => new Set())
+  const [followedByIds, setFollowedByIds] = useState(() => new Set())
   const [followingBusy, setFollowingBusy] = useState(() => new Set())
   const offsetRef = useRef(0)
 
@@ -196,13 +196,24 @@ export default function ActivityPage() {
       if (user?.id) {
         const followActorIds = rows.filter(row => row.type === 'follow').map(row => row.actor_id).filter(Boolean)
         if (followActorIds.length) {
-          const { data: followedRows } = await supabase.from('follows').select('following_id')
-            .eq('follower_id', user.id).in('following_id', followActorIds)
-          const currentlyFollowing = new Set((followedRows || []).map(row => row.following_id))
+          const [followedRowsResult, followingMeRowsResult] = await Promise.all([
+            supabase.from('follows').select('following_id')
+              .eq('follower_id', user.id).in('following_id', followActorIds),
+            supabase.from('follows').select('follower_id')
+              .eq('following_id', user.id).in('follower_id', followActorIds)
+          ])
+          const currentlyFollowing = new Set((followedRowsResult.data || []).map(row => row.following_id))
+          const currentlyFollowedBy = new Set((followingMeRowsResult.data || []).map(row => row.follower_id))
           setFollowingIds(current => {
             const next = new Set(current)
             followActorIds.forEach(id => next.delete(id))
             currentlyFollowing.forEach(id => next.add(id))
+            return next
+          })
+          setFollowedByIds(current => {
+            const next = new Set(current)
+            followActorIds.forEach(id => next.delete(id))
+            currentlyFollowedBy.forEach(id => next.add(id))
             return next
           })
         }
@@ -403,6 +414,7 @@ export default function ActivityPage() {
                   const primaryActor = actors[0] || item.actor
                   const isFollow = item.type === 'follow'
                   const isFollowing = primaryActor ? followingIds.has(primaryActor.id) : false
+                  const isFollowedBy = primaryActor ? followedByIds.has(primaryActor.id) : false
                   const preview = item.resource?.image_url
                   const previewImages = item.resource?.image_urls || []
                   return (
@@ -429,11 +441,11 @@ export default function ActivityPage() {
                       </Link>
                       <div className="activity-feed-side">
                         {isFollow ? <button
-                          className={isFollowing ? 'follows-btn-unfollow activity-follow-action' : 'follows-btn-follow activity-follow-action'}
+                          className={`btn ${isFollowing ? 'btn-secondary' : 'btn-primary'} activity-follow-action${isFollowing && isFollowedBy ? ' activity-friends-button' : ''}`}
                           type="button"
                           onClick={() => toggleFollow(primaryActor)}
                           disabled={!primaryActor || followingBusy.has(primaryActor.id)}
-                        >{followingBusy.has(primaryActor?.id) ? '…' : isFollowing ? 'Dejar de seguir' : 'Seguir'}</button> : previewImages.length ? <span className={`activity-list-poster${previewImages.length === 2 ? ' count-two' : ''}${previewImages.length === 3 ? ' count-three' : ''}`} aria-hidden="true">
+                        >{followingBusy.has(primaryActor?.id) ? '…' : isFollowing ? isFollowedBy ? 'Amigos' : 'Siguiendo' : isFollowedBy ? 'Seguir también' : 'Seguir'}</button> : previewImages.length ? <span className={`activity-list-poster${previewImages.length === 2 ? ' count-two' : ''}${previewImages.length === 3 ? ' count-three' : ''}`} aria-hidden="true">
                           {previewImages.map((image, index) => <img key={`${image}-${index}`} src={image} alt="" loading="lazy" />)}
                         </span> : preview ? <img className="activity-content-preview" src={preview} alt={item.resource?.title || 'Portada'} loading="lazy" onError={event => {
                           const fallback = item.resource?.fallback_image_url

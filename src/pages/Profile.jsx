@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom'
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
+import { getAccentTextColor, getVisibleAccentColor } from '../lib/colorContrast'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useToast } from '../components/Toast'
@@ -97,8 +98,8 @@ export default function Profile() {
     const [searchParams, setSearchParams] = useSearchParams()
 
     const [profile, setProfile] = useState(null)
-    const [stats, setStats] = useState({ following: 0, followers: 0 })
     const [isFollowing, setIsFollowing] = useState(false)
+    const [isFollowedBy, setIsFollowedBy] = useState(false)
     const [loading, setLoading] = useState(true)
     const [followsModal, setFollowsModal] = useState({ isOpen: false, type: 'followers' })
     const [selectedBadge, setSelectedBadge] = useState(null)
@@ -152,7 +153,7 @@ export default function Profile() {
         }
         setIsPlaying(false)
         loadProfile()
-    }, [username, myProfile])
+        }, [username, myProfile])
 
     const getCollageImages = (content) => {
         let images = [];
@@ -209,6 +210,8 @@ export default function Profile() {
 
     const loadProfile = async () => {
         try {
+            setIsFollowing(false)
+            setIsFollowedBy(false)
             let profileData, userId
 
             if (isOwnProfile) {
@@ -236,22 +239,22 @@ export default function Profile() {
 
             const { getUserLists, getUserTemplates } = await import('../lib/listService.js')
 
-            const [{ count: followingCount }, { count: followersCount }, lists, templates] = await Promise.all([
-                supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', userId),
-                supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', userId),
+            const [lists, templates] = await Promise.all([
                 getUserLists(userId),
                 getUserTemplates(userId)
             ])
-            setStats({ following: followingCount || 0, followers: followersCount || 0 })
             setUserLists(lists || [])
             setUserTemplates(templates || [])
 
             if (!isOwnProfile && user) {
-                const { data: followData } = await supabase
-                    .from('follows').select('id')
-                    .eq('follower_id', user.id).eq('following_id', userId)
-                    .maybeSingle()
-                setIsFollowing(!!followData)
+                const [followingResult, followedByResult] = await Promise.all([
+                    supabase.from('follows').select('id')
+                        .eq('follower_id', user.id).eq('following_id', userId).maybeSingle(),
+                    supabase.from('follows').select('id')
+                        .eq('follower_id', userId).eq('following_id', user.id).maybeSingle()
+                ])
+                setIsFollowing(!!followingResult.data)
+                setIsFollowedBy(!!followedByResult.data)
             }
         } catch (err) {
             console.error('Error loading profile:', err)
@@ -267,14 +270,16 @@ export default function Profile() {
                 await supabase.from('follows').delete()
                     .eq('follower_id', user.id).eq('following_id', profile.id)
                 setIsFollowing(false)
-                setStats(prev => ({ ...prev, followers: prev.followers - 1 }))
             } else {
                 await supabase.from('follows').insert({ follower_id: user.id, following_id: profile.id })
                 setIsFollowing(true)
-                setStats(prev => ({ ...prev, followers: prev.followers + 1 }))
             }
         } catch (err) { console.error('Follow error:', err) }
     }
+
+    const followLabel = isFollowing
+        ? isFollowedBy ? 'Amigos' : 'Siguiendo'
+        : isFollowedBy ? 'Seguir también' : 'Seguir'
 
     useEffect(() => {
         return () => {
@@ -396,12 +401,20 @@ export default function Profile() {
     )
 
     const hasSocials = profile.social_links && Object.values(profile.social_links).some(Boolean)
+    const profileAccent = profile.theme_color || '#14b8a6'
+    const accentTextColor = getAccentTextColor(profileAccent)
+    const visibleAccent = getVisibleAccentColor(profileAccent)
 
     return (
         <div className="profile-page" style={profile.theme_color ? { 
             '--brand-primary': profile.theme_color,
-            '--brand-dark': profile.theme_color 
-        } : {}}>
+            '--brand-dark': profile.theme_color,
+            '--profile-accent-text': accentTextColor,
+            '--profile-accent-visible': visibleAccent
+        } : {
+            '--profile-accent-text': accentTextColor,
+            '--profile-accent-visible': visibleAccent
+        }}>
 
             {/* Mobile Topbar */}
             <div className={`profile-mobile-nav ${isScrolled ? 'scrolled' : ''}`}>
@@ -424,11 +437,11 @@ export default function Profile() {
                     </div>
                     {!isOwnProfile && (
                         <button
-                            className="btn btn-primary"
+                            className={`btn btn-primary${isFollowing && isFollowedBy ? ' profile-friends-button' : ''}`}
                             style={{ padding: '4px 12px', fontSize: '0.8rem', minHeight: '28px', flexShrink: 0 }}
                             onClick={handleFollow}
                         >
-                            {isFollowing ? 'Siguiendo' : 'Seguir'}
+                            {followLabel}
                         </button>
                     )}
                 </div>
@@ -471,17 +484,17 @@ export default function Profile() {
                         </div>
                         <div className="profile-actions">
                             {isOwnProfile ? (
-                                <button onClick={() => setSearchParams({ edit: 'true' })} className="btn btn-secondary">
+                                <button onClick={() => setSearchParams({ edit: 'true' })} className="btn btn-secondary profile-edit-button">
                                     <IconEdit /> Editar perfil
                                 </button>
                             ) : (
                                 <button
-                                    className={`btn ${isFollowing ? 'btn-secondary' : 'btn-primary'}`}
+                                    className={`btn ${isFollowing ? 'btn-secondary' : 'btn-primary'}${isFollowing && isFollowedBy ? ' profile-friends-button' : ''}`}
                                     onClick={handleFollow}
                                 >
                                     {isFollowing
-                                        ? <><IconUserCheck /> Siguiendo</>
-                                        : <><IconUserPlus /> Seguir</>
+                                        ? <><IconUserCheck /> {followLabel}</>
+                                        : <><IconUserPlus /> {followLabel}</>
                                     }
                                 </button>
                             )}
@@ -531,27 +544,6 @@ export default function Profile() {
                                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{profile.bio}</ReactMarkdown>
                             </div>
                         )}
-
-                        <div className="profile-stats-inline">
-                            <div 
-                                className="profile-stat-item clickable"
-                                onClick={() => setFollowsModal({ isOpen: true, type: 'followers' })}
-                                style={{ cursor: 'pointer' }}
-                            >
-                                <span className="stat-num">{stats.followers}</span>
-                                <span className="stat-lbl">Seguidores</span>
-                            </div>
-                            <div 
-                                className="profile-stat-item clickable" 
-                                onClick={() => setFollowsModal({ isOpen: true, type: 'following' })}
-                                style={{ cursor: 'pointer' }}
-                            >
-                                <span className="stat-num">{stats.following}</span>
-                                <span className="stat-lbl">Siguiendo</span>
-                            </div>
-                        </div>
-
-
 
                         {hasSocials && (
                             <div className="profile-socials">
@@ -612,20 +604,24 @@ export default function Profile() {
                                     </h3>
 
                                     {(profile.favorite_animes?.length > 0 && profile.favorite_games?.length > 0) && (
-                                        <div className="fav-tab-switch">
+                                        <div className={`fav-tab-switch ${activeFavTab === 'games' ? 'games-active' : ''}`}>
                                             <button 
-                                                className={`switch-option ${activeFavTab === 'anime' ? 'active' : ''}`}
+                                                className={`tab-btn ${activeFavTab === 'anime' ? 'active' : ''}`}
+                                                type="button"
                                                 onClick={() => setActiveFavTab('anime')}
                                                 title="Animes"
+                                                aria-pressed={activeFavTab === 'anime'}
                                             >
-                                                <IconTV size={16} />
+                                                Anime
                                             </button>
                                             <button 
-                                                className={`switch-option ${activeFavTab === 'games' ? 'active' : ''}`}
+                                                className={`tab-btn ${activeFavTab === 'games' ? 'active' : ''}`}
+                                                type="button"
                                                 onClick={() => setActiveFavTab('games')}
                                                 title="Videojuegos"
+                                                aria-pressed={activeFavTab === 'games'}
                                             >
-                                                <IconGamepad size={16} />
+                                                Juegos
                                             </button>
                                         </div>
                                     )}

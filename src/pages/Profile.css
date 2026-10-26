@@ -145,6 +145,15 @@
     margin-left: auto;
 }
 
+.profile-friends-button {
+    border-radius: 999px !important;
+    padding-inline: 1.4rem;
+}
+
+.profile-edit-button {
+    border-radius: 999px !important;
+}
+
 /* ════════════════════════════════════════════════════════════
    STATS — Inline with identity block (Twitter style)
    ════════════════════════════ */
@@ -1034,34 +1043,56 @@
 
 
 .fav-tab-switch {
-    display: flex;
+    display: inline-flex;
+    position: relative;
+    box-sizing: border-box;
+    width: 124px;
     background: var(--bg-tertiary);
     border-radius: var(--radius-full);
-    padding: 4px;
-    gap: 2px;
+    padding: 3px;
     border: 1px solid var(--border-subtle);
+    isolation: isolate;
 }
-.switch-option {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 34px;
-    height: 34px;
+.fav-tab-switch::before {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    top: 2px;
+    bottom: 2px;
+    left: 2px;
+    width: calc((100% - 4px) / 2);
     border-radius: var(--radius-full);
-    cursor: pointer;
-    color: var(--text-secondary);
-    transition: all 0.2s ease;
+    background: var(--brand-primary);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--brand-primary) 30%, transparent);
+    transition: transform 360ms cubic-bezier(.2, .8, .2, 1);
+}
+.fav-tab-switch.games-active::before {
+    transform: translateX(100%);
+}
+.fav-tab-switch .tab-btn {
+    position: relative;
+    z-index: 0;
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 4px 5px;
     border: none;
     background: transparent;
-    padding: 0;
+    color: var(--text-secondary);
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    font-weight: 600;
+    font-size: var(--text-xs);
+    transition: color 220ms ease;
 }
-.switch-option.active {
-    background: var(--brand-primary);
-    color: #fff;
-    box-shadow: 0 2px 8px rgba(20, 184, 166, 0.3);
+.fav-tab-switch .tab-btn.active {
+    color: var(--profile-accent-text, #000);
 }
-.switch-option:not(.active):hover {
+.fav-tab-switch .tab-btn:not(.active):hover {
     color: var(--text-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .fav-tab-switch::before { transition: none; }
 }
 
 .vl-tag {

@@ -143,20 +143,20 @@ export default function LibraryGrid({ profile, userId, username, wishlist = [] }
         const stars = [];
         for (let i = 1; i <= 5; i++) {
             let fill = "transparent";
-            if (rating >= i) fill = "var(--brand-primary)";
+            if (rating >= i) fill = "var(--profile-accent-visible, var(--brand-primary))";
             else if (rating === i - 0.5) fill = "url(#halfStarSmall)";
             stars.push(
                 <svg key={i} viewBox="0 0 24 24" width="14" height="14">
                     <defs>
                         <linearGradient id="halfStarSmall">
-                            <stop offset="50%" stopColor="var(--brand-primary)" />
+                            <stop offset="50%" stopColor="var(--profile-accent-visible, var(--brand-primary))" />
                             <stop offset="50%" stopColor="transparent" stopOpacity="1" />
                         </linearGradient>
                     </defs>
                     <path 
                         d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
                         fill={fill}
-                        stroke="var(--brand-primary)"
+                        stroke="var(--profile-accent-visible, var(--brand-primary))"
                         strokeWidth="1.5"
                         strokeLinejoin="round"
                     />
@@ -183,7 +183,7 @@ export default function LibraryGrid({ profile, userId, username, wishlist = [] }
                         {recentReviews.map(log => (
                             <div key={log.id} className="review-card" style={{ position: 'relative' }}>
                                 {log.isPinned && (
-                                    <div style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 10, color: 'var(--brand-primary)' }} title="Reseña destacada">
+                                    <div style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 10, color: 'var(--profile-accent-visible, var(--brand-primary))' }} title="Reseña destacada">
                                         <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 17v5"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.68V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3v4.68a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/></svg>
                                     </div>
                                 )}

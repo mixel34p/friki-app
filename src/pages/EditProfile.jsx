@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
+import { getAccentTextColor } from '../lib/colorContrast'
 import { searchGames } from '../lib/gameService'
 import { getBlockedUsers, unblockUser } from '../lib/socialDiscoveryService'
 import { BADGES_MAP } from '../lib/badges'
@@ -529,7 +530,8 @@ export default function EditProfile({ onClose }) {
         <div className="ep-portal-root" style={{
             '--brand-primary': formData.theme_color || '#14b8a6',
             '--brand-dark': formData.theme_color || '#14b8a6',
-            '--profile-theme-color': formData.theme_color || '#14b8a6'
+            '--profile-theme-color': formData.theme_color || '#14b8a6',
+            '--profile-accent-text': getAccentTextColor(formData.theme_color || '#14b8a6')
         }}>
             <div className="ep-overlay" onClick={e => { if (e.target === e.currentTarget) handleClose() }}>
                 <div className="ep-modal" onClick={e => e.stopPropagation()}>
