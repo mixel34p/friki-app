@@ -594,8 +594,23 @@
 }
 
 @media (min-width: 769px) {
-    .profile-identity.no-location .profile-bio { margin-top: 52px; }
+    .profile-banner { height: 210px; }
+    .profile-header-card { padding-top: 18px; }
+    .profile-header-inner { padding-bottom: 12px; }
+    .profile-avatar-wrapper { top: -58px; }
+    .profile-avatar,
+    .profile-avatar-placeholder { width: 140px; height: 140px; }
+    .profile-identity { gap: 6px; }
+    .profile-bio { margin-top: 12px; }
+    .profile-identity.no-location .profile-bio { margin-top: 28px; }
+    .profile-song-pill { margin-top: 8px; }
+    .profile-socials { gap: 7px; margin-top: 12px; }
+    .social-icon-btn { width: 32px; height: 32px; }
+    .profile-header-favorites { margin-top: 14px; padding-top: 10px; }
+    .profile-favorites-grid { gap: 10px; }
+    .profile-favorite-poster { width: 96px; }
 }
+
 /* Mobile Profile Header */
 .profile-mobile-nav {
     display: none;
