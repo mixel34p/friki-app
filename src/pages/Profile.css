@@ -1340,3 +1340,103 @@
     .profile-display-name { font-size: var(--text-xl); }
 }
 
+
+/* PC: favoritos en columna bajo el botón de perfil. */
+@media (min-width: 769px) {
+    .profile-header-columns {
+        position: relative;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 240px;
+        align-items: start;
+        gap: 28px;
+    }
+    .profile-name-row .profile-actions {
+        position: absolute;
+        top: -56px;
+        right: 0;
+        margin-left: 0;
+        z-index: 5;
+    }
+    .profile-name-row .profile-actions .btn {
+        min-height: 38px;
+        padding: 0.5rem 1rem;
+        font-size: 0.82rem;
+    }
+    .profile-header-columns.without-favorites {
+        grid-template-columns: minmax(0, 1fr);
+    }
+    .profile-header-columns.without-favorites .profile-header-favorites {
+        display: none;
+    }
+    .profile-header-columns.without-favorites .profile-name-row .profile-actions {
+        position: static;
+        margin-left: auto;
+        z-index: auto;
+        align-self: center;
+    }
+    /* Sin ubicación falta una línea del bloque; baja la bio para despejar la sombra del avatar. */
+    .profile-identity.no-location .profile-bio {
+        margin-top: 64px;
+    }
+    .profile-header-favorites {
+        width: 100%;
+        margin-top: 0;
+        padding-top: 0;
+        border-top: 0;
+    }
+    .profile-favorites-header {
+        justify-content: flex-start !important;
+        align-items: center;
+        flex-wrap: nowrap;
+        gap: 6px;
+    }
+    .profile-favorites-title {
+        order: 1;
+        flex: 1 1 auto;
+        min-width: 0;
+        font-size: 0.62rem !important;
+        font-weight: 650;
+        letter-spacing: 0;
+        line-height: 1.15;
+        text-transform: none;
+    }
+    .profile-favorites-title svg {
+        width: 13px;
+        height: 13px;
+    }
+    .profile-header-favorites .fav-tab-switch {
+        order: 2;
+        flex: 0 0 124px;
+        width: 124px;
+    }
+    .profile-favorites-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        width: 100%;
+    }
+    .profile-favorite-poster {
+        width: 100%;
+        aspect-ratio: 1 / 1;
+    }
+    .profile-favorites-grid--count-1 .profile-favorite-poster,
+    .profile-favorites-grid--count-2 .profile-favorite-poster,
+    .profile-favorites-grid--count-3 .profile-favorite-poster {
+        aspect-ratio: 2 / 3;
+    }
+    .profile-favorites-grid--count-1 .profile-favorite-poster {
+        grid-column: 1 / -1;
+        width: 50%;
+        justify-self: center;
+    }
+    .profile-favorites-grid--count-3 .profile-favorite-poster:nth-child(-n+2) {
+        aspect-ratio: 4 / 5;
+    }
+    .profile-favorites-grid--count-3 .profile-favorite-poster:nth-child(3) {
+        grid-column: 1 / -1;
+        aspect-ratio: 2.7 / 1;
+    }
+    .profile-favorites-grid--count-3 .profile-favorite-poster:nth-child(3) img {
+        object-position: center top;
+    }
+}

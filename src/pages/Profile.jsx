@@ -478,7 +478,7 @@ export default function Profile() {
                     {/* Fila 2: Identidad — nombre, @user, bio, stats, plataformas, socials */}
                     
                     
-                    <div className="profile-header-columns">
+                    <div className={`profile-header-columns ${profile?.favorite_animes?.length || profile?.favorite_games?.length ? 'has-favorites' : 'without-favorites'}`}>
                         <div className={`profile-identity ${profile.location ? 'has-location' : 'no-location'}`}>
                             
                         <div className="profile-name-row" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
@@ -585,11 +585,12 @@ export default function Profile() {
                                 {(profile?.favorite_animes?.length > 0 || profile?.favorite_games?.length > 0) && (
                                     <div className="profile-favorites-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: '12px' }}>
                                     <h3 className="profile-favorites-title" style={{ margin: 0, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '8px', fontFamily: 'var(--font-display)' }}>
-                                        {activeFavTab === 'anime' ? (
-                                            <><IconTV size={18} /> ANIMES FAVORITOS</>
-                                        ) : (
-                                            <><IconGamepad size={18} /> VIDEOJUEGOS FAVORITOS</>
-                                        )}
+                                        <>
+                                            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
+                                                <path d="m12 2.8 2.86 5.8 6.4.93-4.63 4.51 1.09 6.37L12 17.4l-5.72 3.01 1.09-6.37-4.63-4.51 6.4-.93L12 2.8z" />
+                                            </svg>
+                                            FAVORITOS
+                                        </>
                                     </h3>
 
                                     {(profile.favorite_animes?.length > 0 && profile.favorite_games?.length > 0) && (
@@ -620,7 +621,7 @@ export default function Profile() {
                                 
                                 {activeFavTab === 'anime' && profile.favorite_animes && profile.favorite_animes.length > 0 && (
                                     <div className="profile-favorites-block">
-                                        <div className="profile-favorites-grid">
+                                        <div className={`profile-favorites-grid profile-favorites-grid--count-${profile.favorite_animes.length}`}>
                                             {profile.favorite_animes.map((a, idx) => (
                                                 <div key={idx} className="profile-favorite-poster">
                                                     {a.cover_url ? <img src={a.cover_url} alt={a.title} /> : <div className="no-cover">{a.title}</div>}
@@ -635,7 +636,7 @@ export default function Profile() {
 
                                 {activeFavTab === 'games' && profile.favorite_games && profile.favorite_games.length > 0 && (
                                     <div className="profile-favorites-block">
-                                        <div className="profile-favorites-grid">
+                                        <div className={`profile-favorites-grid profile-favorites-grid--count-${profile.favorite_games.length}`}>
                                             {profile.favorite_games.map((g, idx) => (
                                                 <div key={idx} className="profile-favorite-poster">
                                                     {g.cover_url ? <img src={g.cover_url} alt={g.name} /> : <div className="no-cover">{g.name}</div>}
