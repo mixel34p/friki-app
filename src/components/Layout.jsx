@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { SiKofi } from 'react-icons/si'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
+import { getVisibleAccentColor } from '../lib/colorContrast'
 import GlobalSearchModal from './GlobalSearchModal'
 import { ListsEntryModal } from '../pages/lists/ListsEntry'
 import './Layout.css'
@@ -23,6 +26,50 @@ const Icon = ({ name }) => {
   return <svg {...common}>{paths[name]}</svg>
 }
 
+function MoreMenu({ profile, image, username, accentColor, onSignOut }) {
+  const [accountsOpen, setAccountsOpen] = useState(false)
+  const displayName = profile?.display_name || username || 'Mi cuenta'
+  if (accountsOpen) return <>
+    <div className="more-submenu-heading">
+      <button className="more-submenu-back" type="button" aria-label="Volver al menú" onClick={() => setAccountsOpen(false)}>
+        <Icon name="arrow" />
+      </button>
+      <strong>Cuentas</strong>
+    </div>
+    <div className="more-submenu-divider" />
+    <button className="more-current-account" type="button" aria-current="true" aria-label={`${displayName}, cuenta actual`}>
+      {image ? <img src={image} alt="" /> : <span className="more-account-avatar-placeholder">{displayName[0]?.toUpperCase() || 'U'}</span>}
+      <span className="more-account-copy"><strong>{displayName}</strong><small>@{username || 'usuario'}</small></span>
+      <svg className="more-account-check" style={{ color: accentColor }} viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg>
+    </button>
+    <nav className="more-menu-links more-account-actions" aria-label="Acciones de cuenta">
+      <button className="more-menu-link" type="button" aria-disabled="true">Añadir cuenta</button>
+      <button className="more-menu-link more-account-signout" type="button" onClick={onSignOut}>Cerrar sesión @{username || 'usuario'}</button>
+    </nav>
+  </>
+  return <>
+    <button className="more-account" type="button" aria-haspopup="true" aria-expanded="false" onClick={() => setAccountsOpen(true)}>
+      {image ? <img src={image} alt="" /> : <span className="more-account-avatar-placeholder">{displayName[0]?.toUpperCase() || 'U'}</span>}
+      <span className="more-account-copy"><strong>{displayName}</strong><small>@{username || 'usuario'}</small></span>
+      <svg className="more-account-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m8 10 4-4 4 4M8 14l4 4 4-4"/></svg>
+    </button>
+    <nav className="more-menu-links" aria-label="Más opciones">
+      <button className="more-menu-link" type="button" aria-disabled="true">Ajustes</button>
+      <button className="more-menu-link" type="button" aria-disabled="true">Guardados</button>
+      <button className="more-menu-link" type="button" aria-disabled="true">Invitar</button>
+      <button className="more-menu-link" type="button" aria-disabled="true">Términos</button>
+      <button className="more-menu-link" type="button" aria-disabled="true">Normas</button>
+      <a className="more-menu-link more-menu-support" href="https://ko-fi.com/mixel34" target="_blank" rel="noopener noreferrer" aria-label="Apoyar en Ko-fi (se abre en una pestaña nueva)">
+        <SiKofi className="more-menu-kofi-icon" aria-hidden="true" />
+        <span>Apoyar</span>
+        <svg className="more-menu-external-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6"/></svg>
+      </a>
+    </nav>
+    <div className="more-menu-divider" />
+    <button className="more-menu-signout" type="button" onClick={onSignOut}>Cerrar sesión <Icon name="logout"/></button>
+  </>
+}
+
 export default function Layout() {
   const { user, profile, signOut } = useAuth()
   const location = useLocation()
@@ -34,8 +81,12 @@ export default function Layout() {
   const [shareClosing, setShareClosing] = useState(false)
   const [listsOpen, setListsOpen] = useState(false)
   const menuRef = useRef(null)
+  const moreButtonRef = useRef(null)
+  const moreMenuContentRef = useRef(null)
   const mobileNavRef = useRef(null)
   const mobileTopbarRef = useRef(null)
+  const [moreMenuPosition, setMoreMenuPosition] = useState({ left: 256, bottom: 14 })
+  const isDesktop = typeof window !== 'undefined' && window.innerWidth > 960
 
   const openShareMenu = () => {
     setShareClosing(false)
@@ -54,6 +105,16 @@ export default function Layout() {
   const username = profile?.username
   const profilePath = username ? `/profile/${username}` : '/profile'
   const image = profile?.avatar_url || profile?.profile_picture
+  const handleSignOut = async () => { setMoreOpen(false); await signOut(); navigate('/login') }
+  const moreMenu = <MoreMenu profile={profile} image={image} username={username} accentColor={getVisibleAccentColor(profile?.theme_color || 'var(--brand-primary)')} onSignOut={handleSignOut} />
+  const toggleMoreMenu = () => {
+    if (moreOpen) { setMoreOpen(false); return }
+    if (isDesktop && moreButtonRef.current) {
+      const rect = moreButtonRef.current.getBoundingClientRect()
+      setMoreMenuPosition({ left: rect.left, bottom: window.innerHeight - rect.top + 10 })
+    }
+    setMoreOpen(true)
+  }
 
   const loadUnread = useCallback(async () => {
     if (!user?.id) return
@@ -88,7 +149,8 @@ export default function Layout() {
     const handlePointer = event => {
       const inMobileNav = mobileNavRef.current?.contains(event.target)
       const inMobileTopbar = mobileTopbarRef.current?.contains(event.target)
-      if (!inMobileNav && !inMobileTopbar && menuRef.current && !menuRef.current.contains(event.target)) setMoreOpen(false)
+      const inMoreMenu = menuRef.current?.contains(event.target) || moreMenuContentRef.current?.contains(event.target)
+      if (!inMobileNav && !inMobileTopbar && !inMoreMenu) setMoreOpen(false)
     }
     const handleEscape = event => { if (event.key === 'Escape') { setMoreOpen(false); closeShareMenu() } }
     document.addEventListener('pointerdown', handlePointer)
@@ -102,7 +164,7 @@ export default function Layout() {
   const mobileNavIndex = shareOpen ? 2 : active('/home') ? 0 : active('/search') ? 1 : active('/spaces') ? 3 : -1
 
   return (
-    <div className="layout" style={{ '--profile-theme-color': profile?.theme_color || 'var(--brand-primary)' }}>
+    <div className="layout" style={{ '--profile-theme-color': profile?.theme_color || 'var(--brand-primary)', '--profile-accent-visible': getVisibleAccentColor(profile?.theme_color || 'var(--brand-primary)') }}>
       <aside className="app-sidebar" aria-label="Navegación principal">
         <Link className="sidebar-brand" to="/home" aria-label="GeekSphere, inicio">
           <span className="sidebar-brand-mark"><img src="/icons/logo.png" alt="" onError={event => { event.currentTarget.style.display = 'none' }} /></span>
@@ -126,12 +188,8 @@ export default function Layout() {
         </Link>
         <div className="sidebar-bottom-space" />
         <div className="sidebar-popover-anchor more-anchor" ref={menuRef}>
-          <button className={`sidebar-link more-link ${moreOpen ? 'active' : ''}`} type="button" aria-label="Más" aria-expanded={moreOpen} onClick={() => setMoreOpen(v => !v)}><Icon name="more"/><span>Más</span></button>
-          {moreOpen && <section className="sidebar-popover more-popover" aria-label="Más opciones">
-            <Link className="more-option" to={profilePath} onClick={() => setMoreOpen(false)}>Mi perfil <Icon name="arrow"/></Link>
-            <Link className="more-option" to="/profile?edit=true" onClick={() => setMoreOpen(false)}>Editar perfil <Icon name="arrow"/></Link>
-            <button className="more-option" type="button" onClick={async () => { setMoreOpen(false); await signOut(); navigate('/login') }}>Cerrar sesión <Icon name="logout"/></button>
-          </section>}
+          <button ref={moreButtonRef} className="sidebar-link more-link" type="button" aria-label="Más" aria-expanded={moreOpen} onClick={toggleMoreMenu}><Icon name="more"/><span>Más</span></button>
+          {moreOpen && !isDesktop && <section className="sidebar-popover more-popover" aria-label="Más opciones">{moreMenu}</section>}
         </div>
       </aside>
 
@@ -148,12 +206,8 @@ export default function Layout() {
             </Link>
           </div>
           <div className="mobile-topbar-anchor">
-            <button className={`mobile-topbar-button ${moreOpen ? 'active' : ''}`} type="button" aria-label="Abrir menú" aria-expanded={moreOpen} onClick={() => setMoreOpen(v => !v)}><Icon name="more"/></button>
-            {moreOpen && <section className="sidebar-popover mobile-topbar-popover mobile-topbar-menu" aria-label="Menú">
-              <Link className="more-option" to={profilePath} onClick={() => setMoreOpen(false)}>Mi perfil <Icon name="arrow"/></Link>
-              <Link className="more-option" to="/profile?edit=true" onClick={() => setMoreOpen(false)}>Editar perfil <Icon name="arrow"/></Link>
-              <button className="more-option" type="button" onClick={async () => { setMoreOpen(false); await signOut(); navigate('/login') }}>Cerrar sesión <Icon name="logout"/></button>
-            </section>}
+            <button className={`mobile-topbar-button ${moreOpen ? 'active' : ''}`} type="button" aria-label="Abrir menú" aria-expanded={moreOpen} onClick={toggleMoreMenu}><Icon name="more"/></button>
+            {moreOpen && <section className="sidebar-popover mobile-topbar-popover mobile-topbar-menu" aria-label="Menú">{moreMenu}</section>}
           </div>
         </div>
       </header>
@@ -195,6 +249,12 @@ export default function Layout() {
       </div>}
       <GlobalSearchModal isOpen={registerSearchOpen} onClose={() => setRegisterSearchOpen(false)} />
       {listsOpen && <ListsEntryModal onClose={() => setListsOpen(false)} />}
+      {moreOpen && isDesktop && createPortal(
+        <section ref={moreMenuContentRef} className="sidebar-popover more-popover more-popover-desktop" style={moreMenuPosition} aria-label="Más opciones">
+          {moreMenu}
+        </section>,
+        document.body
+      )}
     </div>
   )
 }

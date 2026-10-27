@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { getUserSpaces } from '../../lib/spaceService';
+import { getSpaces, getUserSpaces, joinSpace } from '../../lib/spaceService';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { getSpaceMessagesReadAt } from '../../lib/spaceUnread';
@@ -9,9 +9,12 @@ import './MySpaces.css';
 
 export default function MySpaces() {
   const [spaces, setSpaces] = useState([]);
+  const [availableSpaces, setAvailableSpaces] = useState([]);
   const [unreadCounts, setUnreadCounts] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [recommendationsError, setRecommendationsError] = useState('');
+  const [joiningSpaceId, setJoiningSpaceId] = useState(null);
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -38,6 +41,14 @@ export default function MySpaces() {
     }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [user]);
+
+  useEffect(() => {
+    let active = true;
+    getSpaces().then(data => { if (active) setAvailableSpaces(data); }).catch(err => {
+      if (active) console.error('Error loading recommended spaces:', err);
+    });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     if (!user?.id || spaces.length === 0) {
@@ -122,6 +133,21 @@ export default function MySpaces() {
     });
   };
 
+  const handleJoinSpace = async (event, space) => {
+    event.stopPropagation();
+    if (!user?.id || joiningSpaceId) return;
+    setJoiningSpaceId(space.id);
+    setRecommendationsError('');
+    try {
+      await joinSpace(space.id, user.id);
+      setSpaces(current => current.some(item => String(item.id) === String(space.id)) ? current : [space, ...current]);
+    } catch (joinError) {
+      setRecommendationsError(joinError.message || 'No se pudo unir al espacio. Inténtalo de nuevo.');
+    } finally {
+      setJoiningSpaceId(null);
+    }
+  };
+
   const filteredSpaces = spaces.filter(s =>
     s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (s.description && s.description.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -134,9 +160,15 @@ export default function MySpaces() {
     if (!aFav && bFav) return 1;
     return 0;
   });
+  const joinedSpaceIds = new Set(spaces.map(space => String(space.id)));
+  const recommendedSpaces = availableSpaces
+    .filter(space => !joinedSpaceIds.has(String(space.id)) && String(space.owner_id) !== String(user?.id))
+    .sort((a, b) => (b.space_members?.[0]?.count ?? b.member_count ?? 0) - (a.space_members?.[0]?.count ?? a.member_count ?? 0))
+    .slice(0, 5);
 
   return (
-    <div className="my-spaces-panel" style={{
+    <div className="my-spaces-page-layout">
+    <section className="my-spaces-panel" style={{
       maxWidth: '800px',
       margin: '0 auto',
       marginTop: 'calc(var(--space-xl) * -1)',
@@ -163,7 +195,6 @@ export default function MySpaces() {
             </svg>
           </Link>
         </div>
-
         <div style={{ position: 'relative' }}>
           <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>
             <circle cx="11" cy="11" r="8" />
@@ -213,12 +244,13 @@ export default function MySpaces() {
           <div style={{ padding: '0.5rem 0' }}>
             {sortedSpaces.map(space => {
               const isFav = favorites.includes(space.id);
+              const memberCount = space.member_count ?? availableSpaces.find(item => String(item.id) === String(space.id))?.space_members?.[0]?.count ?? 0;
               return (
                 <div
                   key={space.id}
                   className="my-spaces-row"
                   onClick={() => navigate(`/spaces/${space.id}`)}
-                  style={{ display: 'flex', alignItems: 'center', padding: '0.75rem 1rem', cursor: 'pointer', transition: 'background-color 0.2s' }}
+                  style={{ '--my-space-banner': space.banner_url ? `url("${space.banner_url}")` : 'none', '--space-accent': space.theme_color || 'var(--brand-primary)' }}
                   onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--bg-hover)'; }}
                   onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}
                 >
@@ -244,6 +276,10 @@ export default function MySpaces() {
                     <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.9rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {space.description || 'Da el primer paso y chatea...'}
                     </p>
+                    <span className="my-spaces-member-count">
+                      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                      {memberCount} {memberCount === 1 ? 'miembro' : 'miembros'}
+                    </span>
                   </div>
 
                   <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -264,6 +300,7 @@ export default function MySpaces() {
                         <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                       </svg>
                     </button>
+                    <span className="my-spaces-enter">Entrar <span aria-hidden="true">›</span></span>
                   </div>
                 </div>
               );
@@ -271,6 +308,33 @@ export default function MySpaces() {
           </div>
         )}
       </div>
+    </section>
+
+    <aside className="my-spaces-recommendations" aria-label="Crear y descubrir espacios">
+      <Link className="my-spaces-create-card" to="/discover/spaces">
+        <span className="my-spaces-create-icon" aria-hidden="true">+</span>
+        <span><strong>Descubre más comunidades</strong><small>Encuentra nuevos espacios para tus intereses.</small></span>
+        <span className="my-spaces-card-arrow" aria-hidden="true">›</span>
+      </Link>
+      <section className="my-spaces-recommend-card">
+        <h2><span aria-hidden="true">✦</span> Recomendados</h2>
+        {recommendationsError && <p className="my-spaces-recommend-error" role="alert">{recommendationsError}</p>}
+        {recommendedSpaces.length ? recommendedSpaces.map(space => {
+          const count = space.space_members?.[0]?.count ?? space.member_count ?? 0;
+          return <div className="my-spaces-recommend-row" key={space.id} style={{ '--space-accent': space.theme_color || 'var(--brand-primary)' }}>
+            <Link className="my-spaces-recommend-avatar" to={`/spaces/${space.id}`} aria-label={space.name}>
+              {space.avatar_url ? <img src={space.avatar_url} alt="" /> : <span>{space.name?.[0]?.toUpperCase() || '◈'}</span>}
+            </Link>
+            <Link className="my-spaces-recommend-info" to={`/spaces/${space.id}`}>
+              <strong>{space.name}</strong><small>{count.toLocaleString('es-ES')} {count === 1 ? 'miembro' : 'miembros'}</small>
+            </Link>
+            <button type="button" className="my-spaces-join-button" disabled={joiningSpaceId !== null} onClick={event => handleJoinSpace(event, space)}>
+              {joiningSpaceId === space.id ? 'Uniendo…' : 'Unirse'}
+            </button>
+          </div>;
+        }) : <p className="my-spaces-recommend-empty">No hay más espacios para recomendar.</p>}
+      </section>
+    </aside>
     </div>
   );
 }
