@@ -205,6 +205,7 @@ export default function ReviewDetail() {
   const reviewPreview = shouldTrimReview && reviewPreviewEnd > 300 ? reviewText.slice(0, reviewPreviewEnd).trimEnd() : reviewText.slice(0, reviewTextLimit).trimEnd()
   const reviewPreviewText = shouldTrimReview && !showFullReview ? `${reviewPreview}… Ver más` : reviewText
   const workCover = review.work_type === 'game' ? review.work?.cover_url : review.work?.image_url
+  const reviewBackdrop = workCover
   const workYear = getReleaseYear(review.work, review.work_type)
   const workPath = `/${review.work_type === 'game' ? 'game' : 'anime'}/${review.work_id}`
   const authorName = author?.display_name || author?.username || 'Usuario'
@@ -238,7 +239,7 @@ export default function ReviewDetail() {
   }
 
   return (
-    <main className="review-detail-page" style={{ '--review-page-accent': pageAccent }}>
+    <main className="review-detail-page" style={{ '--review-page-accent': pageAccent, '--review-backdrop-image': reviewBackdrop ? `url("${reviewBackdrop}")` : 'none' }}>
       <SEO title={`${authorName}: review de ${workName || 'una obra'}`} description={review.review_text.slice(0, 150)} />
       <button className="review-detail-back" type="button" onClick={() => navigate(-1)}>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>Volver
@@ -275,7 +276,7 @@ export default function ReviewDetail() {
                 </button>
               </div>
             </div>
-            <h2 className="review-post-review-heading">Reseña de {authorName}</h2>
+            <h2 className="review-post-review-heading">Review de {authorName}</h2>
             {review.contains_spoiler && !showSpoiler ? (
               <SpoilerNotice text={reviewPreviewText} onReveal={() => setShowSpoiler(true)} />
             ) : <>
