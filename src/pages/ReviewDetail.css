@@ -149,6 +149,69 @@
 .review-post-action { display: inline-flex; align-items: center; gap: .4rem; padding: .35rem .2rem; border: 0; color: var(--text-muted); background: transparent; font: 600 .74rem var(--font-sans); }
 .review-post-action svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .review-post-action.upcoming { opacity: .52; cursor: not-allowed; }
+.review-post-action.review-share-trigger { color: var(--text-secondary); cursor: pointer; transition: color .18s ease, transform .18s ease; }
+.review-post-action.review-share-trigger:hover { color: var(--review-page-accent); transform: translateY(-1px); }
+
+.review-share-overlay { position: fixed; inset: 0; z-index: 2400; display: grid; place-items: center; padding: max(18px, env(safe-area-inset-top)) 16px max(18px, env(safe-area-inset-bottom)); background: rgba(0,0,0,.78); backdrop-filter: blur(12px); animation: review-share-fade .18s ease-out; }
+.review-share-dialog { width: min(100%, 520px); max-height: min(90dvh, 780px); overflow-y: auto; overscroll-behavior: contain; padding: 23px; border: 1px solid rgba(255,255,255,.1); border-radius: 21px; color: var(--text-primary); background: #101114; box-shadow: 0 28px 100px rgba(0,0,0,.68), 0 1px 0 rgba(255,255,255,.035) inset; animation: review-share-rise .24s cubic-bezier(.2,.8,.2,1); }
+.review-share-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.review-share-eyebrow,.review-share-link > span { color: var(--review-page-accent); font-size: .65rem; font-weight: 800; letter-spacing: .13em; }
+.review-share-heading h2 { margin: 5px 0 0; font: 700 1.23rem/1.25 var(--font-display); letter-spacing: -.035em; }
+.review-share-close { display: grid; width: 34px; height: 34px; flex: 0 0 34px; place-items: center; border: 1px solid rgba(255,255,255,.08); border-radius: 50%; color: var(--text-secondary); background: rgba(255,255,255,.035); cursor: pointer; transition: color .16s ease, background .16s ease, transform .16s ease; }
+.review-share-close:hover { color: white; background: rgba(255,255,255,.1); transform: rotate(4deg); }
+.review-share-close svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+.review-share-preview { display: grid; grid-template-columns: 76px minmax(0,1fr); gap: 14px; min-height: 110px; margin-bottom: 14px; padding: 12px; border: 1px solid color-mix(in srgb, var(--review-page-accent) 25%, rgba(255,255,255,.08)); border-radius: 15px; background: linear-gradient(115deg, color-mix(in srgb, var(--review-page-accent) 11%, #17181b), #17181b 68%); }
+.review-share-preview-cover { height: 106px; overflow: hidden; border: 1px solid rgba(255,255,255,.14); border-radius: 8px; background: rgba(255,255,255,.05); box-shadow: 0 8px 22px rgba(0,0,0,.28); transform: rotate(-2deg); }
+.review-share-preview-cover img { width: 100%; height: 100%; object-fit: cover; }
+.review-share-preview-copy { display: flex; min-width: 0; flex-direction: column; align-items: flex-start; gap: 5px; }
+.review-share-preview-author { display: flex; min-width: 0; align-items: center; gap: 7px; margin-bottom: 1px; color: var(--text-secondary); font-size: .67rem; font-weight: 700; }
+.review-share-preview-author > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.review-share-preview-author small { display: block; color: var(--text-muted); font-size: .6rem; font-weight: 500; }
+.review-share-preview-copy > strong { overflow: hidden; max-width: 100%; font: 700 .94rem/1.2 var(--font-display); text-overflow: ellipsis; white-space: nowrap; }
+.review-share-preview-copy > span:not(.review-share-preview-author) { color: var(--text-muted); font-size: .64rem; }
+.review-share-preview-copy .review-detail-stars { gap: .25rem; }
+.review-share-preview-copy .review-detail-stars svg { width: 13px; height: 13px; }
+.review-share-preview-copy .review-detail-stars strong { font-size: .7rem; }
+.review-share-link { position: relative; display: flex; width: 100%; min-width: 0; flex-direction: column; gap: 7px; padding: 13px 42px 13px 14px; overflow: hidden; border: 1px solid color-mix(in srgb, var(--review-page-accent) 24%, rgba(255,255,255,.08)); border-radius: 13px; color: var(--text-primary); text-align: left; background: color-mix(in srgb, var(--review-page-accent) 6%, #17181b); cursor: pointer; transition: background .18s ease, border-color .18s ease; }
+.review-share-link:hover { border-color: color-mix(in srgb, var(--review-page-accent) 54%, rgba(255,255,255,.08)); background: color-mix(in srgb, var(--review-page-accent) 9%, #17181b); }
+.review-share-link > strong { display: block; width: 100%; overflow-x: auto; scrollbar-width: none; color: var(--text-secondary); font-size: .76rem; font-weight: 500; white-space: nowrap; }
+.review-share-link > strong::-webkit-scrollbar { display: none; }
+.review-share-link > i { position: absolute; top: 50%; right: 15px; color: var(--review-page-accent); font-size: 1.1rem; font-style: normal; transform: translateY(-50%); }
+.review-share-section-label { margin: 18px 0 10px; color: var(--text-secondary); font-size: .76rem; font-weight: 700; }
+.review-share-networks { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 8px; }
+.review-share-networks > a { display: flex; min-width: 0; flex-direction: column; align-items: center; gap: 7px; padding: 10px 4px 9px; border: 1px solid rgba(255,255,255,.075); border-radius: 12px; color: var(--text-secondary); background: #17181b; text-decoration: none; transition: transform .18s ease, border-color .18s ease, color .18s ease; }
+.review-share-networks > a:hover { transform: translateY(-2px); border-color: rgba(255,255,255,.18); color: white; }
+.review-share-networks b { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 10px; color: white; background: #3b4145; }
+.review-share-networks b svg { width: 17px; height: 17px; }
+.review-share-networks .whatsapp b { background: #25a766; }
+.review-share-networks .x-twitter b { background: #08090a; }
+.review-share-networks .telegram b { background: #229ed9; }
+.review-share-networks .reddit b { background: #ff4500; }
+.review-share-networks .facebook b { background: #0866ff; }
+.review-share-networks span { overflow: hidden; max-width: 100%; font-size: .62rem; text-overflow: ellipsis; white-space: nowrap; }
+.review-share-divider { height: 1px; margin: 16px 0 7px; background: rgba(255,255,255,.08); }
+.review-share-download { display: flex; width: 100%; align-items: center; gap: 12px; padding: 11px 8px; border: 0; border-radius: 12px; color: var(--text-primary); text-align: left; background: transparent; cursor: pointer; transition: background .16s ease; }
+.review-share-download:hover:not(:disabled) { background: rgba(255,255,255,.055); }
+.review-share-download:disabled { opacity: .6; cursor: wait; }
+.review-share-download-icon { display: grid; width: 40px; height: 40px; flex: 0 0 40px; place-items: center; border-radius: 12px; color: var(--review-page-accent); background: color-mix(in srgb, var(--review-page-accent) 12%, transparent); }
+.review-share-download-icon svg,.review-share-download-arrow { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.review-share-download strong,.review-share-download small { display: block; }
+.review-share-download strong { font-size: .84rem; }
+.review-share-download small { margin-top: 3px; color: var(--text-muted); font-size: .68rem; }
+.review-share-download-arrow { margin-left: auto; color: var(--text-muted); }
+@keyframes review-share-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes review-share-rise { from { opacity: 0; transform: translateY(12px) scale(.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+@media (max-width: 520px) {
+  .review-share-overlay { padding-right: 13px; padding-left: 13px; }
+  .review-share-dialog { max-height: min(88dvh, 720px); padding: 19px 16px; border-radius: 19px; }
+  .review-share-preview { grid-template-columns: 68px minmax(0,1fr); gap: 12px; padding: 10px; }
+  .review-share-preview-cover { height: 98px; }
+  .review-share-networks { grid-template-columns: repeat(3,minmax(0,1fr)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .review-share-overlay,.review-share-dialog,.review-share-networks > a,.review-share-close { animation: none; transition: none; }
+}
 
 .review-comments { margin-top: .85rem; padding: .85rem 0 0; border-top: 1px solid var(--border-subtle); }
 .review-comments-heading { gap: .55rem; margin-bottom: .35rem; }

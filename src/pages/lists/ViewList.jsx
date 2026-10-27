@@ -29,6 +29,21 @@ function getRelativeTime(dateString) {
     return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+function collectListPreviewImages(value, images = [], depth = 0) {
+    if (!value || depth > 5 || images.length >= 4) return images;
+    if (Array.isArray(value)) {
+        value.forEach(item => collectListPreviewImages(item, images, depth + 1));
+        return images;
+    }
+    if (typeof value !== 'object') return images;
+    const image = value.image_url || value.cover_url || value.cover?.url;
+    if (image && !images.includes(image)) images.push(image);
+    Object.entries(value).forEach(([key, child]) => {
+        if (key !== 'cover' && images.length < 4 && child && typeof child === 'object') collectListPreviewImages(child, images, depth + 1);
+    });
+    return images;
+}
+
 async function imageToDataUrl(url) {
     const response = await fetch(url, { mode: 'cors' });
     if (!response.ok) throw new Error('No se pudo cargar una imagen del preview');
@@ -369,6 +384,7 @@ export default function ViewList() {
     const [loading, setLoading] = useState(true);
     const [error, setError]     = useState(null);
     const [shareOpen, setShareOpen] = useState(false);
+    const [shareCopied, setShareCopied] = useState(false);
 
     useEffect(() => {
         getListById(id)
@@ -444,6 +460,7 @@ export default function ViewList() {
     const shareUrl = window.location.href;
     const encodedShareUrl = encodeURIComponent(shareUrl);
     const encodedShareTitle = encodeURIComponent(list.title || 'Mira esta lista');
+    const sharePreviewImages = collectListPreviewImages(list.content);
 
     const copyShareLink = async () => {
         try {
@@ -459,6 +476,8 @@ export default function ViewList() {
                 document.execCommand('copy');
                 input.remove();
             }
+            setShareCopied(true);
+            window.setTimeout(() => setShareCopied(false), 1800);
         } catch (err) {
             console.error('No se pudo copiar el enlace', err);
         }
@@ -570,13 +589,21 @@ export default function ViewList() {
                 <div className="vl-share-overlay" onClick={() => setShareOpen(false)}>
                     <section className="vl-share-dialog" role="dialog" aria-modal="true" aria-labelledby="vl-share-title" onClick={event => event.stopPropagation()}>
                         <header className="vl-share-heading">
-                            <div><span className="vl-share-eyebrow">COMPARTIR LISTA</span><h2 id="vl-share-title">Que la vean los demás</h2></div>
+                            <div><span className="vl-share-eyebrow">COMPARTIR LISTA</span><h2 id="vl-share-title">Que la vean los demás</h2><p>Una selección tuya, lista para pasarla.</p></div>
                             <button className="vl-icon-btn" onClick={() => setShareOpen(false)} aria-label="Cerrar menú de compartir">
                                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="m18 6-12 12M6 6l12 12"/></svg>
                             </button>
                         </header>
+                        <div className="vl-share-preview" style={{ '--share-author-accent': authorThemeColor }}>
+                            <div className="vl-share-preview-copy">
+                                <span className="vl-share-preview-author"><img src={authorAvatar} alt="" />{authorDisplayName}<small>@{authorUsername}</small></span>
+                                <strong>{list.title}</strong>
+                                <span>{TYPE_LABELS[list.list_type] || 'Lista'}{list.media_type ? ` · ${MEDIA_LABELS[list.media_type] || list.media_type}` : ''}</span>
+                            </div>
+                            <div className="vl-share-preview-art" aria-hidden="true">{sharePreviewImages.slice(0, 3).map((image, index) => <img key={`${image}-${index}`} src={image} alt="" loading="lazy" />)}{sharePreviewImages.length === 0 && <span>GS</span>}</div>
+                        </div>
                         <button className="vl-share-link" onClick={copyShareLink} aria-label="Copiar enlace de la lista">
-                            <span className="vl-share-link-label">ENLACE DE LA LISTA</span>
+                            <span className="vl-share-link-label">{shareCopied ? 'ENLACE COPIADO' : 'ENLACE DE LA LISTA'}</span>
                             <span className="vl-share-link-value">{shareUrl}</span>
                         </button>
                         <div className="vl-share-section-label">Compartir directamente</div>
