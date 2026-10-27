@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { createReview, updateReview } from '../../lib/reviewService'
 import { useAuth } from '../../context/AuthContext'
 import './Reviews.css'
@@ -85,7 +86,7 @@ export default function ReviewForm({ workId, workType, onClose, onReviewAdded, i
         }
     }
 
-    return (
+    return createPortal((
         <div className="review-form-overlay" onClick={onClose}>
             <div className="review-modal-content" onClick={e => e.stopPropagation()}>
                 <button className="close-btn" onClick={onClose}>&times;</button>
@@ -196,5 +197,5 @@ export default function ReviewForm({ workId, workType, onClose, onReviewAdded, i
                 </form>
             </div>
         </div>
-    )
+    ), document.body)
 }

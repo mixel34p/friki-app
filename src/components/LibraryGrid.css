@@ -306,15 +306,6 @@
     margin: 0;
 }
 
-.spoiler-warning { cursor: pointer; transition: background 0.2s; } .spoiler-warning:hover { background: rgba(239, 68, 68, 0.2); } .spoiler-warning {
-    color: #ef4444;
-    background: rgba(239, 68, 68, 0.1);
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    font-size: 0.85rem;
-    cursor: pointer;
-}
-
 /* --- DIARY LIST --- */
 .diary-list {
     display: flex;
@@ -541,6 +532,7 @@
     cursor: not-allowed;
     opacity: 0.5;
 }
+
 
 .review-avatar {
     width: 64px;

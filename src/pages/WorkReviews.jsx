@@ -5,6 +5,7 @@ import { getWorkReviews, getWorkRatings, getWorkReviewStats } from '../lib/libra
 import { formatRelativeDate } from '../lib/formatRelativeDate'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ReviewLikeButton from '../components/ReviewLikeButton'
+import SpoilerNotice from '../components/reviews/SpoilerNotice'
 import SEO from '../components/SEO'
 import { BADGES_MAP } from '../lib/badges'
 import '../components/LibraryGrid.css'
@@ -300,7 +301,7 @@ export default function WorkReviews({ mediaType }) {
                                             ></div>
                                         </Link>
                                         <div className="review-author-name-group">
-                                            <Link to={`/profile/${log.profiles?.username}`} className="review-title">
+                                            <Link to={`/reviews/${log.id}`} className="review-title">
                                                 {log.profiles?.display_name || log.profiles?.username}
                                             </Link>
                                             {log.profiles?.featured_badge && BADGES_MAP[log.profiles?.featured_badge] && (
@@ -323,9 +324,12 @@ export default function WorkReviews({ mediaType }) {
                                 <div className="review-content">
                                     <p className="review-text">
                                         {log.contains_spoiler && !revealedSpoilers[log.id] ? (
-                                            <span className="spoiler-warning" onClick={() => toggleSpoiler(log.id)}>
-                                                Esta reseña contiene spoilers. Haz clic para ver.
-                                            </span>
+                                            <SpoilerNotice
+                                                text={expandedReviews[log.id] || log.review_text.length <= 250
+                                                    ? `${log.review_text}${expandedReviews[log.id] && log.review_text.length > 250 ? ' less' : ''}`
+                                                    : `${log.review_text.substring(0, 250)}... more`}
+                                                onReveal={() => toggleSpoiler(log.id)}
+                                            />
                                         ) : (
                                             <>
                                                 {expandedReviews[log.id] || log.review_text.length <= 250 

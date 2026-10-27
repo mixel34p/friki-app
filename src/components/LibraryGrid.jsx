@@ -4,6 +4,7 @@ import { getUserLibrary } from '../lib/libraryService'
 import { getWorkById } from '../lib/workPageService'
 import LoadingSpinner from './LoadingSpinner'
 import ReviewLikeButton from './ReviewLikeButton'
+import SpoilerNotice from './reviews/SpoilerNotice'
 import { useAuth } from '../context/AuthContext'
 import './LibraryGrid.css'
 
@@ -192,7 +193,7 @@ export default function LibraryGrid({ profile, userId, username, wishlist = [] }
                                 </Link>
                                 <div className="review-content">
                                     <div className="review-header">
-                                        <Link to={`/${log.work_type}/${log.work_id}`} className="review-title">
+                                        <Link to={`/reviews/${log.id}`} className="review-title">
                                             {log.work_type === 'game' ? log.work.name : log.work.title}
                                         </Link>
                                         <span className="review-year">
@@ -209,9 +210,12 @@ export default function LibraryGrid({ profile, userId, username, wishlist = [] }
                                     </div>
                                     <p className="review-text">
                                         {log.contains_spoiler && !revealedSpoilers[log.id] ? (
-                                            <span className="spoiler-warning" onClick={() => toggleSpoiler(log.id)}>
-                                                Esta reseña contiene spoilers. Haz clic para ver.
-                                            </span>
+                                            <SpoilerNotice
+                                                text={expandedReviews[log.id] || log.review_text.length <= 250
+                                                    ? `${log.review_text}${expandedReviews[log.id] && log.review_text.length > 250 ? ' less' : ''}`
+                                                    : `${log.review_text.substring(0, 250)}... more`}
+                                                onReveal={() => toggleSpoiler(log.id)}
+                                            />
                                         ) : (
                                             <>
                                                 {expandedReviews[log.id] || log.review_text.length <= 250 

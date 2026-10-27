@@ -75,6 +75,12 @@ BEGIN
         notification_type := 'like_list';
         related_type := 'list';
         related_id := NEW.list_id;
+    ELSIF TG_TABLE_NAME = 'library_review_comments' THEN
+        SELECT user_id INTO recipient_id FROM public.library_entries WHERE id = NEW.review_entry_id;
+        actor_id := NEW.user_id;
+        notification_type := 'comment_review';
+        related_type := 'review';
+        related_id := NEW.review_entry_id;
     ELSE
         RETURN NEW;
     END IF;
@@ -134,6 +140,13 @@ BEGIN
         DROP TRIGGER IF EXISTS notify_user_list_like ON public.user_list_likes;
         CREATE TRIGGER notify_user_list_like
             AFTER INSERT ON public.user_list_likes
+            FOR EACH ROW EXECUTE FUNCTION public.create_activity_notification();
+    END IF;
+
+    IF to_regclass('public.library_review_comments') IS NOT NULL THEN
+        DROP TRIGGER IF EXISTS notify_library_review_comment ON public.library_review_comments;
+        CREATE TRIGGER notify_library_review_comment
+            AFTER INSERT ON public.library_review_comments
             FOR EACH ROW EXECUTE FUNCTION public.create_activity_notification();
     END IF;
 END;

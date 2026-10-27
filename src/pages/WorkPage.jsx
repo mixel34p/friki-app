@@ -13,6 +13,7 @@ import { getSpacesByWork } from '../lib/spaceService'
 import LogModal from '../components/LogModal'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ReviewLikeButton from '../components/ReviewLikeButton'
+import SpoilerNotice from '../components/reviews/SpoilerNotice'
 import SEO from '../components/SEO'
 import { BADGES_MAP } from '../lib/badges'
 import '../components/LibraryGrid.css'
@@ -287,13 +288,14 @@ export default function WorkPage({ mediaType }) {
                             </button>
                         )}
                         <button 
-                            className={`wishlist-icon-btn ${isInWishlist ? 'active' : ''}`} 
+                            className={`interaction-btn wishlist ${isInWishlist ? 'active' : ''}`} 
                             onClick={toggleWishlist}
                             title={isInWishlist ? 'Quitar de Wishlist' : 'Añadir a Wishlist'}
                         >
-                            <svg viewBox="0 0 24 24" width="22" height="22" fill={isInWishlist ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <svg viewBox="0 0 24 24" width="15" height="15" fill={isInWishlist ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
                             </svg>
+                            {isInWishlist ? 'En wishlist' : 'Wishlist'}
                         </button>
                     </div>
                 </div>
@@ -381,7 +383,7 @@ export default function WorkPage({ mediaType }) {
                                                     ></div>
                                                 </Link>
                                                 <div className="review-author-name-group">
-                                                    <Link to={`/profile/${log.profiles?.username}`} className="review-title">
+                                                    <Link to={`/reviews/${log.id}`} className="review-title">
                                                         {log.profiles?.display_name || log.profiles?.username}
                                                     </Link>
                                                     {log.profiles?.featured_badge && BADGES_MAP[log.profiles?.featured_badge] && (
@@ -404,9 +406,10 @@ export default function WorkPage({ mediaType }) {
                                         <div className="review-content">
                                             <p className="review-text">
                                                 {log.contains_spoiler && !revealedSpoilers[log.id] ? (
-                                                    <span className="spoiler-warning" onClick={() => toggleSpoiler(log.id)}>
-                                                        Esta reseña contiene spoilers. Haz clic para ver.
-                                                    </span>
+                                                    <SpoilerNotice
+                                                        text={log.review_text.length > 300 ? `${log.review_text.substring(0, 300)}...` : log.review_text}
+                                                        onReveal={() => toggleSpoiler(log.id)}
+                                                    />
                                                 ) : (
                                                     <>{log.review_text.length > 300 ? log.review_text.substring(0, 300) + '...' : log.review_text}</>
                                                 )}

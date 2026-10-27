@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { createReview, updateReview } from '../../lib/reviewService'
 import { useAuth } from '../../context/AuthContext'
+import './QuickReviewModal.css'
 
 export default function QuickReviewModal({
     workId,
@@ -60,8 +62,8 @@ export default function QuickReviewModal({
         }
     }
 
-    return (
-        <div className="modal-overlay" onClick={onClose}>
+    return createPortal((
+        <div className="modal-overlay quick-review-overlay" onClick={onClose}>
             <div className="modal" style={{ maxWidth: '480px' }} onClick={e => e.stopPropagation()}>
                 <div className="modal-header">
                     <h2>Reseña: {workTitle}</h2>
@@ -141,5 +143,5 @@ export default function QuickReviewModal({
                 </div>
             </div>
         </div>
-    )
+    ), document.body)
 }

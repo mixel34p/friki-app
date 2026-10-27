@@ -136,19 +136,21 @@
 }
 
 .interaction-btn {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 0.5rem;
     background: var(--brand-primary);
     color: #000;
     border: none;
-    padding: 0.7rem 1.5rem;
-    border-radius: var(--radius-md);
+    padding: 0.48rem 0.85rem;
+    border-radius: 999px;
     font-weight: 600;
-    font-size: 1rem;
+    font-size: 0.82rem;
     cursor: pointer;
     transition: all 0.2s;
 }
+
+.interaction-btn svg { flex: 0 0 auto; }
 
 .interaction-btn:hover {
     filter: brightness(1.1);
@@ -509,6 +511,7 @@
 
 
 .interaction-btn.wishlist {
+    margin-left: auto;
     background: rgba(255, 255, 255, 0.05);
     color: var(--text-primary);
     border: 1px solid var(--border-subtle);
@@ -559,6 +562,11 @@
 }
 
 .wishlist-icon-btn.active svg {
+    transform-origin: center bottom;
+    animation: bookmarkPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.interaction-btn.wishlist.active svg {
     transform-origin: center bottom;
     animation: bookmarkPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }

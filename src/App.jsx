@@ -22,6 +22,7 @@ import UserDiary from './pages/UserDiary'
 import UserTierlists from './pages/UserTierlists'
 import UserTemplates from './pages/UserTemplates'
 import WorkReviews from './pages/WorkReviews'
+import ReviewDetail from './pages/ReviewDetail'
 import Search from './pages/Search'
 import DiscoverWorks from './pages/DiscoverWorks'
 import DiscoverLists from './pages/DiscoverLists'
@@ -191,6 +192,7 @@ function App() {
             <Route path="/profile/:username/diary" element={<ProtectedRoute><UserDiary /></ProtectedRoute>} />
             <Route path="/profile/:username/tierlists" element={<ProtectedRoute><UserTierlists /></ProtectedRoute>} />
             <Route path="/profile/:username/templates" element={<ProtectedRoute><UserTemplates /></ProtectedRoute>} />
+            <Route path="/reviews/:reviewId" element={<ProtectedRoute><ReviewDetail /></ProtectedRoute>} />
             <Route path="/edit-profile" element={<Navigate to="/profile?edit=true" replace />} />
             
             {/* OLD TIERLIST REDIRECTS */}
