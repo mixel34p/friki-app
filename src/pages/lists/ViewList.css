@@ -1,4 +1,4 @@
-﻿/*
+/*
  * ViewList.css — estilos exclusivos de /lists/:id
  * La base (review-post, header, comments, share) viene de ReviewDetail.css
  */
@@ -15,7 +15,7 @@
     padding: .55rem clamp(.85rem, 1.8vw, 1.3rem);
     border-bottom: 1px solid var(--border-subtle);
     /* pequeño espacio antes del autor */
-    margin-bottom: .75rem;
+    margin-bottom: .5rem;
 }
 
 /* El botón de volver dentro del topbar no necesita margen extra */
@@ -95,36 +95,45 @@
     stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
 }
 
-/* ── Header autor: sin borde, fluye directo al bloque negro ─────────────────── */
+/* ── Header autor: con separación hacia la "foto", sin borde ─────────────────── */
 .vl-author-header {
     border-bottom: 0 !important;
-    margin-bottom: 0;
-    padding-bottom: .6rem;
+    margin-bottom: 0.95rem;
+    padding-bottom: 0;
 }
 
-/* ── Bloque preview: título + visual en el mismo fondo negro ─────────────────── */
-/* Va a sangre horizontal (compensa el padding del article) */
+/* ── Bloque preview: estilo "foto" como en Twitter (fondo negro, bordes redondeados) ─── */
 .vl-preview-block {
-    margin-left:  calc(-1 * clamp(.85rem, 1.8vw, 1.3rem));
-    margin-right: calc(-1 * clamp(.85rem, 1.8vw, 1.3rem));
-    border-top:    1px solid var(--border-subtle);
-    border-bottom: 1px solid var(--border-subtle);
+    position: relative;
+    width: 100%;
+    margin: 0 0 1rem;
     background: #000;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
     overflow: hidden;
+    cursor: pointer;
+    transition: border-color .18s ease, box-shadow .18s ease;
+}
+.vl-preview-block:hover {
+    border-color: rgba(255, 255, 255, 0.26);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
 }
 
-/* Fila título + botón editar — mismo fondo negro */
+/* Fila título dentro de la "foto" */
 .vl-preview-titlebar {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: .8rem;
-    padding: .75rem clamp(.85rem, 1.8vw, 1.3rem) .65rem;
-    }
+    padding: .85rem 1rem .35rem;
+    background: #000;
+    border-bottom: none;
+}
 
 .vl-preview-title {
     margin: 0;
-    color: var(--text-primary);
+    color: #fff;
     font: 750 clamp(1rem, 2vw, 1.25rem)/1.3 var(--font-display);
     letter-spacing: -.02em;
     overflow: hidden;
@@ -153,13 +162,23 @@
     stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
 }
 
-/* Área visual — sin padding horizontal propio (hereda del block negro) */
+/* Área visual dentro de la "foto" */
 .vl-post-visual-wrapper {
     width: 100%;
     background: #000;
-    padding: 1rem 0;
+    padding: .2rem .75rem .75rem;
 }
 .vl-post-visual { width: 100%; }
+
+.vl-preview-block .cl-ranking-stack {
+    margin: 0 auto;
+}
+
+/* Acciones bajo la "foto" (estilo Twitter sin línea divisoria invasiva) */
+.review-post-actions {
+    border-top: 0 !important;
+    padding-top: 0 !important;
+}
 
 /* ── Share: placeholder portada ─────────────────────────────────────────────── */
 .vl-share-cover-placeholder {
@@ -175,68 +194,292 @@
 
 /* ── Responsive ─────────────────────────────────────────────────────────────── */
 @media (max-width: 620px) {
-    .vl-preview-titlebar { padding: .6rem .85rem .5rem; }
-    .vl-preview-title    { font-size: .95rem; }
-    .vl-post-visual-wrapper { padding: .75rem 0; }
+    .vl-author-header    { margin-bottom: .75rem; }
+    .vl-preview-block    { border-radius: 14px; margin-bottom: .85rem; }
+    .vl-preview-titlebar { padding: .65rem .85rem .3rem; }
+    .vl-preview-title    { font-size: .98rem; }
+    .vl-post-visual-wrapper { padding: .15rem .5rem .55rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
     .vl-dropdown, .vl-dots-btn, .vl-dropdown-item, .vl-preview-edit-btn { animation: none; transition: none; }
 }
 
-/* ── Ranking view (vl-specific overrides) ─────────────────────────── */
-.vl-ranking-cover {
-    flex: 0 0 44px;
-    height: 58px;
+/* ── Ranking view — diseño tipo leaderboard ─────────────────────────── */
+.vl-ranking-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    width: 100%;
+}
+
+/* Fila individual */
+.vl-ranking-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    transition: background .12s ease;
+}
+.vl-ranking-row:last-child { border-bottom: none; }
+
+/* Número de posición */
+.vl-rank-num {
+    flex: 0 0 28px;
+    text-align: center;
+    font: 800 0.85rem/1 var(--font-display, sans-serif);
+    color: rgba(255, 255, 255, 0.28);
+    letter-spacing: -.01em;
+    user-select: none;
+}
+.vl-ranking-row.top-0 .vl-rank-num { color: #f5c542; font-size: 1rem; }
+.vl-ranking-row.top-1 .vl-rank-num { color: #bdbdbd; font-size: .95rem; }
+.vl-ranking-row.top-2 .vl-rank-num { color: #c9824b; font-size: .9rem; }
+
+/* Portada / póster */
+.vl-rank-cover {
+    flex: 0 0 36px;
+    height: 50px;
+    border-radius: 5px;
     overflow: hidden;
-    border-radius: var(--radius-sm, 4px);
-    background: var(--bg-tertiary);
+    background: rgba(255, 255, 255, 0.06);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.45);
 }
-.vl-ranking-cover .cl-item {
-    width: 44px !important;
-    height: 58px !important;
-}
-.vl-ranking-cover .cl-item img {
+.vl-rank-cover img {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    object-position: center 15%;
+    display: block;
 }
-.vl-ranking-cover .cl-ranking-cover-fallback {
+.vl-rank-cover-empty {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 44px;
-    height: 58px;
-    font-size: 1.1rem;
-    color: var(--text-muted);
-    background: var(--bg-tertiary);
+    width: 36px;
+    height: 50px;
+    font-size: 1rem;
+    color: rgba(255,255,255,0.18);
 }
-.vl-ranking-info {
+
+/* Top-3: portadas un poco más grandes */
+.vl-ranking-row.top-0 .vl-rank-cover,
+.vl-ranking-row.top-1 .vl-rank-cover,
+.vl-ranking-row.top-2 .vl-rank-cover {
+    flex-basis: 40px;
+    height: 56px;
+}
+
+/* Info: título + año */
+.vl-rank-info {
     flex: 1;
     min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
 }
-.vl-ranking-name {
-    color: var(--text-primary);
-    font: 600 .88rem var(--font-sans, sans-serif);
+.vl-rank-name {
+    color: var(--text-primary, #f1f5f9);
+    font: 600 .87rem/1.3 var(--font-sans, sans-serif);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-.vl-ranking-year {
-    color: var(--text-muted);
+.vl-ranking-row.top-0 .vl-rank-name { font-size: .93rem; font-weight: 700; }
+.vl-ranking-row.top-1 .vl-rank-name { font-size: .9rem;  font-weight: 700; }
+.vl-ranking-row.top-2 .vl-rank-name { font-size: .9rem;  font-weight: 700; }
+
+.vl-rank-year {
+    color: rgba(255, 255, 255, 0.38);
     font-size: .72rem;
-    margin-top: 2px;
-}
-.vl-ranking-empty {
-    color: var(--text-muted);
-    font-size: .82rem;
 }
 
-/* ── Fondo de acento (igual que reviews pero con color en vez de imagen) ─── */
-/* El ::before de ReviewDetail.css usa --review-backdrop-image (imagen borrosa).  */
-/* En listas no hay imagen, así que sobreescribimos ese pseudo con el acento puro. */
+/* Fila vacía */
+.vl-rank-empty-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+.vl-rank-empty-row:last-child { border-bottom: none; }
+.vl-rank-empty-slot {
+    flex: 1;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.07);
+    border-radius: 2px;
+    margin: 24px 0;
+}
+
+/* ── Fondo de acento tipo review (halo ambiental de acento en la parte superior) ─── */
 .vl-list-page::before {
+    position: fixed !important;
+    z-index: -2 !important;
+    top: -140px !important;
+    bottom: auto !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: min(100vw + 240px, 1400px) !important;
+    height: 750px !important;
+    pointer-events: none !important;
     background-image: none !important;
-    background-color: var(--review-page-accent);
-    opacity: .18;
+    background: radial-gradient(ellipse 65% 55% at 50% 25%, color-mix(in srgb, var(--review-page-accent) 26%, transparent) 0%, color-mix(in srgb, var(--review-page-accent) 9%, transparent) 55%, transparent 85%) !important;
+    filter: blur(64px) !important;
+    opacity: 0.95 !important;
+    content: '' !important;
+}
+
+/* ── Share: abanico de portadas para listas ─────────────────────────────────── */
+.vl-share-cover-fan {
+    position: relative !important;
+    width: 76px !important;
+    height: 106px !important;
+    overflow: visible !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    transform: none !important;
+}
+.vl-share-cover-fan img {
+    position: absolute !important;
+    width: 56px !important;
+    height: 82px !important;
+    border-radius: 6px !important;
+    border: 1px solid rgba(255, 255, 255, 0.22) !important;
+    object-fit: cover !important;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45) !important;
+    transition: transform 0.2s ease !important;
+}
+.vl-share-cover-fan .vl-fan-img-0 {
+    top: 14px;
+    left: 0;
+    transform: rotate(-8deg);
+    z-index: 1;
+}
+.vl-share-cover-fan .vl-fan-img-1 {
+    top: 7px;
+    left: 9px;
+    transform: rotate(2deg);
+    z-index: 2;
+}
+.vl-share-cover-fan .vl-fan-img-2 {
+    top: 0;
+    left: 17px;
+    transform: rotate(10deg);
+    z-index: 3;
+}
+
+/* ── Tierlist view (items container) ──────────────────────────────── */
+.cl-tier-items {
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-content: flex-start;
+    padding: 8px;
+    min-height: 96px;
+}
+/* ── Preview bloqueada en el post (comportamiento tipo imagen) ─────────────── */
+.vl-locked-preview {
+    pointer-events: none;
+    user-select: none;
+}
+
+/* ── Lightbox: lista + título, fondo negro, bordes redondeados y cerrar fuera ─ */
+.vl-lightbox-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 2500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: clamp(10px, 2.2vw, 24px);
+    background: rgba(0, 0, 0, 0.88);
+    backdrop-filter: blur(18px);
+    animation: vlLightboxFade .16s ease-out;
+}
+.vl-lightbox-dialog {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: min(100%, 1060px);
+    max-height: min(94vh, 920px);
+    background: #000;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 20px;
+    box-shadow: 0 28px 90px rgba(0, 0, 0, 0.95);
+    overflow: hidden;
+    animation: vlLightboxRise .18s cubic-bezier(.2, .8, .2, 1);
+}
+.vl-lightbox-close {
+    position: fixed;
+    top: clamp(14px, 2.5vw, 24px);
+    right: clamp(14px, 2.5vw, 28px);
+    z-index: 2600;
+    display: grid;
+    width: 42px;
+    height: 42px;
+    place-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 50%;
+    color: #fff;
+    background: rgba(18, 18, 20, 0.78);
+    backdrop-filter: blur(12px);
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    transition: color .16s ease, background .16s ease, transform .16s ease, border-color .16s ease;
+}
+.vl-lightbox-close:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.22);
+    border-color: rgba(255, 255, 255, 0.45);
+    transform: scale(1.08);
+}
+.vl-lightbox-close svg {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.2;
+    stroke-linecap: round;
+}
+.vl-lightbox-body {
+    flex: 1;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: clamp(10px, 1.8vw, 16px);
+}
+.vl-lightbox-titlebar {
+    margin-bottom: 0.5rem;
+    padding: 0.2rem 0.4rem 0.2rem;
+    border-bottom: none;
+}
+.vl-lightbox-title {
+    margin: 0;
+    color: #fff;
+    font: 750 clamp(1.05rem, 2vw, 1.35rem)/1.25 var(--font-display);
+    letter-spacing: -.02em;
+    word-break: break-word;
+}
+.vl-interactive-view {
+    width: 100%;
+    pointer-events: auto !important;
+}
+
+@keyframes vlLightboxFade {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+@keyframes vlLightboxRise {
+    from { opacity: 0; transform: translateY(12px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (max-width: 620px) {
+    .vl-lightbox-overlay { padding: max(10px, env(safe-area-inset-top)) 8px max(10px, env(safe-area-inset-bottom)); }
+    .vl-lightbox-dialog { width: 100%; max-height: 94dvh; border-radius: 16px; }
+    .vl-lightbox-close { top: 12px; right: 12px; width: 36px; height: 36px; }
+    .vl-lightbox-body { padding: 10px 8px 12px; }
+    .vl-lightbox-titlebar { margin-bottom: 0.5rem; padding: 0.1rem 0.2rem 0.45rem; }
 }

@@ -1,7 +1,8 @@
-﻿import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { FaFacebookF, FaRedditAlien, FaTelegram, FaWhatsapp, FaXTwitter } from 'react-icons/fa6';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import { supabase } from '../../lib/supabase';
 import { getVisibleAccentColor } from '../../lib/colorContrast';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -32,17 +33,68 @@ function ProfileAvatar({ profile, size = 'normal' }) {
     );
 }
 
-// ─── Helpers para exportar imagen ────────────────────────────────────────────
+// ─── Helpers para exportar imagen e info de preview ──────────────────────────
+function collectListPreviewImages(content, max = 3) {
+    if (!content) return [];
+    const images = [];
+    const extract = item => {
+        if (!item || typeof item !== 'object') return;
+        const img = item.image_url || item.cover_url || item.cover?.url;
+        if (img && typeof img === 'string' && !images.includes(img)) {
+            images.push(img);
+        }
+    };
+    if (Array.isArray(content)) {
+        for (const item of content) {
+            extract(item);
+            if (images.length >= max) break;
+        }
+    } else if (typeof content === 'object') {
+        for (const val of Object.values(content)) {
+            if (Array.isArray(val)) {
+                for (const sub of val) {
+                    extract(sub);
+                    if (images.length >= max) break;
+                }
+            } else {
+                extract(val);
+            }
+            if (images.length >= max) break;
+        }
+    }
+    return images;
+}
+
 async function imageToDataUrl(url) {
-    const response = await fetch(url, { mode: 'cors' });
-    if (!response.ok) throw new Error('imagen inaccesible');
-    const blob = await response.blob();
-    return new Promise((res, rej) => {
-        const reader = new FileReader();
-        reader.onload = () => res(reader.result);
-        reader.onerror = rej;
-        reader.readAsDataURL(blob);
-    });
+    if (!url) return '';
+    try {
+        const normalized = new URL(url, window.location.href).href;
+        let blob = null;
+        try {
+            const { data, error, response } = await supabase.functions.invoke('igdb-proxy', { body: { imageUrl: normalized } });
+            if (!error && data) {
+                const imageType = response?.headers?.get('x-image-content-type') || 'image/jpeg';
+                blob = data instanceof Blob ? new Blob([data], { type: imageType }) : new Blob([data], { type: imageType });
+            }
+        } catch { /* fallback to direct fetch */ }
+
+        if (!blob) {
+            const resp = await fetch(normalized, { mode: 'cors', credentials: 'omit', referrerPolicy: 'no-referrer' });
+            if (resp.ok) blob = await resp.blob();
+        }
+
+        if (blob) {
+            return new Promise((res, rej) => {
+                const reader = new FileReader();
+                reader.onload = () => res(reader.result);
+                reader.onerror = rej;
+                reader.readAsDataURL(blob);
+            });
+        }
+    } catch (e) {
+        console.warn('No se pudo convertir la imagen a dataUrl:', url, e);
+    }
+    return '';
 }
 
 function escapeSvg(v) {
@@ -114,7 +166,7 @@ function buildPreviewSvg(preview, imageSources, w, h) {
         const align = style.textAlign || 'start';
         const anchor = align === 'center' ? 'middle' : (align === 'right' || align === 'end') ? 'end' : 'start';
         const x = anchor === 'middle' ? box.x + box.width / 2 : anchor === 'end' ? box.x + box.width - rp : box.x + lp;
-        if (parent.classList?.contains('cl-ranking-badge')) {
+        if (parent.classList?.contains('cl-ranking-badge') || parent.classList?.contains('vl-rank-num')) {
             const bfs = 16; mc.font = `${fi} ${fw} ${bfs}px ${ff}`;
             const met = mc.measureText(text);
             const by = box.y + box.height / 2 + ((met.actualBoundingBoxAscent || bfs * 0.75) - (met.actualBoundingBoxDescent || 0)) / 2;
@@ -174,10 +226,10 @@ function buildPreviewSvg(preview, imageSources, w, h) {
     return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><defs>${defs.join('')}</defs>${body.join('')}</svg>`;
 }
 
-async function downloadListImage(preview, listTitle, authorName, authorAvatar, authorThemeColor) {
+async function downloadListImage(preview, listTitle, authorName, authorAvatar, authorThemeColor, authorUsername, bgCoverUrl, listType) {
     if (!preview) throw new Error('No se encontró el preview');
     await document.fonts?.ready;
-    const vc = preview.querySelector('.cl-tierlist, .cl-ranking-stack, .cl-grid-cells') || preview;
+    const vc = preview.querySelector('.cl-tierlist, .vl-ranking-stack, .cl-grid-cells') || preview;
     const bounds = vc.getBoundingClientRect();
     const imgs = [...preview.querySelectorAll('img')];
     const imageSources = new Map();
@@ -194,39 +246,118 @@ async function downloadListImage(preview, listTitle, authorName, authorAvatar, a
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         canvas.width = 1200;
-        const dynamic = vc.matches('.cl-tierlist, .cl-ranking-stack');
-        const pa = dynamic ? { x: 24, y: 150, width: canvas.width - 48, height: 920 } : { x: 24, y: 150, width: 1152, height: 920 };
+        const dynamic = vc.matches('.cl-tierlist, .vl-ranking-stack');
+        const pa = dynamic ? { x: 24, y: 180, width: canvas.width - 48, height: 920 } : { x: 24, y: 180, width: 1152, height: 920 };
         const scale = dynamic ? pa.width / bounds.width : Math.min(pa.width / bounds.width, pa.height / bounds.height);
         const dw = bounds.width * scale, dh = bounds.height * scale;
-        canvas.height = dynamic ? Math.max(320, Math.ceil(pa.y + dh + 130)) : 1200;
-        ctx.fillStyle = '#0a0a0a'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        canvas.height = dynamic ? Math.max(340, Math.ceil(pa.y + dh + 130)) : 1200;
+
+        // ── 1. Fondo visual tipo review (base oscura + blur de portada + halo de acento) ──
+        ctx.fillStyle = '#0a0a0a';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        if (bgCoverUrl) {
+            try {
+                const bgData = await imageToDataUrl(bgCoverUrl);
+                if (bgData) {
+                    const bgImg = new Image();
+                    await new Promise(r => { bgImg.onload = r; bgImg.onerror = r; bgImg.src = bgData; });
+                    if (bgImg.naturalWidth) {
+                        ctx.save();
+                        ctx.filter = 'blur(74px)';
+                        ctx.globalAlpha = 0.32;
+                        ctx.drawImage(bgImg, -80, -80, canvas.width + 160, canvas.height + 160);
+                        ctx.restore();
+                        ctx.fillStyle = 'rgba(5, 6, 9, 0.84)';
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    }
+                }
+            } catch { /* skip bg */ }
+        }
+
+        const glow = ctx.createRadialGradient(canvas.width * 0.65, 110, 0, canvas.width * 0.65, 110, 700);
+        glow.addColorStop(0, authorThemeColor || '#14b8a6');
+        glow.addColorStop(1, 'rgba(10, 10, 10, 0)');
+        ctx.globalAlpha = 0.18;
+        ctx.fillStyle = glow;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.globalAlpha = 1;
+
+        // ── 2. Renderizado de la lista (sistema de escala y posicionamiento preservado) ──
         const dy = dynamic ? pa.y : pa.y + (pa.height - dh) / 2;
         const dx = pa.x + (pa.width - dw) / 2;
         ctx.drawImage(pi, dx, dy, dw, dh);
+
         const bf = document.querySelector('.sidebar-brand-name');
         const font = bf ? window.getComputedStyle(bf).fontFamily : 'sans-serif';
         const hl = dynamic ? pa.x : 48;
-        ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic'; ctx.fillStyle = '#fff'; ctx.font = `750 34px ${font}`;
-        ctx.fillText(listTitle || 'Lista', hl, 58, 920);
-        const as = 44, ag = 12; ctx.font = `650 24px ${font}`;
-        const ax = hl, ay = 82; let adu = '';
+
+        // ── 3. Usuario (encima del título, con avatar + acento + username) ──
+        const avatarX = hl;
+        const avatarY = 32;
+        const avatarSize = 54;
+        let adu = '';
         try { adu = await imageToDataUrl(authorAvatar || '/default-avatar.png'); } catch { /* skip */ }
         if (adu) {
             const ai = new Image();
             await new Promise(res => { ai.onload = res; ai.onerror = res; ai.src = adu; });
-            if (ai.naturalWidth) { ctx.save(); ctx.beginPath(); ctx.arc(ax + as / 2, ay + as / 2, as / 2, 0, Math.PI * 2); ctx.clip(); ctx.drawImage(ai, ax, ay, as, as); ctx.restore(); }
+            if (ai.naturalWidth) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(avatarX + avatarSize / 2, avatarY + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
+                ctx.clip();
+                ctx.drawImage(ai, avatarX, avatarY, avatarSize, avatarSize);
+                ctx.restore();
+            }
+        } else {
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.beginPath();
+            ctx.arc(avatarX + avatarSize / 2, avatarY + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
+            ctx.fill();
         }
-        ctx.strokeStyle = authorThemeColor || '#14b8a6'; ctx.lineWidth = 2.5;
-        ctx.beginPath(); ctx.arc(ax + as / 2, ay + as / 2, as / 2 - 1.25, 0, Math.PI * 2); ctx.stroke();
-        ctx.fillStyle = '#fff'; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
-        ctx.fillText(authorName || 'Usuario', ax + as + ag, ay + as / 2, 620);
-        const ms = 42, fr = canvas.width - 24, my = canvas.height - 100;
+
+        ctx.strokeStyle = authorThemeColor || '#14b8a6';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(avatarX + avatarSize / 2, avatarY + avatarSize / 2, avatarSize / 2 - 1.5, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'alphabetic';
+        ctx.fillStyle = '#f4f4f5';
+        ctx.font = `700 24px ${font}`;
+        ctx.fillText(authorName || 'Usuario', avatarX + avatarSize + 16, avatarY + 24, canvas.width - avatarX - avatarSize - 40);
+
+        ctx.fillStyle = '#a1a1aa';
+        ctx.font = `400 17px ${font}`;
+        ctx.fillText(`@${authorUsername || 'usuario'}`, avatarX + avatarSize + 16, avatarY + 47, canvas.width - avatarX - avatarSize - 40);
+
+        // Línea divisoria bajo el autor (idéntica a las reviews)
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+        ctx.fillRect(hl, 102, canvas.width - hl * 2, 1);
+
+        // ── 4. Título de la lista (debajo del autor) ──
+        ctx.fillStyle = '#f5f5f5';
+        ctx.font = `750 34px ${font}`;
+        ctx.fillText(listTitle || 'Lista', hl, 148, canvas.width - hl * 2);
+
+        // ── 5. Footer con separador y GeekSphere branding (idéntico a las reviews) ──
+        const footerY = canvas.height - 62;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+        ctx.fillRect(hl, footerY - 32, canvas.width - hl * 2, 1);
+
         const logo = new Image();
         await new Promise(res => { logo.onload = res; logo.onerror = res; logo.src = '/icons/logo.png'; });
-        ctx.fillStyle = '#fff'; ctx.font = `750 29px ${font}`; ctx.textBaseline = 'middle';
-        const bn = 'GeekSphere', nw = ctx.measureText(bn).width, nx = fr - nw, lx = nx - 12 - ms;
-        if (logo.naturalWidth) ctx.drawImage(logo, lx, my, ms, ms);
-        ctx.fillText(bn, nx, my + ms / 2);
+        const brand = 'GeekSphere';
+        ctx.font = `750 25px ${font}`;
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#ffffff';
+        const brandX = canvas.width - hl;
+        const brandWidth = ctx.measureText(brand).width;
+        ctx.fillText(brand, brandX, footerY);
+        if (logo.naturalWidth) ctx.drawImage(logo, brandX - brandWidth - 46, footerY - 20, 40, 40);
+
         const png = await new Promise(res => canvas.toBlob(res, 'image/png'));
         if (!png) throw new Error('No se pudo crear el PNG');
         const pu = URL.createObjectURL(png);
@@ -250,7 +381,9 @@ export default function ViewList() {
     const [error, setError] = useState(null);
 
     const [shareOpen, setShareOpen] = useState(false);
+    const [lightboxOpen, setLightboxOpen] = useState(false);
     const [shareCopied, setShareCopied] = useState(false);
+    const sharePreviewImages = collectListPreviewImages(list?.content, 3);
 
     const [menuOpen, setMenuOpen] = useState(false);
     const menuRef = useRef(null);
@@ -285,13 +418,26 @@ export default function ViewList() {
 
     useEffect(() => { loadComments(); }, [loadComments]);
 
-    // Cerrar share con Escape
+    // Cerrar share y lightbox con Escape
     useEffect(() => {
-        if (!shareOpen) return;
-        const fn = e => { if (e.key === 'Escape') setShareOpen(false); };
+        if (!shareOpen && !lightboxOpen) return;
+        const fn = e => {
+            if (e.key === 'Escape') {
+                setShareOpen(false);
+                setLightboxOpen(false);
+            }
+        };
         document.addEventListener('keydown', fn);
         return () => document.removeEventListener('keydown', fn);
-    }, [shareOpen]);
+    }, [shareOpen, lightboxOpen]);
+
+    // Bloquear scroll de body cuando el lightbox está abierto
+    useEffect(() => {
+        if (!lightboxOpen) return;
+        const prev = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        return () => { document.body.style.overflow = prev; };
+    }, [lightboxOpen]);
 
     // Cerrar menú 3 puntos al hacer clic fuera
     useEffect(() => {
@@ -409,7 +555,7 @@ export default function ViewList() {
                         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
                         Volver
                     </button>
-                    <div className="vl-menu-wrap" ref={menuRef}>
+                    {isAuthor && (<div className="vl-menu-wrap" ref={menuRef}>
                         <button className="vl-dots-btn" type="button" aria-label="Más opciones" onClick={() => setMenuOpen(o => !o)}>
                             <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
                                 <circle cx="5"  cy="12" r="1.5"/>
@@ -425,10 +571,6 @@ export default function ViewList() {
                                         Editar lista
                                     </Link>
                                 )}
-                                <button className="vl-dropdown-item" type="button" onClick={() => { setMenuOpen(false); setShareOpen(true); }}>
-                                    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.7 10.7 6.6-4.4M8.7 13.3l6.6 4.4"/></svg>
-                                    Compartir
-                                </button>
                                 {isAuthor && (
                                     <button className="vl-dropdown-item danger" type="button" onClick={handleDelete}>
                                         <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
@@ -437,7 +579,7 @@ export default function ViewList() {
                                 )}
                             </div>
                         )}
-                    </div>
+                    </div>)}
                 </div>
 
                 {/* ── Autor ── */}
@@ -458,21 +600,25 @@ export default function ViewList() {
                     </Link>
                 </header>
 
-                {/* ── Preview: bloque negro con título + visual fusionados ── */}
-                <div className="vl-preview-block">
-                    <div className="vl-preview-titlebar">
-                        <h1 className="vl-preview-title">{list.title}</h1>
-                        {isAuthor && (
-                            <Link to={`/lists/${list.id}/edit`} className="vl-preview-edit-btn" title="Editar lista" aria-label="Editar lista">
-                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                            </Link>
-                        )}
-                    </div>
-                    <div className="vl-post-visual-wrapper">
-                        <div className="vl-post-visual">
-                            {list.list_type === 'tierlist' && <TierlistView list={list} />}
-                            {list.list_type === 'ranking'  && <RankingView  list={list} />}
-                            {list.list_type === 'grid'     && <GridView     list={list} />}
+                {/* ── Preview: bloque negro con título + visual fusionados (comportamiento tipo imagen) ── */}
+                <div
+                    className="vl-preview-block is-preview-card"
+                    onClick={() => setLightboxOpen(true)}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Ver lista completa: ${list.title}`}
+                    onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setLightboxOpen(true); } }}
+                >
+                    <div className="vl-locked-preview">
+                        <div className="vl-preview-titlebar">
+                            <h1 className="vl-preview-title">{list.title}</h1>
+                        </div>
+                        <div className="vl-post-visual-wrapper">
+                            <div className="vl-post-visual">
+                                {list.list_type === 'tierlist' && <TierlistView list={list} />}
+                                {list.list_type === 'ranking'  && <RankingView  list={list} />}
+                                {list.list_type === 'grid'     && <GridView     list={list} />}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -597,7 +743,17 @@ export default function ViewList() {
                             </button>
                         </header>
                         <div className="review-share-preview" style={{ '--review-page-accent': pageAccent }}>
-                            <div className="review-share-preview-cover vl-share-cover-placeholder"><span>GS</span></div>
+                            <div className={`review-share-preview-cover${sharePreviewImages.length > 1 ? ' vl-share-cover-fan' : ''}`}>
+                                {sharePreviewImages.length > 1 ? (
+                                    sharePreviewImages.map((img, i) => (
+                                        <img key={i} src={img} alt="" className={`vl-fan-img-${i}`} />
+                                    ))
+                                ) : sharePreviewImages.length === 1 ? (
+                                    <img src={sharePreviewImages[0]} alt="" />
+                                ) : (
+                                    <div className="vl-share-cover-placeholder"><span>GS</span></div>
+                                )}
+                            </div>
                             <div className="review-share-preview-copy">
                                 <div className="review-share-preview-author">
                                     <ProfileAvatar profile={authorProfile} size="small" />
@@ -622,7 +778,18 @@ export default function ViewList() {
                         </div>
                         <div className="review-share-divider" />
                         <button className="review-share-download" type="button" onClick={async () => {
-                            try { await downloadListImage(document.querySelector('.vl-post-visual-wrapper'), list.title, authorName, list.author?.avatar_url || null, authorThemeColor); }
+                            try {
+                                await downloadListImage(
+                                    document.querySelector('.vl-post-visual-wrapper'),
+                                    list.title,
+                                    authorName,
+                                    list.author?.avatar_url || null,
+                                    authorThemeColor,
+                                    authorUsername,
+                                    sharePreviewImages[0],
+                                    list.list_type
+                                );
+                            }
                             catch (err) { console.error(err); alert('No se pudo generar la imagen. Inténtalo de nuevo.'); }
                         }}>
                             <span className="review-share-download-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg></span>
@@ -630,6 +797,31 @@ export default function ViewList() {
                             <svg className="review-share-download-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
                         </button>
                     </section>
+                </div>
+            ), document.body)}
+            {/* ── Vista ampliada / Lightbox (lista + título, cerrar fuera) ── */}
+            {lightboxOpen && createPortal((
+                <div className="vl-lightbox-overlay" onClick={() => setLightboxOpen(false)}>
+                    <button
+                        className="vl-lightbox-close"
+                        type="button"
+                        onClick={() => setLightboxOpen(false)}
+                        aria-label="Cerrar vista"
+                    >
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m18 6-12 12M6 6l12 12"/></svg>
+                    </button>
+                    <div className="vl-lightbox-dialog" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={`Vista ampliada: ${list.title}`}>
+                        <div className="vl-lightbox-body">
+                            <div className="vl-lightbox-titlebar">
+                                <h2 className="vl-lightbox-title">{list.title}</h2>
+                            </div>
+                            <div className="vl-post-visual vl-interactive-view">
+                                {list.list_type === 'tierlist' && <TierlistView list={list} />}
+                                {list.list_type === 'ranking'  && <RankingView  list={list} />}
+                                {list.list_type === 'grid'     && <GridView     list={list} />}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             ), document.body)}
         </main>
@@ -661,17 +853,31 @@ function TierlistView({ list }) {
 function RankingView({ list }) {
     const slots = list.type_config?.max_items || (Array.isArray(list.content) ? list.content.length : 10);
     return (
-        <div className="cl-ranking-stack">
+        <div className="vl-ranking-stack">
             {Array.from({ length: slots }, (_, i) => {
                 const item = Array.isArray(list.content) ? list.content[i] : list.content['r' + i];
+                const imgUrl = item ? (item.image_url || item.cover_url || item.cover?.url) : null;
+                if (!item) {
+                    return (
+                        <div key={i} className="vl-rank-empty-row">
+                            <span className="vl-rank-num">{i + 1}</span>
+                            <div className="vl-rank-cover"><div className="vl-rank-cover-empty">—</div></div>
+                            <div className="vl-rank-info"><span className="vl-rank-name" style={{ color: 'rgba(255,255,255,0.2)' }}>—</span></div>
+                        </div>
+                    );
+                }
                 return (
-                    <div key={i} className={`cl-ranking-row${i < 3 ? ` top-${i}` : ""}`}>
-                        <div className="cl-ranking-badge">{i + 1}</div>
-                        <div className="vl-ranking-cover">{item && <ItemCard item={item} hideName />}</div>
-                        <div className="vl-ranking-info">
-                            {item
-                                ? <><div className="vl-ranking-name">{item.name}</div>{item.year && <div className="vl-ranking-year">{item.year}</div>}</>
-                                : <div className="vl-ranking-empty">—</div>}
+                    <div key={i} className={`vl-ranking-row${i < 3 ? ` top-${i}` : ''}`}>
+                        <span className="vl-rank-num">{i + 1}</span>
+                        <div className="vl-rank-cover">
+                            {imgUrl
+                                ? <img src={imgUrl} alt={item.name} />
+                                : <div className="vl-rank-cover-empty">{item.name?.charAt(0)}</div>
+                            }
+                        </div>
+                        <div className="vl-rank-info">
+                            <div className="vl-rank-name">{item.name}</div>
+                            {item.year && <div className="vl-rank-year">{item.year}</div>}
                         </div>
                     </div>
                 );
