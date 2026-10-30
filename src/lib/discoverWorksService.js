@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { isPrimaryIGDBGame, gameCatalogDedupKey } from './igdb'
 
 const PAGE_SIZE = 1000
 
@@ -43,6 +44,10 @@ function catalogPopularity(work) {
   )
 }
 
+function normalizeTitle(value) {
+  return String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim()
+}
+
 /** Loads the catalog and registration ratings used by Discover. */
 export async function getDiscoverWorks(mediaType) {
   if (!['anime', 'game'].includes(mediaType)) throw new Error('Tipo de obra no válido')
@@ -67,7 +72,16 @@ export async function getDiscoverWorks(mediaType) {
     stats.set(key, item)
   }
 
-  const works = catalog.map(work => {
+  const visibleCatalog = mediaType === 'anime'
+    ? catalog
+    : catalog.filter(game => isPrimaryIGDBGame(game))
+  const seenTitles = new Set()
+  const works = visibleCatalog.filter(work => {
+    const title = mediaType === 'game' ? gameCatalogDedupKey(work) : normalizeTitle(work[titleField])
+    if (!title || seenTitles.has(title)) return false
+    seenTitles.add(title)
+    return true
+  }).map(work => {
     const score = stats.get(String(work.id)) || { registrations: 0, ratingTotal: 0, ratingCount: 0 }
     return {
       ...work,

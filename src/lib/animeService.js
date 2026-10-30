@@ -3,6 +3,7 @@
  */
 
 import { supabase } from './supabase'
+import { rankSearchResults } from './searchRanking'
 
 /**
  * Anime Service - Orchestrates local DB cache + AniList GraphQL API
@@ -11,13 +12,14 @@ import { supabase } from './supabase'
 const ANILIST_API_URL = 'https://graphql.anilist.co'
 
 /**
- * Search anime (DB first, then AniList)
+ * Search anime (DB first, then AniList only if the local catalog is short)
  * @param {string} query - Search query
  * @param {number} limit - Max results
  * @returns {Promise<Array>} Array of anime objects
  */
 export async function searchAnime(query, limit = 20, { signal } = {}) {
     if (!query || query.length < 2) return []
+    let localResults = []
 
     try {
         // 1. Search local DB first
@@ -25,21 +27,18 @@ export async function searchAnime(query, limit = 20, { signal } = {}) {
             .from('anime')
             .select('*')
             .ilike('title', `%${query}%`)
-            .limit(limit)
+            .limit(Math.min(100, Math.max(limit * 5, 50)))
             .abortSignal(signal)
 
         if (error) {
             console.error('Local DB anime search error:', error)
         }
 
-        const localResults = (localAnime || []).map(formatAnime)
+        localResults = dedupeAnime((localAnime || []).map(formatAnime))
+        const rankedLocal = rankSearchResults(localResults, query, anime => [anime.title], anime => anime.rating)
+        if (rankedLocal.length >= limit) return rankedLocal.slice(0, limit)
 
-        // 2. If we have enough local results, return them
-        if (localResults.length >= limit / 2) {
-            return localResults.slice(0, limit)
-        }
-
-        // 3. Fetch from AniList GraphQL API
+        // AniList is queried only when the local catalog cannot fill the page.
         const graphqlQuery = `
         query ($search: String, $limit: Int) {
           Page (page: 1, perPage: $limit) {
@@ -48,6 +47,7 @@ export async function searchAnime(query, limit = 20, { signal } = {}) {
               title {
                 romaji
                 english
+                native
               }
               coverImage {
                 extraLarge
@@ -61,6 +61,7 @@ export async function searchAnime(query, limit = 20, { signal } = {}) {
               averageScore
               description
               genres
+              format
             }
           }
         }
@@ -75,35 +76,73 @@ export async function searchAnime(query, limit = 20, { signal } = {}) {
             signal,
             body: JSON.stringify({
                 query: graphqlQuery,
-                variables: { search: query, limit: limit }
+                variables: { search: query, limit: Math.min(Math.max((limit - rankedLocal.length) * 3, 12), 50) }
             })
         })
 
+        if (!response.ok) throw new Error(`AniList error: ${response.status}`)
         const { data } = await response.json()
-        const anilistResults = (data?.Page?.media || []).map(anilistToStandard)
+        const anilistResults = dedupeAnime((data?.Page?.media || []).map(anilistToStandard))
 
-        // 4. Import new anime to local DB
-        const localIds = new Set(localResults.map(a => a.id))
-        const newAnime = anilistResults.filter(a => !localIds.has(a.id))
-
-        if (newAnime.length > 0) {
-            importAnimeToDb(newAnime) // Fire and forget
+        const localIds = new Set(localResults.map(anime => String(anime.id)))
+        let existingIds = localIds
+        if (anilistResults.length) {
+            const { data: existingAnime, error: existingError } = await supabase
+                .from('anime')
+                .select('id')
+                .in('id', anilistResults.map(anime => anime.id))
+                .abortSignal(signal)
+            if (!existingError) existingIds = new Set([...(existingAnime || []).map(anime => String(anime.id)), ...localIds])
         }
+        const newAnime = anilistResults.filter(anime => !existingIds.has(String(anime.id)))
+        if (newAnime.length) importAnimeToDb(newAnime)
 
-        // 5. Merge
-        const allAnime = [...localResults]
-        for (const anime of anilistResults) {
-            if (!localIds.has(anime.id)) {
-                allAnime.push(anime)
-            }
-        }
-
-        return allAnime.slice(0, limit)
+        return rankSearchResults(
+            dedupeAnime([...anilistResults, ...localResults]),
+            query,
+            anime => [anime.title, ...(anime.search_terms || [])],
+            anime => anime.rating,
+        ).slice(0, limit)
 
     } catch (error) {
+        if (signal?.aborted || error?.name === 'AbortError') return []
         console.error('searchAnime error:', error)
+        return rankSearchResults(localResults, query, anime => [anime.title], anime => anime.rating).slice(0, limit)
+    }
+}
+
+/** Search only the local anime cache; used for lightweight decorative samples. */
+export async function searchAnimeLocal(query, limit = 20) {
+    if (!query || query.length < 2) return []
+    try {
+        const { data, error } = await supabase
+            .from('anime')
+            .select('*')
+            .ilike('title', `%${query}%`)
+            .limit(Math.min(100, Math.max(limit * 5, 50)))
+        if (error) throw error
+        const results = dedupeAnime((data || []).map(formatAnime))
+        return rankSearchResults(results, query, anime => [anime.title], anime => anime.rating).slice(0, limit)
+    } catch (error) {
+        console.error('searchAnimeLocal error:', error)
         return []
     }
+}
+
+function normalizeAnimeTitle(value) {
+    return (value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim()
+}
+
+function dedupeAnime(animeList) {
+    const seenIds = new Set()
+    const seenTitles = new Set()
+    return animeList.filter(anime => {
+        const title = normalizeAnimeTitle(anime.title || anime.name)
+        if (seenIds.has(anime.id) || !title || seenTitles.has(title)) return false
+        seenIds.add(anime.id)
+        seenTitles.add(title)
+        return true
+    })
 }
 
 /**
@@ -262,6 +301,7 @@ function anilistToStandard(media) {
         id: media.id,
         name: title,
         title: title,
+        search_terms: [media.title?.english, media.title?.romaji, media.title?.native].filter(Boolean),
         image_url: media.coverImage?.extraLarge,
         cover_url: media.coverImage?.extraLarge,
         banner_url: media.bannerImage || null,
@@ -299,15 +339,18 @@ function formatAnime(dbAnime) {
 }
 
 async function importAnimeToDb(animeList) {
-    if (!animeList || animeList.length === 0) return
+    if (!animeList || animeList.length === 0) return true
 
     try {
         const ids = animeList.map(a => a.id)
         const { error } = await supabase.functions.invoke('secure-sync', {
             body: { type: 'anime', ids }
         })
-        if (error) console.error('Import anime secure-sync error:', error)
+        if (error) throw error
+        return true
     } catch (e) {
         console.error('importAnimeToDb error:', e)
+        return false
     }
 }
+

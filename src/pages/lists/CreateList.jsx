@@ -90,6 +90,7 @@ export default function CreateList() {
     const { id } = useParams();
     const [searchParams] = useSearchParams();
     const templateId = searchParams.get('template');
+    const fromListId = searchParams.get('fromList');
     const navigate = useNavigate();
     const { user, profile } = useAuth();
 
@@ -118,11 +119,22 @@ export default function CreateList() {
 
     // Sidebar colapsable y edición de título inline
     const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
-    const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     
     // UI states
     const [editingTitle, setEditingTitle] = useState(false);
     const [titleInput, setTitleInput] = useState('');
+
+    useEffect(() => {
+        if (isMobileSearchOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+        return () => {
+            document.body.style.overflow = '';
+        };
+    }, [isMobileSearchOpen]);
 
     useEffect(() => {
         if (id) return;
@@ -131,13 +143,15 @@ export default function CreateList() {
                 setTitle(`${template.title} (${profile.display_name || profile.username || 'Usuario'})`);
                 setDefaultTitleSet(true);
             }
+        } else if (fromListId) {
+            // Handled when list loads
         } else {
             if (profile && !defaultTitleSet) {
                 setTitle(`Nueva Lista (${profile.display_name || profile.username || 'Usuario'})`);
                 setDefaultTitleSet(true);
             }
         }
-    }, [id, templateId, template, profile, defaultTitleSet]);
+    }, [id, templateId, fromListId, template, profile, defaultTitleSet]);
 
     // ── Load template or existing list ──
     useEffect(() => {
@@ -157,6 +171,53 @@ export default function CreateList() {
                 }
                 setContent(initialContent);
                 setPool(data.default_items || []);
+            }).catch(err => setError(err.message));
+        } else if (fromListId) {
+            getListById(fromListId).then(data => {
+                if (data.template_id) {
+                    getTemplateById(data.template_id).then(t => setTemplate(t));
+                }
+                setListType(data.list_type);
+                setMediaType(data.media_type);
+                setTypeConfig(data.type_config);
+                let initialContent = {};
+                if (data.list_type === 'tierlist') {
+                    (data.type_config?.tiers || []).forEach(t => (initialContent[t.id] = []));
+                } else if (data.list_type === 'ranking') {
+                    const max = data.type_config?.max_items || 10;
+                    for (let i = 0; i < max; i++) initialContent[`r${i}`] = [];
+                } else if (data.list_type === 'grid') {
+                    (data.type_config?.cells || []).forEach((_, i) => (initialContent[`c${i}`] = []));
+                }
+                setContent(initialContent);
+
+                // Recopilamos todos los ítems de la lista para ponerlos en el pool de la nueva lista
+                const allItems = [];
+                if (data.content) {
+                    if (Array.isArray(data.content)) {
+                        allItems.push(...data.content.filter(Boolean));
+                    } else if (typeof data.content === 'object') {
+                        Object.values(data.content).forEach(val => {
+                            if (Array.isArray(val)) allItems.push(...val.filter(Boolean));
+                            else if (val) allItems.push(val);
+                        });
+                    }
+                }
+                if (Array.isArray(data.pool)) {
+                    allItems.push(...data.pool.filter(Boolean));
+                }
+                const seen = new Set();
+                const uniquePool = allItems.filter(item => {
+                    const k = item.id || item.name;
+                    if (!k || seen.has(k)) return false;
+                    seen.add(k);
+                    return true;
+                });
+                setPool(uniquePool);
+                if (profile) {
+                    setTitle(`${data.title} (${profile.display_name || profile.username || 'Usuario'})`);
+                    setDefaultTitleSet(true);
+                }
             }).catch(err => setError(err.message));
         } else if (id) {
             getListById(id).then(data => {
@@ -182,7 +243,7 @@ export default function CreateList() {
                 }
             }).catch(err => setError(err.message));
         }
-    }, [templateId, id]);
+    }, [templateId, fromListId, id, profile]);
 
     // ── Search ──
     useEffect(() => {
@@ -461,8 +522,18 @@ export default function CreateList() {
                         {/* POOL */}
                         <div className="cl-pool-section">
                             <div className="cl-pool-separator"></div>
+                            <div className="cl-pool-header">
+                                <span className="cl-pool-title">Biblioteca</span>
+                                <span className="cl-pool-count">{pool.length}</span>
+                            </div>
                                 <div className="cl-mobile-pool-actions">
-                                    <button className="cl-pool-add-btn" onClick={() => setIsMobileSearchOpen(true)}>
+                                    <button
+                                        className="cl-pool-add-btn"
+                                        onClick={() => {
+                                            setIsMobileSearchOpen(true);
+                                            setSidebarCollapsed(false);
+                                        }}
+                                    >
                                         <IconPlus />
                                         <span>Añadir a la lista</span>
                                     </button>
@@ -492,31 +563,53 @@ export default function CreateList() {
                 <>
                     <div className={`cl-mobile-backdrop ${isMobileSearchOpen ? 'is-open' : ''}`} onClick={() => setIsMobileSearchOpen(false)}></div>
                     <aside className={`cl-sidebar ${sidebarCollapsed ? 'collapsed' : ''} ${isMobileSearchOpen ? 'mobile-open' : ''}`}>
-                            <div className="cl-sidebar-handle" onClick={() => setIsMobileSearchOpen(false)}></div>
-                            {/* Toggle */}
-                            <button
-                                className="cl-sidebar-toggle"
-                                onClick={() => setSidebarCollapsed(c => !c)}
-                                title={sidebarCollapsed ? 'Expandir' : 'Colapsar'}
-                            >
-                                {sidebarCollapsed ? <IconChevronLeft /> : <IconChevronRight />}
-                            </button>
+                        <div className="cl-sidebar-handle" onClick={() => setIsMobileSearchOpen(false)}></div>
 
-                        {!sidebarCollapsed && (
+                        {sidebarCollapsed && !isMobileSearchOpen && (
+                            <button
+                                className="cl-sidebar-rail-btn"
+                                onClick={() => setSidebarCollapsed(false)}
+                                title="Añadir elementos"
+                            >
+                                <IconPlus />
+                                <span className="cl-sidebar-rail-label">Añadir</span>
+                            </button>
+                        )}
+
+                        {(!sidebarCollapsed || isMobileSearchOpen) && (
                             <div className="cl-sidebar-inner">
+                                <div className="cl-sidebar-header">
+                                    <div className="cl-sidebar-title-group">
+                                        <h3 className="cl-sidebar-title">Añadir elementos</h3>
+                                    </div>
+                                    <button
+                                        className="cl-sidebar-close-btn"
+                                        onClick={() => {
+                                            setSidebarCollapsed(true);
+                                            setIsMobileSearchOpen(false);
+                                        }}
+                                        title="Cerrar panel"
+                                    >
+                                        <span className="cl-sidebar-close-desktop"><IconChevronRight /></span>
+                                        <span className="cl-sidebar-close-mobile"><IconX /></span>
+                                    </button>
+                                </div>
+
                                 {/* Tabs */}
                                 <div className="cl-sidebar-tabs">
                                     <button
                                         className={`cl-sidebar-tab ${activeTab === 'search' ? 'active' : ''}`}
                                         onClick={() => setActiveTab('search')}
                                     >
-                                        Buscar
+                                        <IconSearch />
+                                        <span>Buscar</span>
                                     </button>
                                     <button
                                         className={`cl-sidebar-tab ${activeTab === 'custom' ? 'active' : ''}`}
                                         onClick={() => setActiveTab('custom')}
                                     >
-                                        Personalizado
+                                        <IconPlus />
+                                        <span>Personalizado</span>
                                     </button>
                                 </div>
 
@@ -528,26 +621,40 @@ export default function CreateList() {
                                             <input
                                                 className="cl-search-input"
                                                 type="text"
-                                                placeholder={mediaType === 'game' ? 'Elden Ring, Zelda...' : 'Naruto, One Piece...'}
+                                                placeholder={mediaType === 'game' ? 'Buscar juegos (Zelda, Elden Ring...)' : 'Buscar anime (One Piece, Naruto...)'}
                                                 value={searchQuery}
                                                 onChange={e => setSearchQuery(e.target.value)}
                                             />
+                                            {searchQuery && (
+                                                <button
+                                                    className="cl-search-clear"
+                                                    onClick={() => setSearchQuery('')}
+                                                    type="button"
+                                                    title="Limpiar búsqueda"
+                                                >
+                                                    <IconX />
+                                                </button>
+                                            )}
                                             {isSearching && <div className="cl-search-spinner" />}
                                         </div>
 
                                         <div className="cl-results">
                                             {!isSearching && searchQuery.length < 2 && (
                                                 <div className="cl-results-empty">
-                                                    <span className="cl-results-empty-icon"><IconSearch /></span>
-                                                    <p>Busca para añadir</p>
-                                                    <small>Mínimo 2 caracteres</small>
+                                                    <div className="cl-results-empty-icon-wrap">
+                                                        <IconSearch />
+                                                    </div>
+                                                    <p>Busca tus favoritos</p>
+                                                    <small>Escribe al menos 2 letras para buscar</small>
                                                 </div>
                                             )}
                                             {!isSearching && searchQuery.length >= 2 && searchResults.length === 0 && (
                                                 <div className="cl-results-empty">
-                                                    <span className="cl-results-empty-icon"><IconSearch /></span>
+                                                    <div className="cl-results-empty-icon-wrap">
+                                                        <IconX />
+                                                    </div>
                                                     <p>Sin resultados</p>
-                                                    <small>Prueba con otro nombre</small>
+                                                    <small>Prueba con otro título o revisa la ortografía</small>
                                                 </div>
                                             )}
                                             {!isSearching && searchResults.map(item => {
@@ -564,14 +671,16 @@ export default function CreateList() {
                                                         <div className="cl-result-thumb">
                                                             {imgUrl
                                                                 ? <img src={imgUrl} alt="" onError={e => e.target.style.display = 'none'} />
-                                                                : <div className="cl-result-fallback" />
+                                                                : <div className="cl-result-fallback"><IconSearch /></div>
                                                             }
                                                         </div>
                                                         <div className="cl-result-info">
                                                             <span className="cl-result-name">{item.name}</span>
-                                                            {item.release_date && (
-                                                                <span className="cl-result-year">{item.release_date.substring(0, 4)}</span>
-                                                            )}
+                                                            <div className="cl-result-meta">
+                                                                {item.release_date && (
+                                                                    <span className="cl-result-year">{item.release_date.substring(0, 4)}</span>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                         <div className={`cl-result-btn ${isAdded ? 'added' : ''}`}>
                                                             {isAdded ? <IconCheck /> : <IconPlus />}
@@ -586,25 +695,32 @@ export default function CreateList() {
                                 {/* Custom tab */}
                                 {activeTab === 'custom' && (
                                     <div className="cl-custom-form">
-                                        <label className="cl-custom-label">Nombre</label>
-                                        <input
-                                            className="cl-custom-input"
-                                            type="text"
-                                            placeholder="Nombre del elemento"
-                                            value={customName}
-                                            onChange={e => setCustomName(e.target.value)}
-                                        />
-                                        <label className="cl-custom-label">URL de imagen</label>
-                                        <input
-                                            className="cl-custom-input"
-                                            type="url"
-                                            placeholder="https://ejemplo.com/imagen.jpg"
-                                            value={customImageUrl}
-                                            onChange={e => setCustomImageUrl(e.target.value)}
-                                        />
+                                        <div className="cl-custom-field">
+                                            <label className="cl-custom-label">Título o Nombre</label>
+                                            <input
+                                                className="cl-custom-input"
+                                                type="text"
+                                                placeholder="Ej: Bloodborne, Evangelion..."
+                                                value={customName}
+                                                onChange={e => setCustomName(e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="cl-custom-field">
+                                            <label className="cl-custom-label">URL de la carátula</label>
+                                            <input
+                                                className="cl-custom-input"
+                                                type="url"
+                                                placeholder="https://ejemplo.com/portada.jpg"
+                                                value={customImageUrl}
+                                                onChange={e => setCustomImageUrl(e.target.value)}
+                                            />
+                                        </div>
                                         {customImageUrl && (
-                                            <div className="cl-custom-preview">
-                                                <img src={customImageUrl} alt="Preview" onError={e => e.target.style.display = 'none'} />
+                                            <div className="cl-custom-preview-card">
+                                                <div className="cl-custom-preview">
+                                                    <img src={customImageUrl} alt="Preview" onError={e => e.target.style.display = 'none'} />
+                                                </div>
+                                                <span className="cl-custom-preview-name">{customName || 'Vista previa'}</span>
                                             </div>
                                         )}
                                         <button
@@ -619,7 +735,7 @@ export default function CreateList() {
                                             disabled={!customName || !customImageUrl}
                                         >
                                             <IconPlus />
-                                            Añadir al pool
+                                            <span>Añadir a la biblioteca</span>
                                         </button>
                                     </div>
                                 )}

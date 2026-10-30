@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { getSearchHighlights, searchPlatform } from '../lib/platformSearchService'
+import { getSearchRecommendations } from '../lib/searchRecommendationsService'
+import { getDiscoverLists } from '../lib/listService'
+import { useAuth } from '../context/AuthContext'
 import SEO from '../components/SEO'
 import './Search.css'
 
@@ -182,7 +185,145 @@ function CategoryCard({ kind, title, items, to, wide = false }) {
   </Link>
 }
 
+function SpotlightRow({ kind, items = [], loading = false }) {
+  const people = kind === 'people'
+  const orderedItems = people ? [...items].sort((a, b) => (b.commonWorks || 0) - (a.commonWorks || 0)) : items
+  const title = people ? 'Personas' : 'Espacios'
+  const href = people ? '/discover/users' : '/discover/spaces'
+  const mobileItems = orderedItems.slice(0, 3)
+  return <section className={`search-spotlight ${kind}`} aria-labelledby={`search-${kind}-title`}>
+    <Link to={href} className={`search-spotlight-mobile-link ${people ? 'people' : 'spaces'}`}>
+      <span className="search-spotlight-mobile-avatars" aria-hidden="true">
+        {(mobileItems.length ? mobileItems : Array.from({ length: 3 }, (_, index) => ({ id: `loading-${index}` }))).map((item, index) => <span className={`mobile-avatar${loading ? ' loading' : ''}`} key={item.user_id || item.id} style={{ '--avatar-index': index }}>
+          {!loading && item.avatar_url && <img src={item.avatar_url} alt="" loading="lazy"/>}
+        </span>)}
+      </span>
+      <span className="search-spotlight-mobile-copy">
+        <strong>{title}</strong>
+        <small>{people ? 'Tienen mucho en común contigo' : 'Comparte tus aficiones'}</small>
+      </span>
+      <svg className="search-spotlight-mobile-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+    </Link>
+    <div className="search-spotlight-heading">
+      <h2 id={`search-${kind}-title`}>{title}</h2>
+      <Link to={href} className="search-spotlight-view-more">Ver todas <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></Link>
+    </div>
+    {loading ? <div className="search-spotlight-row is-loading" aria-label={`Cargando ${title}`} aria-busy="true">
+      {Array.from({ length: 5 }, (_, index) => <div className={`search-spotlight-skeleton ${people ? 'person' : 'space'}`} key={index} aria-hidden="true">
+        {people ? <><span className="skeleton-avatar"/><i className="skeleton-title"/><b className="skeleton-subtitle"/></>
+          : <><span className="skeleton-cover"/><i className="skeleton-title"/></>}
+      </div>)}
+    </div> : orderedItems.length ? <div className="search-spotlight-row">
+      {orderedItems.slice(0, 8).map(item => {
+        const name = item.display_name || item.name || item.username || 'Usuario'
+        const image = item.avatar_url
+        const destination = people ? `/profile/${item.username || item.user_id || item.id}` : `/spaces/${item.id}`
+        const subtitle = `${item.commonWorks || 0} en común`
+        return <Link className={`search-spotlight-card ${people ? 'person' : 'space'}`} to={destination} key={item.user_id || item.id} title={name}>
+          {people ? <span className="search-spotlight-avatar" style={{ '--person-theme': item.theme_color || 'var(--brand-primary)' }}>{image ? <img src={image} alt="" loading="lazy"/> : <span>{name.slice(0, 1).toUpperCase()}</span>}</span>
+            : <span className="search-spotlight-cover">{image ? <img src={image} alt="" loading="lazy"/> : <span>{name.slice(0, 1).toUpperCase()}</span>}</span>}
+          <strong>{name}</strong>
+          {people && <small>{subtitle}</small>}
+        </Link>
+      })}
+    </div> : <p className="search-spotlight-empty">Todavía no hay {people ? 'personas para mostrar' : 'espacios para mostrar'}.</p>}
+  </section>
+}
+
+
+function RecommendationItem({ work }) {
+  const isAnime = work.type === 'anime' || work.media_type === 'anime'
+  const href = isAnime ? `/anime/${work.id}` : `/game/${work.id}`
+  const image = work.image || work.cover_url || work.image_url
+  return (
+    <Link to={href} className="srec-card" title={work.title} aria-label={work.title}>
+      <div className="srec-card-poster">
+        {image ? (
+          <img src={image} alt={work.title} loading="lazy" />
+        ) : (
+          <div className="srec-card-fallback">{isAnime ? '▣' : '▤'}</div>
+        )}
+        <div className="srec-card-overlay">
+          <span className="srec-card-title">{work.title}</span>
+        </div>
+      </div>
+    </Link>
+  )
+}
+
+function FeaturedListCard({ list }) {
+  const author = list.author?.username || 'comunidad'
+  return <Link className="search-featured-list-card" to={`/lists/${list.id}`} title={list.title || 'Lista sin título'}>
+    <span className="search-featured-list-art"><ListPoster list={list}/></span>
+    <strong>{list.title || 'Lista sin título'}</strong>
+    <small className="search-featured-list-author"><span className="search-featured-list-avatar">{list.author?.avatar_url ? <img src={list.author.avatar_url} alt="" loading="lazy"/> : author.slice(0, 1).toUpperCase()}</span><span>@{author}</span></small>
+  </Link>
+}
+
+function FeaturedLists({ lists, loading }) {
+  return <section className="search-featured-lists" aria-labelledby="featured-lists-title">
+    <div className="search-explore-heading">
+      <div><h2 id="featured-lists-title">LISTAS</h2></div>
+      <Link to="/discover/lists" className="search-spotlight-view-more">Ver todas <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></Link>
+    </div>
+    {loading ? <div className="search-featured-list-row" aria-label="Cargando listas">{Array.from({ length: 4 }, (_, index) => <div className="search-featured-list-skeleton" key={index}><span/><i/><b/></div>)}</div>
+      : lists.length ? <div className="search-featured-list-row">{lists.map(list => <FeaturedListCard list={list} key={list.id}/>)}</div>
+        : <p className="search-spotlight-empty">Todavía no hay listas públicas para mostrar.</p>}
+  </section>
+}
+
+function FeaturedListsMobile({ lists, loading }) {
+  const images = []
+  lists.forEach(list => getListCollageImages(list.content).forEach(image => { if (!images.includes(image) && images.length < 3) images.push(image) }))
+  return <Link to="/discover/lists" className="search-spotlight-mobile-link lists">
+    <span className="search-spotlight-mobile-avatars" aria-hidden="true">
+      {Array.from({ length: 3 }, (_, index) => <span className={`mobile-avatar${loading ? ' loading' : ''}`} key={index} style={{ '--avatar-index': index }}>{!loading && images[index] && <img src={images[index]} alt="" loading="lazy"/>}</span>)}
+    </span>
+    <span className="search-spotlight-mobile-copy"><strong>Listas</strong><small>Descubre listas de la comunidad</small></span>
+    <svg className="search-spotlight-mobile-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+  </Link>
+}
+
+function RecommendationSidebar({ userId }) {
+  const [recs, setRecs] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    getSearchRecommendations(userId, 6).then(items => {
+      if (!cancelled) {
+        setRecs(items)
+        setLoading(false)
+      }
+    }).catch(() => {
+      if (!cancelled) setLoading(false)
+    })
+    return () => { cancelled = true }
+  }, [userId])
+
+  return (
+    <aside className="search-sidebar" aria-label="Te puede gustar">
+      <div className="search-explore-heading">
+        <div><h2>TE PUEDE GUSTAR</h2></div>
+      </div>
+      <div className="srec-grid">
+        {loading && Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="srec-skeleton" aria-hidden="true" />
+        ))}
+        {!loading && recs.length === 0 && (
+          <p className="srec-empty">Sin recomendaciones disponibles</p>
+        )}
+        {!loading && recs.map(work => (
+          <RecommendationItem key={`${work.type}-${work.id}`} work={work} />
+        ))}
+      </div>
+    </aside>
+  )
+}
+
 export default function Search() {
+  const { user } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
@@ -201,6 +342,9 @@ export default function Search() {
   const [loading, setLoading] = useState(urlQuery.trim().length >= 2)
   const [draftLoading, setDraftLoading] = useState(false)
   const [highlightData, setHighlightData] = useState({})
+  const [highlightsLoading, setHighlightsLoading] = useState(true)
+  const [featuredLists, setFeaturedLists] = useState([])
+  const [featuredListsLoading, setFeaturedListsLoading] = useState(true)
   const [isFocused, setIsFocused] = useState(false)
   const [activeIndex, setActiveIndex] = useState(-1)
   const inputRef = useRef(null)
@@ -241,19 +385,33 @@ export default function Search() {
     const requestId = ++requestRef.current
     let cancelled = false
     const controller = new AbortController()
-    searchPlatform(debouncedQuery, isResults ? 20 : 8, controller.signal).then(result => {
+    setLoading(true)
+    searchPlatform(debouncedQuery, isResults ? 20 : 8, controller.signal, isResults ? filter : 'all').then(result => {
       if (!cancelled && requestId === requestRef.current) setData(result)
     }).catch(error => {
       if (!cancelled && requestId === requestRef.current) setData({ works: [], spaces: [], users: [], lists: [], errors: { all: error } })
     }).finally(() => { if (!cancelled && requestId === requestRef.current) setLoading(false) })
     return () => { cancelled = true; controller.abort(); requestRef.current += 1 }
-  }, [debouncedQuery, isResults])
+  }, [debouncedQuery, isResults, filter])
 
   useEffect(() => {
     let cancelled = false
-    getSearchHighlights().then(samples => { if (!cancelled) setHighlightData(samples) }).catch(() => {})
+    setHighlightsLoading(true)
+    getSearchHighlights(user?.id).then(samples => { if (!cancelled) setHighlightData(samples) }).catch(() => {}).finally(() => { if (!cancelled) setHighlightsLoading(false) })
     return () => { cancelled = true }
-  }, [])
+  }, [user?.id])
+
+  useEffect(() => {
+    if (isResults) return undefined
+    let cancelled = false
+    const controller = new AbortController()
+    setFeaturedListsLoading(true)
+    getDiscoverLists({ page: 1, pageSize: 6, signal: controller.signal })
+      .then(result => { if (!cancelled) setFeaturedLists(result.items || []) })
+      .catch(() => { if (!cancelled) setFeaturedLists([]) })
+      .finally(() => { if (!cancelled) setFeaturedListsLoading(false) })
+    return () => { cancelled = true; controller.abort() }
+  }, [isResults])
 
   useEffect(() => {
     const onPointer = event => { if (!rootRef.current?.contains(event.target)) setIsFocused(false) }
@@ -310,36 +468,54 @@ export default function Search() {
 
   return <div className={`search-page${isResults ? ' results-page' : ''}`} ref={rootRef}>
     <SEO title="Busca tus aficiones" description="Encuentra obras, espacios, personas y listas en GeekSphere." />
-    <section className={`search-universal${previewOpen ? ' has-preview' : ''}`} aria-label="Búsqueda global">
-      <SearchInput value={query} onChange={onInputChange} onFocus={() => setIsFocused(true)} onKeyDown={onInputKeyDown} inputRef={inputRef} resultsId="search-preview" isOpen={previewOpen} activeDescendant={activeDescendant} />
-      {previewOpen && <Preview query={previewQuery} data={previewData} loading={previewLoading} error={Object.keys(previewData.errors || {}).length > 0} activeIndex={activeIndex} onSelect={() => setIsFocused(false)} onViewAll={viewAll} listRef={listRef} />}
-    </section>
-
-    {isResults ? <section className="search-results-content" aria-live="polite">
-      <nav className="search-filters" aria-label="Filtrar resultados" style={{ '--filter-index': FILTERS.findIndex(item => item.id === filter), '--filter-count': FILTERS.length }}>
-        {FILTERS.map(item => <button type="button" key={item.id} className={filter === item.id ? 'active' : ''} aria-pressed={filter === item.id} onClick={() => { setResultsDraft(urlQuery); const next = new URLSearchParams(params); next.set('filter', item.id); if (urlQuery.trim()) next.set('q', urlQuery.trim()); setParams(next) }}>{item.label}</button>)}
-      </nav>
-      {urlQuery.trim().length < 2 ? <div className="search-full-empty"><span>⌕</span><h2>Empieza con dos letras o más</h2><p>Busca títulos, espacios y usuarios.</p></div>
-        : loading && !data.works.length && !data.spaces.length && !data.users.length && !data.lists.length ? <SearchSkeleton />
-          : Object.keys(data.errors || {}).length === 4 && !data.works.length && !data.spaces.length && !data.users.length && !data.lists.length ? <div className="search-full-empty"><span>!</span><h2>No se pudo completar la búsqueda</h2><p>Comprueba tu conexión e inténtalo de nuevo.</p></div>
-            : <>
-              {sections.map(([key, items]) => items?.length > 0 && <section className={`search-result-section ${key}`} data-result-category={key} key={key}>
-                <div className="search-section-heading"><div className="search-section-title"><h2>{CATEGORY_LABELS[key]}</h2><span className="search-section-count">{items.length}</span></div></div>
-                <div className="search-result-grid">{items.map(item => <ResultLink key={`${item.type || key}-${item.id}`} item={item} display={key === 'users' ? 'row' : 'card'} />)}</div>
-              </section>)}
-              {!loading && Object.keys(data.errors || {}).length > 0 && <p className="search-full-error">Algunos catálogos no respondieron. Los resultados disponibles siguen visibles.</p>}
-              {!loading && !hasVisibleResults && <p className="search-no-results">Sin resultados para «{urlQuery}»</p>}
-              {loading && <SearchSkeleton />}
-            </>}
-    </section> : <section className="search-explore" aria-labelledby="explore-title">
-      <div className="search-explore-heading"><div><h2 id="explore-title">EXPLORAR</h2></div></div>
-      <div className="search-category-grid">
-        <CategoryCard kind="anime" title="Animes" items={highlightData.anime} to="/discover/anime" />
-        <CategoryCard kind="games" title="Juegos" items={highlightData.games} to="/discover/games" />
-        <CategoryCard kind="users" title="Usuarios" items={highlightData.users} to="/discover/users" />
-        <CategoryCard kind="spaces" title="Espacios" items={highlightData.spaces} to="/discover/spaces" wide />
-        <CategoryCard kind="lists" title="Listas" to="/discover/lists" wide />
+    {isResults ? <div className="search-results-layout">
+      <div className="search-results-main">
+      <section className={`search-universal${previewOpen ? ' has-preview' : ''}`} aria-label="Búsqueda global">
+        <SearchInput value={query} onChange={onInputChange} onFocus={() => setIsFocused(true)} onKeyDown={onInputKeyDown} inputRef={inputRef} resultsId="search-preview" isOpen={previewOpen} activeDescendant={activeDescendant} />
+        {previewOpen && <Preview query={previewQuery} data={previewData} loading={previewLoading} error={Object.keys(previewData.errors || {}).length > 0} activeIndex={activeIndex} onSelect={() => setIsFocused(false)} onViewAll={viewAll} listRef={listRef} />}
+      </section>
+      <section className="search-results-content" aria-live="polite">
+        <nav className="search-filters" aria-label="Filtrar resultados" style={{ '--filter-index': FILTERS.findIndex(item => item.id === filter), '--filter-count': FILTERS.length }}>
+          {FILTERS.map(item => <button type="button" key={item.id} className={filter === item.id ? 'active' : ''} aria-pressed={filter === item.id} onClick={() => { setResultsDraft(urlQuery); const next = new URLSearchParams(params); next.set('filter', item.id); if (urlQuery.trim()) next.set('q', urlQuery.trim()); setParams(next) }}>{item.label}</button>)}
+        </nav>
+        {urlQuery.trim().length < 2 ? <div className="search-full-empty"><span>⌕</span><h2>Empieza con dos letras o más</h2><p>Busca títulos, espacios y usuarios.</p></div>
+          : loading && !data.works.length && !data.spaces.length && !data.users.length && !data.lists.length ? <SearchSkeleton />
+            : Object.keys(data.errors || {}).length === 4 && !data.works.length && !data.spaces.length && !data.users.length && !data.lists.length ? <div className="search-full-empty"><span>!</span><h2>No se pudo completar la búsqueda</h2><p>Comprueba tu conexión e inténtalo de nuevo.</p></div>
+              : <>
+                {sections.map(([key, items]) => items?.length > 0 && <section className={`search-result-section ${key}`} data-result-category={key} key={key}>
+                  <div className="search-section-heading"><div className="search-section-title"><h2>{CATEGORY_LABELS[key]}</h2><span className="search-section-count">{items.length}</span></div></div>
+                  <div className="search-result-grid">{items.map(item => <ResultLink key={`${item.type || key}-${item.id}`} item={item} display={key === 'users' ? 'row' : 'card'} />)}</div>
+                </section>)}
+                {!loading && Object.keys(data.errors || {}).length > 0 && <p className="search-full-error">Algunos catálogos no respondieron. Los resultados disponibles siguen visibles.</p>}
+                {!loading && !hasVisibleResults && <p className="search-no-results">Sin resultados para «{urlQuery}»</p>}
+                {loading && <SearchSkeleton />}
+              </>}
+      </section>
       </div>
-    </section>}
+      <div className="search-landing-divider" aria-hidden="true" />
+      <RecommendationSidebar userId={user?.id}/>
+    </div> : <div className="search-landing-layout">
+      <div className="search-landing-main">
+        <section className={`search-universal${previewOpen ? ' has-preview' : ''}`} aria-label="Búsqueda global">
+          <SearchInput value={query} onChange={onInputChange} onFocus={() => setIsFocused(true)} onKeyDown={onInputKeyDown} inputRef={inputRef} resultsId="search-preview" isOpen={previewOpen} activeDescendant={activeDescendant} />
+          {previewOpen && <Preview query={previewQuery} data={previewData} loading={previewLoading} error={Object.keys(previewData.errors || {}).length > 0} activeIndex={activeIndex} onSelect={() => setIsFocused(false)} onViewAll={viewAll} listRef={listRef} />}
+        </section>
+        <section className="search-explore" aria-labelledby="explore-title">
+          <div className="search-explore-heading"><div><h2 id="explore-title">EXPLORAR</h2></div></div>
+          <div className="search-category-grid">
+            <CategoryCard kind="anime" title="Animes" items={highlightData.anime} to="/discover/anime" />
+            <CategoryCard kind="games" title="Juegos" items={highlightData.games} to="/discover/games" />
+          </div>
+        </section>
+        <div className="search-spotlight-mobile-panel">
+          <SpotlightRow kind="people" items={highlightData.users} loading={highlightsLoading}/>
+          <SpotlightRow kind="spaces" items={highlightData.spaces} loading={highlightsLoading}/>
+          <FeaturedListsMobile lists={featuredLists} loading={featuredListsLoading}/>
+        </div>
+        <FeaturedLists lists={featuredLists} loading={featuredListsLoading}/>
+      </div>
+      <div className="search-landing-divider" aria-hidden="true" />
+      <RecommendationSidebar userId={user?.id}/>
+    </div>}
   </div>
 }

@@ -1,25 +1,27 @@
 import { supabase } from './supabase'
-import { searchGames } from './gameService'
-import { searchAnime } from './animeService'
+import { searchGames, searchGamesLocal } from './gameService'
+import { searchAnime, searchAnimeLocal } from './animeService'
+import { getUsersByCommonWorks } from './discoverUsersService'
+import { normalizeSearchText, rankSearchResults, searchMatchScore } from './searchRanking'
 
 const profileFields = 'id, username, display_name, avatar_url, bio, theme_color'
 const spaceFields = 'id, name, description, avatar_url, banner_url, theme_color, owner_id, is_verified'
 const listFields = 'id, title, list_type, media_type, content, user_id, created_at, visibility'
 
-const normalized = value => String(value || '').toLocaleLowerCase()
-const sortByMatch = (items, term, getName) => [...items].sort((a, b) => {
-  const left = normalized(getName(a))
-  const right = normalized(getName(b))
-  return Number(!left.startsWith(normalized(term))) - Number(!right.startsWith(normalized(term)))
-})
+const normalized = normalizeSearchText
+const sortByMatch = (items, term, getName) => rankSearchResults(items, term, item => [getName(item), ...(item.search_terms || [])], item => item.rating || item.score || item.member_count || 0)
 
 /** Search existing work catalogs and Supabase spaces/profiles. */
-export async function searchPlatform(query, limit = 8, signal) {
+export async function searchPlatform(query, limit = 8, signal, workFilter = 'all') {
   const term = query.trim()
   if (term.length < 2) return { works: [], spaces: [], users: [], lists: [], errors: {} }
 
+  const gameSearch = workFilter === 'anime' || ['spaces', 'lists', 'users'].includes(workFilter)
+    ? Promise.resolve([]) : searchGames(term, limit, { signal })
+  const animeSearch = workFilter === 'game' || ['spaces', 'lists', 'users'].includes(workFilter)
+    ? Promise.resolve([]) : searchAnime(term, limit, { signal })
   const results = await Promise.allSettled([
-    Promise.all([searchGames(term, limit, { signal }), searchAnime(term, limit, { signal })]),
+    Promise.all([gameSearch, animeSearch]),
     supabase.from('spaces').select(`${spaceFields}, space_members(count)`).ilike('name', `%${term}%`).order('created_at', { ascending: false }).limit(limit).abortSignal(signal),
     supabase.from('profiles').select(profileFields).or(`username.ilike.%${term}%,display_name.ilike.%${term}%`).limit(limit).abortSignal(signal),
     supabase.from('user_lists').select(listFields).eq('visibility', 'public').ilike('title', `%${term}%`).order('created_at', { ascending: false }).limit(limit).abortSignal(signal),
@@ -36,7 +38,9 @@ export async function searchPlatform(query, limit = 8, signal) {
     works = sortByMatch([
       ...(games || []).map(item => ({ ...item, type: 'game', title: item.name, image: item.cover_url || item.image_url })),
       ...(anime || []).map(item => ({ ...item, type: 'anime', title: item.title, image: item.image_url || item.cover_url })),
-    ], term, item => item.title).slice(0, limit)
+    ], term, item => item.title)
+      .filter(item => searchMatchScore(term, [item.title, ...(item.search_terms || [])]) > 0)
+      .slice(0, limit)
   } else errors.works = results[0].reason
 
   if (results[1].status === 'fulfilled' && !results[1].value.error) {
@@ -66,14 +70,14 @@ export async function searchPlatform(query, limit = 8, signal) {
 }
 
 /** Small real-image samples used to decorate the category entry cards. */
-export async function getSearchHighlights() {
+export async function getSearchHighlights(userId) {
   const [minecraft, zelda, naruto, attackOnTitan, spaces, users] = await Promise.allSettled([
-    searchGames('Minecraft', 8),
-    searchGames('The Legend of Zelda: Breath of the Wild', 8),
-    searchAnime('Naruto', 8),
-    searchAnime('Attack on Titan', 8),
-    supabase.from('spaces').select('id, name, avatar_url').not('avatar_url', 'is', null).limit(4),
-    supabase.from('profiles').select('id, username, avatar_url').not('avatar_url', 'is', null).limit(4),
+    searchGamesLocal('Minecraft', 8),
+    searchGamesLocal('The Legend of Zelda: Breath of the Wild', 8),
+    searchAnimeLocal('Naruto', 8),
+    searchAnimeLocal('Attack on Titan', 8),
+    supabase.from('spaces').select('id, name, description, avatar_url, banner_url, theme_color, space_members(count)').order('created_at', { ascending: false }).limit(12),
+    userId ? getUsersByCommonWorks(userId) : supabase.from('profiles').select('id, username, display_name, avatar_url, theme_color').limit(12),
   ])
   const selectTitle = (result, expected) => {
     if (result.status !== 'fulfilled') return null
@@ -86,7 +90,7 @@ export async function getSearchHighlights() {
   return {
     games: [selectTitle(minecraft, 'Minecraft'), selectTitle(zelda, 'The Legend of Zelda: Breath of the Wild')].filter(Boolean),
     anime: [selectTitle(naruto, 'Naruto'), selectTitle(attackOnTitan, 'Attack on Titan')].filter(Boolean),
-    spaces: spaces.status === 'fulfilled' ? spaces.value.data || [] : [],
-    users: users.status === 'fulfilled' ? users.value.data || [] : [],
+    spaces: spaces.status === 'fulfilled' ? (spaces.value.data || []).map(space => ({ ...space, member_count: space.space_members?.[0]?.count || 0 })).sort((a, b) => b.member_count - a.member_count) : [],
+    users: users.status === 'fulfilled' ? (userId ? users.value : users.value.data || []).slice(0, 12) : [],
   }
 }

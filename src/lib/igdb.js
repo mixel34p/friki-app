@@ -5,6 +5,8 @@
  * This client calls our igdb-proxy Edge Function.
  */
 
+import { matchesAllSearchTokens, rankSearchResults } from './searchRanking'
+
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
 
@@ -41,46 +43,64 @@ export async function searchGamesIGDB(query, limit = 20, signal) {
     if (!query || query.length < 2) return []
 
     try {
-        const body = `
-              search "${query}";
-              fields id, name, slug, cover.url, first_release_date, rating, total_rating_count, category, parent_game, version_parent,
-                     genres.name, platforms.name, summary, artworks.url, screenshots.url;
-              limit 50;
-        `
+        const allowedCategories = new Set([0, 4, 8, 9, 10])
+        const normalizedQuery = normalizeGameName(query)
+        const fetchCandidates = async searchTerm => {
+            const escapedTerm = searchTerm.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/[\r\n]/g, ' ')
+            const body = `
+                search "${escapedTerm}";
+                fields id, name, slug, cover.url, first_release_date, rating, total_rating_count, category, parent_game, version_parent,
+                       alternative_names.name, genres.name, platforms.name, summary, artworks.url, screenshots.url;
+                limit 500;
+            `
+            return callIgdbProxy('/games', body, signal)
+        }
+        const isAllowedGame = game => {
+            const exactTitleMatch = normalizeGameName(game.name) === normalizedQuery
+            return allowedCategories.has(Number(game.category))
+                || (!game.version_parent && exactTitleMatch)
+        }
 
-        let games = await callIgdbProxy('/games', body, signal)
+        let games = (await fetchCandidates(query)).filter(isAllowedGame)
+        const relevantCount = games.filter(game => matchesAllSearchTokens(
+            query,
+            [game.name, ...(game.alternative_names || []).map(name => name.name)],
+        )).length
 
-        // Advanced filter: Remove DLCs and garbage, but keep main games and popular expansions like Persona 5 Royal
-        games = games.filter(game => {
-            // Filter out alternate editions (Launch Edition, Deluxe Edition, etc)
-            if (game.version_parent) return false;
-            
-            // If it has a parent game, it's either an expansion, remake, OR a misclassified DLC
-            if (game.parent_game) {
-                // If it's explicitly marked as remake/remaster/expansion, keep it
-                const allowedCategories = [2, 4, 8, 9, 10]; // Expansion, Standalone Expansion, Remake, Remaster, Expanded Game
-                if (allowedCategories.includes(game.category)) return true;
-                
-                // Otherwise (category 0 or null), only keep it if it's popular enough
-                // This filters out obscure DLCs but keeps games like Persona 5 Royal
-                if (game.total_rating_count && game.total_rating_count > 5) return true;
-                
-                return false; // Hide obscure DLCs
+        // IGDB's search can return too few title continuations for a short
+        // franchise query (e.g. “Persona 5” -> “Persona 5 Royal”). Search the
+        // shorter prefix only to fill the remaining slots, then keep candidates
+        // that still contain every token from the original query.
+        const queryTokens = query.trim().split(/\s+/)
+        if (queryTokens.length > 1 && relevantCount < limit) {
+            const broaderQuery = queryTokens.slice(0, -1).join(' ')
+            const existingIds = new Set(games.map(game => game.id))
+            try {
+                const broaderGames = (await fetchCandidates(broaderQuery))
+                    .filter(isAllowedGame)
+                    .filter(game => !existingIds.has(game.id))
+                    .filter(game => matchesAllSearchTokens(
+                        query,
+                        [game.name, ...(game.alternative_names || []).map(name => name.name)],
+                    ))
+                games = [...games, ...broaderGames]
+            } catch (error) {
+                if (signal?.aborted || error?.name === 'AbortError') throw error
+                console.warn('IGDB broader search failed:', error)
             }
-            
-            return true; // Keep all normal main games
+        }
+
+        // Collapse duplicate catalogue entries that differ only by punctuation,
+        // casing or edition suffixes in their display name.
+        const seenNames = new Set()
+        games = games.filter(game => {
+            const key = gameCatalogDedupKey({ name: game.name, category: game.category, release_date: game.first_release_date })
+            if (!key || seenNames.has(key)) return false
+            seenNames.add(key)
+            return true
         })
 
-        // Sort locally: Exact matches first, then by popularity
-        const lowerQuery = query.toLowerCase()
-        games.sort((a, b) => {
-            const aExact = a.name.toLowerCase() === lowerQuery ? 1 : 0
-            const bExact = b.name.toLowerCase() === lowerQuery ? 1 : 0
-            
-            if (aExact !== bExact) return bExact - aExact
-            
-            return (b.total_rating_count || 0) - (a.total_rating_count || 0)
-        })
+        games = rankSearchResults(games, query, game => [game.name, ...(game.alternative_names || []).map(name => name.name)], game => game.total_rating_count)
 
         return games.map(game => {
             let banner = null
@@ -92,7 +112,11 @@ export async function searchGamesIGDB(query, limit = 20, signal) {
             return {
                 id: game.id,
                 name: game.name,
+                search_terms: [game.name, ...(game.alternative_names || []).map(name => name.name)],
                 slug: game.slug,
+                igdb_category: game.category ?? null,
+                igdb_parent_game: game.parent_game ?? null,
+                igdb_version_parent: game.version_parent ?? null,
                 cover_url: game.cover?.url
                     ? 'https:' + game.cover.url.replace('t_thumb', 't_cover_big')
                     : null,
@@ -108,8 +132,51 @@ export async function searchGamesIGDB(query, limit = 20, signal) {
         }).slice(0, limit)
     } catch (error) {
         console.error('IGDB search error:', error)
-        return []
+        throw error
     }
+}
+
+function normalizeGameName(name) {
+    return (name || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/\b(deluxe|definitive|ultimate|complete|collector'?s|launch|special) edition\b/g, '')
+        .replace(/[^a-z0-9]+/g, ' ')
+        .trim()
+}
+
+export function gameCatalogDedupKey(game) {
+    const name = normalizeGameName(game?.name)
+    if (!name) return ''
+    const category = Number(game?.igdb_category ?? game?.category)
+    if ([4, 8, 9, 10].includes(category)) {
+        const rawDate = game?.release_date ?? game?.first_release_date
+        const year = typeof rawDate === 'number'
+            ? new Date(rawDate * 1000).getFullYear()
+            : String(rawDate || '').match(/^\d{4}/)?.[0] || ''
+        return `${name}|${category}|${year}`
+    }
+    return name
+}
+
+export function isPrimaryIGDBGame(game, metadata = null) {
+    const category = metadata?.category ?? game?.igdb_category
+    const versionParent = metadata?.version_parent ?? game?.igdb_version_parent
+    const parentGame = metadata?.parent_game ?? game?.igdb_parent_game
+    if (category !== null && category !== undefined) {
+        const numericCategory = Number(category)
+        if (Number.isFinite(numericCategory)) {
+            if ([4, 8, 9, 10].includes(numericCategory)) return true
+            return numericCategory === 0 && !versionParent && !parentGame
+        }
+    }
+    if (versionParent || parentGame) return false
+    return !/\b(dlc|add[- ]on|downloadable content|expansion|expansi[oó]n|season\s*[0-9]+|temporada\s*[0-9]+|season pass|chapter\s*[2-9]|episode\s*[2-9]|episodio\s*[2-9]|demo|beta|soundtrack|banda sonora|original soundtrack|ost|deluxe edition|collector'?s edition|bundle|pack|bonus content|contenido descargable)\b/i.test(game?.name || '')
+}
+
+export function filterPrimaryIGDBGames(games) {
+    return (games || []).filter(game => isPrimaryIGDBGame(game))
 }
 
 /**
@@ -120,7 +187,7 @@ export async function searchGamesIGDB(query, limit = 20, signal) {
 export async function getGameByIdIGDB(id) {
     try {
         const body = `
-            fields id, name, slug, cover.url, first_release_date, rating, 
+            fields id, name, slug, cover.url, first_release_date, rating, category, parent_game, version_parent,
                    genres.name, platforms.name, summary,
                    artworks.url, screenshots.url, involved_companies.company.name, involved_companies.developer;
             where id = ${id};
@@ -144,6 +211,9 @@ export async function getGameByIdIGDB(id) {
             id: game.id,
             name: game.name,
             slug: game.slug,
+            igdb_category: game.category ?? null,
+            igdb_parent_game: game.parent_game ?? null,
+            igdb_version_parent: game.version_parent ?? null,
             cover_url: game.cover?.url
                 ? 'https:' + game.cover.url.replace('t_thumb', 't_cover_big')
                 : null,

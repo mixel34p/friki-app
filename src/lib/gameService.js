@@ -2,15 +2,18 @@
  * Game Service - Orchestrates local DB cache + IGDB API
  * 
  * Flow:
- * 1. Search local DB first
- * 2. If not enough results, fetch from IGDB
- * 3. Import new games to local DB
- * 4. Return combined results
+ * 1. Search and rank the local DB
+ * 2. Fetch from IGDB only to fill missing results
+ * 3. Import only newly discovered game IDs
+ * 4. Return the ranked combined results
  */
 
 import { supabase } from './supabase'
-import { searchGamesIGDB, getGameByIdIGDB, getSimilarGamesIGDB } from './igdb'
+import { searchGamesIGDB, getGameByIdIGDB, getSimilarGamesIGDB, filterPrimaryIGDBGames, gameCatalogDedupKey } from './igdb'
+import { rankSearchResults } from './searchRanking'
 // ...
+
+const legacyGameRefreshRetryAfter = new Map()
 
 /**
  * Get similar games (IGDB)
@@ -30,13 +33,14 @@ export async function getSimilarGames(gameId, limit = 10) {
 }
 
 /**
- * Search games (DB first, then IGDB if needed)
+ * Search games (DB first, then IGDB only if needed)
  * @param {string} query - Search query
  * @param {number} limit - Max results
  * @returns {Promise<Array>} Array of game objects
  */
 export async function searchGames(query, limit = 20, { signal } = {}) {
     if (!query || query.length < 2) return []
+    let localResults = []
 
     try {
         // 1. Search local DB first
@@ -44,44 +48,59 @@ export async function searchGames(query, limit = 20, { signal } = {}) {
             .from('games')
             .select('*')
             .ilike('name', `%${query}%`)
-            .limit(limit)
+            .limit(Math.min(100, Math.max(limit * 5, 50)))
             .abortSignal(signal)
 
         if (error) {
             console.error('Local DB search error:', error)
         }
 
-        const localResults = (localGames || []).map(formatGame)
+        localResults = await refreshLegacyGameRows((localGames || []).map(formatGame), signal)
+        localResults = filterPrimaryIGDBGames(localResults)
+        const rankedLocal = rankSearchResults(dedupeGames(localResults), query, game => [game.name], game => game.rating)
 
-        // 2. If we have enough local results, return them sorted by rating
-        if (localResults.length >= limit / 2) {
-            return localResults.sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, limit)
-        }
+        // The local database is the first source. Only call IGDB to fill slots
+        // the local catalog could not satisfy.
+        if (rankedLocal.length >= limit) return rankedLocal.slice(0, limit)
 
-        // 3. Fetch from IGDB for more results
         const igdbResults = await searchGamesIGDB(query, limit, signal)
-
-        // 4. Import new games to local DB (don't await, do in background)
-        const localIds = new Set(localResults.map(g => g.id))
-        const newGames = igdbResults.filter(g => !localIds.has(g.id))
-
-        if (newGames.length > 0) {
-            importGamesToDb(newGames) // Fire and forget
+        const localIds = new Set(localResults.map(game => String(game.id)))
+        let existingIds = localIds
+        if (igdbResults.length) {
+            const { data: existingGames, error: existingError } = await supabase
+                .from('games')
+                .select('id')
+                .in('id', igdbResults.map(game => game.id))
+                .abortSignal(signal)
+            if (!existingError) existingIds = new Set([...(existingGames || []).map(game => String(game.id)), ...localIds])
         }
+        const newGames = igdbResults.filter(game => !existingIds.has(String(game.id)))
+        if (newGames.length) importGamesToDb(newGames)
 
-        // 5. Merge, deduplicate, and sort by rating so best games stay on top
-        const allGames = [...localResults]
-        for (const game of igdbResults) {
-            if (!localIds.has(game.id)) {
-                allGames.push(game)
-            }
-        }
-
-        return allGames.sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, limit)
+        return rankSearchResults(
+            dedupeGames([...igdbResults, ...localResults]),
+            query,
+            game => [game.name, ...(game.search_terms || [])],
+            game => game.rating,
+        ).slice(0, limit)
     } catch (error) {
+        if (signal?.aborted || error?.name === 'AbortError') return []
         console.error('searchGames error:', error)
-        return []
+        const filteredLocal = filterPrimaryIGDBGames(localResults)
+        return rankSearchResults(dedupeGames(filteredLocal), query, game => [game.name], game => game.rating).slice(0, limit)
     }
+}
+
+function dedupeGames(games) {
+    const seenIds = new Set()
+    const seenNames = new Set()
+    return games.filter(game => {
+        const name = gameCatalogDedupKey(game)
+        if (seenIds.has(game.id) || !name || seenNames.has(name)) return false
+        seenIds.add(game.id)
+        seenNames.add(name)
+        return true
+    })
 }
 
 /**
@@ -131,7 +150,7 @@ export async function getGameById(id) {
  * @param {Array} games - Array of game objects
  */
 async function importGamesToDb(games) {
-    if (!games || games.length === 0) return
+    if (!games || games.length === 0) return true
 
     try {
         const ids = games.map(game => game.id)
@@ -143,9 +162,40 @@ async function importGamesToDb(games) {
         })
         
         if (error) throw error
+        return true
     } catch (error) {
         console.error('Error importing games via secure-sync:', error)
+        return false
     }
+}
+
+async function refreshLegacyGameRows(games, signal) {
+    const staleRows = games.filter(game =>
+        !game.igdb_metadata_checked_at
+        && (legacyGameRefreshRetryAfter.get(String(game.id)) || 0) <= Date.now()
+    ).slice(0, 20)
+    if (!staleRows.length || signal?.aborted) return games
+
+    const ids = staleRows.map(game => game.id)
+    ids.forEach(id => legacyGameRefreshRetryAfter.set(String(id), Date.now() + 5 * 60 * 1000))
+    const synced = await importGamesToDb(staleRows)
+    if (!synced || signal?.aborted) return games
+
+    const { data, error } = await supabase
+        .from('games')
+        .select('*')
+        .in('id', ids)
+        .abortSignal(signal)
+    if (error || !data?.length) return games
+
+    const checkedIds = new Set(data.filter(game => game.igdb_metadata_checked_at).map(game => String(game.id)))
+    if (checkedIds.size < ids.length) {
+        console.warn('Game metadata was not persisted. Apply add_catalog_classification_metadata.sql and deploy secure-sync.')
+    }
+    for (const id of checkedIds) legacyGameRefreshRetryAfter.delete(String(id))
+
+    const refreshed = new Map(data.map(game => [String(game.id), formatGame(game)]))
+    return games.map(game => refreshed.get(String(game.id)) || game)
 }
 
 /**
@@ -167,6 +217,10 @@ function formatGame(dbGame) {
         release_date: relDate,
         rating: dbGame.rating,
         igdb_rating: dbGame.rating,
+        igdb_category: dbGame.igdb_category ?? null,
+        igdb_parent_game: dbGame.igdb_parent_game ?? null,
+        igdb_version_parent: dbGame.igdb_version_parent ?? null,
+        igdb_metadata_checked_at: dbGame.igdb_metadata_checked_at ?? null,
         genres: dbGame.genres || [],
         platforms: dbGame.platforms || [],
         developers: dbGame.developers || [],
@@ -188,11 +242,12 @@ export async function searchGamesLocal(query, limit = 20) {
             .from('games')
             .select('*')
             .ilike('name', `%${query}%`)
-            .limit(limit)
+            .limit(Math.min(100, Math.max(limit * 5, 50)))
 
         if (error) throw error
 
-        return (data || []).map(formatGame)
+        const games = filterPrimaryIGDBGames((data || []).map(formatGame))
+        return rankSearchResults(dedupeGames(games), query, game => [game.name], game => game.rating).slice(0, limit)
     } catch (error) {
         console.error('searchGamesLocal error:', error)
         return []

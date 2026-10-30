@@ -513,6 +513,9 @@ export default function ViewList() {
     );
 
     const isAuthor = user && list.user_id === user.id;
+    const templateUseUrl = list.template_id
+        ? `/lists/new?template=${list.template_id}`
+        : `/lists/new?fromList=${list.id}`;
 
     const authorUsername   = list.author?.username    || 'usuario';
     const authorName       = list.author?.display_name || list.author?.username || 'Usuario';
@@ -555,7 +558,7 @@ export default function ViewList() {
                         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
                         Volver
                     </button>
-                    {isAuthor && (<div className="vl-menu-wrap" ref={menuRef}>
+                    <div className="vl-menu-wrap" ref={menuRef}>
                         <button className="vl-dots-btn" type="button" aria-label="Más opciones" onClick={() => setMenuOpen(o => !o)}>
                             <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
                                 <circle cx="5"  cy="12" r="1.5"/>
@@ -565,6 +568,13 @@ export default function ViewList() {
                         </button>
                         {menuOpen && (
                             <div className="vl-dropdown">
+                                <Link to={templateUseUrl} className="vl-dropdown-item" onClick={() => setMenuOpen(false)}>
+                                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                                        <path d="M3 9h18M9 21V9" />
+                                    </svg>
+                                    Usar plantilla
+                                </Link>
                                 {isAuthor && (
                                     <Link to={`/lists/${list.id}/edit`} className="vl-dropdown-item" onClick={() => setMenuOpen(false)}>
                                         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -579,7 +589,7 @@ export default function ViewList() {
                                 )}
                             </div>
                         )}
-                    </div>)}
+                    </div>
                 </div>
 
                 {/* ── Autor ── */}

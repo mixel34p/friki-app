@@ -34,7 +34,7 @@ async function syncGames(ids: number[]) {
     if (!ids.length) return []
     const token = await getTwitchToken()
     const body = `
-        fields id, name, slug, cover.url, first_release_date, rating, 
+        fields id, name, slug, cover.url, first_release_date, rating, category, parent_game, version_parent,
                genres.name, platforms.name, summary,
                artworks.url, screenshots.url, involved_companies.company.name, involved_companies.developer;
         where id = (${ids.join(',')});
@@ -59,6 +59,10 @@ async function syncGames(ids: number[]) {
             id: game.id,
             name: game.name,
             slug: game.slug,
+            igdb_category: game.category ?? null,
+            igdb_parent_game: game.parent_game ?? null,
+            igdb_version_parent: game.version_parent ?? null,
+            igdb_metadata_checked_at: new Date().toISOString(),
             cover_url: game.cover?.url ? 'https:' + game.cover.url.replace('t_thumb', 't_cover_big') : null,
             banner_url: banner,
             release_date: game.first_release_date ? new Date(game.first_release_date * 1000).toISOString().split('T')[0] : null,
