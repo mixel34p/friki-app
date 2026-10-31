@@ -425,7 +425,10 @@ export default function WorkPage({ mediaType }) {
                                         <div className="review-content">
                                             <p className="review-text">
                                                 {log.contains_spoiler && !revealedSpoilers[log.id] ? (
-                                                    <SpoilerNotice onReveal={() => toggleSpoiler(log.id)} />
+                                                    <SpoilerNotice
+                                                        text={log.review_text.length > 300 ? `${log.review_text.substring(0, 300)}...` : log.review_text}
+                                                        onReveal={() => toggleSpoiler(log.id)}
+                                                    />
                                                 ) : (
                                                     <>{log.review_text.length > 300 ? log.review_text.substring(0, 300) + '...' : log.review_text}</>
                                                 )}

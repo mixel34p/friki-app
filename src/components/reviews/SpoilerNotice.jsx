@@ -1,6 +1,6 @@
 import './SpoilerNotice.css'
 
-export default function SpoilerNotice({ onReveal }) {
+export default function SpoilerNotice({ onReveal, text = '' }) {
   return (
     <button
       className="spoiler-notice"
@@ -8,28 +8,27 @@ export default function SpoilerNotice({ onReveal }) {
       onClick={onReveal}
       aria-label="Mostrar reseña con spoilers"
       style={{
-        display: 'inline-flex',
-        width: 'fit-content',
+        position: 'relative',
+        display: 'block',
+        width: '100%',
         maxWidth: '100%',
-        minHeight: 36,
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 7,
+        minHeight: '1.5em',
+        boxSizing: 'border-box',
         margin: '8px 0',
-        padding: '.45rem .85rem',
+        padding: '.45em .75em',
         appearance: 'none',
         WebkitAppearance: 'none',
         border: '1px solid var(--border-default, rgba(255,255,255,.1))',
-        borderRadius: 9999,
+        borderRadius: '12px',
         color: 'var(--text-primary, #f5f5f5)',
         backgroundColor: 'var(--bg-tertiary, #1b1b20)',
-        font: '600 .78rem/1.2 var(--font-sans, sans-serif)',
-        lineHeight: 1.2,
-        textAlign: 'center',
-        whiteSpace: 'nowrap',
+        font: 'inherit',
+        lineHeight: 'inherit',
+        textAlign: 'left',
         cursor: 'pointer',
       }}
     >
+      <span className="spoiler-notice-spacer" aria-hidden="true">{text}</span>
       <span className="spoiler-notice-heading">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M3 3 21 21" />

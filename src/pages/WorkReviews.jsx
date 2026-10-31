@@ -324,7 +324,12 @@ export default function WorkReviews({ mediaType }) {
                                 <div className="review-content">
                                     <p className="review-text">
                                         {log.contains_spoiler && !revealedSpoilers[log.id] ? (
-                                            <SpoilerNotice onReveal={() => toggleSpoiler(log.id)} />
+                                            <SpoilerNotice
+                                                text={expandedReviews[log.id] || log.review_text.length <= 250
+                                                    ? `${log.review_text}${expandedReviews[log.id] && log.review_text.length > 250 ? ' less' : ''}`
+                                                    : `${log.review_text.substring(0, 250)}... more`}
+                                                onReveal={() => toggleSpoiler(log.id)}
+                                            />
                                         ) : (
                                             <>
                                                 {expandedReviews[log.id] || log.review_text.length <= 250 

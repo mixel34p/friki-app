@@ -506,6 +506,7 @@ export default function ReviewDetail() {
   const shouldTrimReview = reviewText.length > reviewTextLimit
   const reviewPreviewEnd = shouldTrimReview ? reviewText.lastIndexOf(' ', reviewTextLimit) : reviewText.length
   const reviewPreview = shouldTrimReview && reviewPreviewEnd > 300 ? reviewText.slice(0, reviewPreviewEnd).trimEnd() : reviewText.slice(0, reviewTextLimit).trimEnd()
+  const reviewPreviewText = shouldTrimReview && !showFullReview ? `${reviewPreview}… Ver más` : reviewText
   const workCover = review.work_type === 'game' ? review.work?.cover_url : review.work?.image_url
   const reviewBackdrop = workCover
   const shareCover = getReviewShareCover(workCover)
@@ -660,7 +661,7 @@ export default function ReviewDetail() {
             </div>
             <h2 className="review-post-review-heading">Review de {authorName}</h2>
             {review.contains_spoiler && !showSpoiler ? (
-              <SpoilerNotice onReveal={() => setShowSpoiler(true)} />
+              <SpoilerNotice text={reviewPreviewText} onReveal={() => setShowSpoiler(true)} />
             ) : <>
               <p className="review-post-text">{shouldTrimReview && !showFullReview ? `${reviewPreview}…` : reviewText}</p>
               {shouldTrimReview && <button type="button" className="review-post-more" onClick={() => setShowFullReview(value => !value)}>{showFullReview ? 'Ver menos' : 'Ver más'}</button>}
