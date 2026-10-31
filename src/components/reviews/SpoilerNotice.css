@@ -1,31 +1,35 @@
 .spoiler-notice {
-    display: flex;
-    width: 100%;
-    min-height: 0;
+    display: inline-flex;
+    width: fit-content;
+    max-width: 100%;
+    min-height: 36px;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 7px;
     box-sizing: border-box;
     margin: 8px 0;
-    padding: .5rem .75rem;
-    font: inherit;
+    padding: .45rem .85rem;
+    appearance: none;
+    -webkit-appearance: none;
+    font: 600 .78rem/1.2 var(--font-sans, sans-serif);
     line-height: 1.2;
     text-align: center;
     color: var(--text-primary, #f5f5f5);
     background: var(--bg-tertiary, #1b1b20);
     background: color-mix(in srgb, var(--brand-primary, #14b8a6) 5%, var(--bg-card, #121216));
     border: 1px solid var(--border-default, rgba(255,255,255,.1));
-    border-radius: var(--radius-lg, 12px);
+    border-radius: 999px;
     cursor: pointer;
-    transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+    white-space: nowrap;
+    transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
 }
 
-.spoiler-notice:hover { background: var(--bg-tertiary, #1b1b20); background: color-mix(in srgb, var(--brand-primary, #14b8a6) 9%, var(--bg-card, #121216)); border-color: color-mix(in srgb, var(--brand-primary, #14b8a6) 38%, var(--border-default, #303038)); transform: translateY(-1px); }
+.spoiler-notice:hover { background: var(--bg-tertiary, #1b1b20); background: color-mix(in srgb, var(--brand-primary, #14b8a6) 9%, var(--bg-card, #121216)); border-color: color-mix(in srgb, var(--brand-primary, #14b8a6) 38%, var(--border-default, #303038)); }
 .spoiler-notice:focus-visible { outline: 2px solid var(--brand-primary); outline-offset: 3px; }
-.spoiler-notice-heading { display: inline-flex; flex-wrap: nowrap; align-items: center; justify-content: center; gap: 8px; font-size: .86rem; line-height: 1.2; text-align: center; pointer-events: none; }
+.spoiler-notice-heading { display: inline-flex; flex-wrap: nowrap; align-items: center; justify-content: center; gap: 7px; font: inherit; line-height: inherit; text-align: center; pointer-events: none; }
 .spoiler-notice-heading svg { width: 16px; height: 16px; flex: 0 0 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .spoiler-notice-heading strong { font-weight: 700; }
 
 @media (max-width: 560px) {
-    .spoiler-notice { border-radius: var(--radius-md, 10px); }
+    .spoiler-notice { min-height: 34px; padding-inline: .72rem; }
 }
