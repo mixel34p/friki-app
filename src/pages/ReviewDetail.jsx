@@ -393,6 +393,9 @@ export default function ReviewDetail() {
     let active = true
     setLoading(true)
     setError('')
+    setReview(null)
+    setShowSpoiler(false)
+    setShowFullReview(false)
     getLibraryReview(reviewId)
       .then(data => { if (active) setReview(data) })
       .catch(err => {
