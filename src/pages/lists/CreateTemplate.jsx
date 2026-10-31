@@ -103,8 +103,9 @@ export default function CreateTemplate() {
   };
 
   const handleAddTier = () => {
+    if (tiers.length >= 10) return;
     const newId = 't' + Date.now();
-    setTiers([...tiers, { id: newId, label: 'Nuevo', color: TIER_COLORS_PALETTE[0] }]);
+    setTiers(previous => previous.length >= 10 ? previous : [...previous, { id: newId, label: 'Nuevo', color: TIER_COLORS_PALETTE[0] }]);
   };
 
   const handleRemoveTier = (index) => {
@@ -175,6 +176,10 @@ export default function CreateTemplate() {
   };
 
   const handlePublish = async () => {
+    if (listType === 'tierlist' && tiers.length > 10) {
+      alert('Las plantillas pueden tener un máximo de 10 tiers. Elimina algunos para continuar.');
+      return;
+    }
     const config = {};
     if (listType === 'tierlist') config.tiers = tiers;
     if (listType === 'ranking') config.maxItems = maxItems;
@@ -268,11 +273,6 @@ export default function CreateTemplate() {
                   <h3>Tierlist</h3>
                   <p>Clásico S/A/B/C/D, ordena lo que quieras por niveles</p>
                 </div>
-                <div className={`type-card ${listType === 'ranking' ? 'active' : ''}`} onClick={() => setListType('ranking')}>
-                  <div className="type-card-icon">🏆</div>
-                  <h3>Ranking</h3>
-                  <p>Tu top personal, del 1 al N</p>
-                </div>
                 <div className={`type-card ${listType === 'grid' ? 'active' : ''}`} onClick={() => setListType('grid')}>
                   <div className="type-card-icon">⊞</div>
                   <h3>Grid</h3>
@@ -358,7 +358,7 @@ export default function CreateTemplate() {
                 </div>
               ))}
             </div>
-            <button className="btn btn-secondary btn-sm" style={{marginTop:'1rem'}} onClick={handleAddTier}>+ Añadir tier</button>
+            <button className="btn btn-secondary btn-sm" style={{marginTop:'1rem'}} onClick={handleAddTier} disabled={tiers.length >= 10}>{tiers.length >= 10 ? 'Máximo de 10 tiers' : '+ Añadir tier'}</button>
             
             <div className="tier-preview">
               <h3>Preview Live</h3>

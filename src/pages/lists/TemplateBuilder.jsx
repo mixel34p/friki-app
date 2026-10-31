@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { IoSettingsSharp } from 'react-icons/io5';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
     getTemplateById,
@@ -10,6 +11,7 @@ import {
 import { searchGames } from '../../lib/gameService';
 import { searchAnime } from '../../lib/animeService';
 import { getTierLabelFontSize } from '../../lib/tierLabel';
+import TierLabelEditor from './TierLabelEditor';
 import './TemplateBuilder.css';
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
@@ -58,6 +60,13 @@ const IconEdit = () => (
         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
     </svg>
+);
+const IconSettings = () => <IoSettingsSharp aria-hidden="true" />;
+const IconChevronUp = () => (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 14 6-6 6 6" /></svg>
+);
+const IconChevronDown = () => (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 10 6 6 6-6" /></svg>
 );
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -113,8 +122,22 @@ export default function TemplateBuilder() {
 
     // Tier popover
     const [activePopover, setActivePopover] = useState(null);
-    const [popoverLabel, setPopoverLabel] = useState('');
-    const [popoverColor, setPopoverColor] = useState('');
+
+    useEffect(() => {
+        if (!activePopover) return;
+        const closeOnOutsideClick = event => {
+            if (!event.target.closest('.tb-tier-wrap')) setActivePopover(null);
+        };
+        const closeOnEscape = event => {
+            if (event.key === 'Escape') setActivePopover(null);
+        };
+        document.addEventListener('mousedown', closeOnOutsideClick);
+        document.addEventListener('keydown', closeOnEscape);
+        return () => {
+            document.removeEventListener('mousedown', closeOnOutsideClick);
+            document.removeEventListener('keydown', closeOnEscape);
+        };
+    }, [activePopover]);
 
     // Inline title editing
     const [editingTitle, setEditingTitle] = useState(false);
@@ -236,9 +259,25 @@ export default function TemplateBuilder() {
     const addGridCell = () => setGridCells(p => [...p, { id: 'c_' + Date.now(), label: `Grid ${p.length + 1}` }]);
     const removeGridCell = (cid) => setGridCells(p => p.filter(c => c.id !== cid));
     const updateGridCell = (cid, label) => setGridCells(p => p.map(c => c.id === cid ? { ...c, label } : c));
+    const moveTier = (tierId, direction) => setTiers(previous => {
+        const currentIndex = previous.findIndex(tier => tier.id === tierId);
+        const nextIndex = currentIndex + direction;
+        if (currentIndex < 0 || nextIndex < 0 || nextIndex >= previous.length) return previous;
+        const next = [...previous];
+        [next[currentIndex], next[nextIndex]] = [next[nextIndex], next[currentIndex]];
+        return next;
+    });
+    const addTier = () => setTiers(previous => previous.length >= 10 ? previous : [
+        ...previous,
+        { id: `tier_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`, label: 'NUEVO', color: '#6b7280' },
+    ]);
 
     const persist = async () => {
         try {
+            if (template.list_type === 'tierlist' && tiers.length > 10) {
+                alert('Las plantillas pueden tener un máximo de 10 tiers. Elimina algunos para continuar.');
+                return;
+            }
             setSaving(true);
             let type_config = {};
             if (template.list_type === 'tierlist') type_config.tiers = tiers;
@@ -478,65 +517,54 @@ export default function TemplateBuilder() {
                         {template.list_type === 'tierlist' && (
                             <section className="tb-section">
                                 <div className="tb-tiers">
-                                    {tiers.map(tier => (
+                                    {tiers.map((tier, tierIndex) => (
                                         <div
                                             key={tier.id}
                                             className="tb-tier-wrap"
                                             style={{ zIndex: activePopover === tier.id ? 10 : 1 }}
                                         >
                                             <div className="tb-tier-row">
-                                                <button
+                                                <div
                                                     className="tb-tier-label"
                                                     style={{ backgroundColor: tier.color }}
-                                                    onClick={() => {
-                                                        setActivePopover(activePopover === tier.id ? null : tier.id);
-                                                        setPopoverLabel(tier.label);
-                                                        setPopoverColor(tier.color);
-                                                    }}
                                                 >
-                                                    <span
-                                                        className="tb-tier-text"
+                                                    <TierLabelEditor
+                                                        className="tb-tier-text-input tb-tier-text"
+                                                        aria-label={`Nombre del nivel ${tier.label}`}
+                                                        label={tier.label}
+                                                        onChange={label => setTiers(previous => previous.map(item => item.id === tier.id ? { ...item, label } : item))}
                                                         style={{ fontSize: getTierLabelFontSize(tier.label, {
                                                             availableWidth: window.matchMedia('(max-width: 600px)').matches ? 56 : 80,
                                                             availableHeight: 72,
                                                             maxSize: 22.4
                                                         }) }}
-                                                    >
-                                                        {tier.label}
-                                                    </span>
-                                                    <span className="tb-tier-edit-hint">
-                                                        <IconEdit />
-                                                    </span>
-                                                </button>
+                                                    />
+                                                </div>
                                                 <div className="tb-tier-drop-zone" />
+                                                <div className="tb-tier-controls" aria-label={`Controles del nivel ${tier.label}`}>
+                                                    <button type="button" className="tb-tier-control-btn" aria-label={`Editar color de ${tier.label}`} title="Color" onClick={() => setActivePopover(activePopover === tier.id ? null : tier.id)}><IconSettings /></button>
+                                                    <button type="button" className="tb-tier-control-btn" aria-label={`Subir ${tier.label}`} title="Subir nivel" disabled={tiers[0]?.id === tier.id} onClick={() => moveTier(tier.id, -1)}><IconChevronUp /></button>
+                                                    <button type="button" className="tb-tier-control-btn" aria-label={`Bajar ${tier.label}`} title="Bajar nivel" disabled={tiers[tiers.length - 1]?.id === tier.id} onClick={() => moveTier(tier.id, 1)}><IconChevronDown /></button>
+                                                </div>
                                             </div>
 
                                             {activePopover === tier.id && (
-                                                <div className="tb-popover" onClick={e => e.stopPropagation()}>
-                                                    <label className="tb-popover-label">Nombre</label>
-                                                    <input
-                                                        className="tb-popover-input"
-                                                        value={popoverLabel}
-                                                        onChange={e => {
-                                                            setPopoverLabel(e.target.value);
-                                                            setTiers(p => p.map(t => t.id === tier.id ? { ...t, label: e.target.value } : t));
-                                                        }}
-                                                        placeholder="S, A, B..."
-                                                    />
-                                                    <label className="tb-popover-label">Color</label>
+                                                <div className="tb-popover" style={tierIndex === tiers.length - 1 ? { top: 'auto', bottom: 4 } : undefined} onClick={e => e.stopPropagation()}>
+                                                    <div className="tb-tier-popover-heading">Color del nivel</div>
                                                     <div className="tb-color-grid">
                                                         {TIER_COLORS_PALETTE.map(c => (
                                                             <button
                                                                 key={c}
-                                                                className={`tb-color-dot ${popoverColor === c ? 'is-active' : ''}`}
+                                                                className={`tb-color-dot ${tier.color === c ? 'is-active' : ''}`}
+                                                                aria-label={`Elegir color ${c}`}
                                                                 style={{ background: c }}
                                                                 onClick={() => {
-                                                                    setPopoverColor(c);
                                                                     setTiers(p => p.map(t => t.id === tier.id ? { ...t, color: c } : t));
                                                                 }}
                                                             />
                                                         ))}
                                                     </div>
+                                                    <label className="tb-tier-custom-color">Color personalizado<input type="color" value={tier.color || '#6b7280'} onChange={event => setTiers(p => p.map(t => t.id === tier.id ? { ...t, color: event.target.value } : t))} /></label>
                                                     <button
                                                         className="tb-remove-tier-btn"
                                                         disabled={tiers.length <= 2}
@@ -544,9 +572,7 @@ export default function TemplateBuilder() {
                                                             setTiers(p => p.filter(t => t.id !== tier.id));
                                                             setActivePopover(null);
                                                         }}
-                                                    >
-                                                        Eliminar fila
-                                                    </button>
+                                                    >Eliminar tier</button>
                                                 </div>
                                             )}
                                         </div>
@@ -554,9 +580,10 @@ export default function TemplateBuilder() {
 
                                     <button
                                         className="tb-add-tier-btn"
-                                        onClick={() => setTiers(p => [...p, { id: 'tier_' + Date.now(), label: 'NUEVO', color: '#6b7280' }])}
+                                        onClick={addTier}
+                                        disabled={tiers.length >= 10}
                                     >
-                                        <IconPlus /> Añadir fila
+                                        {tiers.length < 10 && <IconPlus />} {tiers.length >= 10 ? 'Máximo de 10 tiers' : 'Añadir fila'}
                                     </button>
                                 </div>
                             </section>

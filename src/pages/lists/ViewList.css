@@ -511,3 +511,26 @@
     .vl-lightbox-body { padding: 10px 8px 12px; }
     .vl-lightbox-titlebar { margin-bottom: 0.5rem; padding: 0.1rem 0.2rem 0.45rem; }
 }
+
+.vl-delete-overlay { position: fixed; inset: 0; z-index: 3200; display: grid; place-items: center; padding: 18px; background: rgba(0,0,0,.76); backdrop-filter: blur(12px); animation: vlDeleteFade .16s ease both; }
+.vl-delete-dialog { width: min(100%, 410px); padding: 26px; border: 1px solid rgba(255,255,255,.11); border-radius: 20px; color: var(--text-primary); background: color-mix(in srgb, var(--bg-elevated) 92%, #151518); box-shadow: 0 28px 90px rgba(0,0,0,.72); animation: vlDeleteIn .2s cubic-bezier(.2,.8,.2,1) both; }
+.vl-delete-icon { display: grid; width: 42px; height: 42px; margin-bottom: 16px; place-items: center; border: 1px solid rgba(248,113,113,.22); border-radius: 13px; color: #f87171; background: rgba(248,113,113,.09); }
+.vl-delete-icon svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.vl-delete-dialog h2 { margin: 0; font: 720 1.15rem/1.3 var(--font-display); letter-spacing: -.02em; }
+.vl-delete-dialog > p { margin: 9px 0 0; color: var(--text-secondary); font-size: .84rem; line-height: 1.55; }
+.vl-delete-dialog > .vl-delete-error { color: #fca5a5; font-size: .77rem; }
+.vl-delete-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 23px; }
+.vl-delete-actions button { min-height: 39px; padding: .55rem .9rem; border: 1px solid rgba(255,255,255,.1); border-radius: 999px; font: 650 .76rem var(--font-sans); cursor: pointer; transition: background .15s ease, border-color .15s ease, transform .15s ease; }
+.vl-delete-actions button:active:not(:disabled) { transform: scale(.97); }
+.vl-delete-actions button:disabled { opacity: .55; cursor: wait; }
+.vl-delete-cancel { color: var(--text-secondary); background: rgba(255,255,255,.04); }
+.vl-delete-cancel:hover:not(:disabled) { color: var(--text-primary); background: rgba(255,255,255,.08); }
+.vl-delete-confirm { border-color: rgba(248,113,113,.34) !important; color: #fff; background: #a93b46; }
+.vl-delete-confirm:hover:not(:disabled) { background: #bf4653; }
+@keyframes vlDeleteFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes vlDeleteIn { from { opacity: 0; transform: translateY(7px) scale(.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+@media (max-width: 620px) {
+    .vl-delete-dialog { padding: 22px 19px; border-radius: 18px; }
+    .vl-delete-actions button { flex: 1; }
+}

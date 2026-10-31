@@ -272,7 +272,7 @@ export default function UserTierlists() {
                                                         {t.list_type === 'ranking' ? 'Ranking' : t.list_type === 'grid' ? 'Grid' : 'Tierlist'}
                                                     </span>
                                                 )}
-                                                {t.media_type && (
+                                                {t.list_type !== 'ranking' && t.media_type && (
                                                     <span className={'vl-tag media-' + t.media_type}>
                                                         {t.media_type === 'game' && <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="6" width="20" height="12" rx="2" ry="2"/><path d="M6 12h4"/><path d="M8 10v4"/><line x1="15" y1="13" x2="15.01" y2="13"/><line x1="18" y1="11" x2="18.01" y2="11"/></svg>}
                                                         {t.media_type === 'anime' && <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"/><polyline points="17 2 12 7 7 2"/></svg>}

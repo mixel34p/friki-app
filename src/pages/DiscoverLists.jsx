@@ -57,13 +57,13 @@ function collectTemplateImages(template) {
   return collectImages(template.cover_items?.length ? template.cover_items : template.default_items || [])
 }
 
-function TypePicker({ value, onChange }) {
+function TypePicker({ value, onChange, options = TYPES }) {
   const [open, setOpen] = useState(false)
-  const [activeIndex, setActiveIndex] = useState(() => Math.max(0, TYPES.findIndex(option => option.value === value)))
+  const [activeIndex, setActiveIndex] = useState(() => Math.max(0, options.findIndex(option => option.value === value)))
   const rootRef = useRef(null)
   const triggerRef = useRef(null)
   const optionRefs = useRef([])
-  const selectedIndex = Math.max(0, TYPES.findIndex(option => option.value === value))
+  const selectedIndex = Math.max(0, options.findIndex(option => option.value === value))
 
   useEffect(() => {
     if (!open) return undefined
@@ -74,7 +74,7 @@ function TypePicker({ value, onChange }) {
   }, [open, activeIndex])
 
   const choose = index => {
-    onChange(TYPES[index].value)
+    onChange(options[index].value)
     setActiveIndex(index)
     setOpen(false)
     triggerRef.current?.focus()
@@ -94,10 +94,10 @@ function TypePicker({ value, onChange }) {
       triggerRef.current?.focus()
     } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault()
-      setActiveIndex(index => (index + (event.key === 'ArrowDown' ? 1 : -1) + TYPES.length) % TYPES.length)
+      setActiveIndex(index => (index + (event.key === 'ArrowDown' ? 1 : -1) + options.length) % options.length)
     } else if (event.key === 'Home' || event.key === 'End') {
       event.preventDefault()
-      setActiveIndex(event.key === 'Home' ? 0 : TYPES.length - 1)
+      setActiveIndex(event.key === 'Home' ? 0 : options.length - 1)
     } else if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault()
       choose(activeIndex)
@@ -106,9 +106,9 @@ function TypePicker({ value, onChange }) {
 
   return <div className="discover-sort-picker discover-list-type-picker" ref={rootRef}>
     <button ref={triggerRef} type="button" className="discover-sort-trigger" aria-label="Filtrar por formato" aria-haspopup="listbox" aria-expanded={open} aria-controls="discover-list-type-options" onClick={() => { setActiveIndex(selectedIndex); setOpen(current => !current) }} onKeyDown={onTriggerKeyDown}>
-      {TYPES[selectedIndex]?.label}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>
+      {options[selectedIndex]?.label}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>
     </button>
-    {open && <div id="discover-list-type-options" className="discover-sort-options" role="listbox" aria-label="Formato de lista" onKeyDown={onOptionsKeyDown}>{TYPES.map((option, index) => <div key={option.value || 'all'} ref={node => { optionRefs.current[index] = node }} className={`discover-sort-option${value === option.value ? ' active' : ''}`} role="option" aria-selected={value === option.value} tabIndex={index === activeIndex ? 0 : -1} onFocus={() => setActiveIndex(index)} onClick={() => choose(index)}>{option.label}</div>)}</div>}
+    {open && <div id="discover-list-type-options" className="discover-sort-options" role="listbox" aria-label="Formato de lista" onKeyDown={onOptionsKeyDown}>{options.map((option, index) => <div key={option.value || 'all'} ref={node => { optionRefs.current[index] = node }} className={`discover-sort-option${value === option.value ? ' active' : ''}`} role="option" aria-selected={value === option.value} tabIndex={index === activeIndex ? 0 : -1} onFocus={() => setActiveIndex(index)} onClick={() => choose(index)}>{option.label}</div>)}</div>}
   </div>
 }
 
@@ -135,7 +135,7 @@ function ListCard({ item, template = false }) {
         <Author profile={profile}/>
         <span className="search-list-tags">
           <span className={`search-list-tag type-${item.list_type || 'tierlist'}`}>{label}</span>
-          {item.media_type && <span className={`search-list-tag media-${item.media_type}`}>{item.media_type === 'game' ? 'Videojuegos' : item.media_type === 'anime' ? 'Anime' : item.media_type}</span>}
+          {item.list_type !== 'ranking' && item.media_type && <span className={`search-list-tag media-${item.media_type}`}>{item.media_type === 'game' ? 'Videojuegos' : item.media_type === 'anime' ? 'Anime' : item.media_type}</span>}
         </span>
         {template && <small className="discover-list-uses">{item.uses_count || 0} usos</small>}
       </span>
@@ -156,7 +156,9 @@ export default function DiscoverLists() {
   const [retryToken, setRetryToken] = useState(0)
   const [catalog, setCatalog] = useState({ key: '', items: [], total: 0, loading: true, error: '' })
   const mode = params.get('tab') === 'templates' ? 'templates' : 'lists'
-  const type = TYPES.some(option => option.value === params.get('type')) ? params.get('type') : ''
+  const requestedType = TYPES.some(option => option.value === params.get('type')) ? params.get('type') : ''
+  const type = mode === 'templates' && requestedType === 'ranking' ? '' : requestedType
+  const typeOptions = mode === 'templates' ? TYPES.filter(option => option.value !== 'ranking') : TYPES
   const media = MEDIA.some(option => option.value === params.get('media')) ? params.get('media') : ''
   const query = params.get('q') || ''
   const page = Math.max(1, Number.parseInt(params.get('page') || '1', 10) || 1)
@@ -195,7 +197,7 @@ export default function DiscoverLists() {
   const create = () => {
     if (!user) return navigate('/register')
     if (mode === 'templates') setShowTemplateModal(true)
-    else navigate('/lists/new')
+    else navigate('/share?openList=1')
   }
 
   return <main className="discover-works-page discover-lists-page">
@@ -217,7 +219,7 @@ export default function DiscoverLists() {
       </div>
 
       <div className="discover-list-filter-row">
-        <TypePicker value={type} onChange={value => updateParams({ type: value })}/>
+        <TypePicker value={typeOptions.some(option => option.value === type) ? type : ''} options={typeOptions} onChange={value => updateParams({ type: value })}/>
         <div className="discover-genre-list media" role="group" aria-label="Filtrar por medio">{MEDIA.map(option => <button key={option.value || 'all'} type="button" className={`discover-chip${media === option.value ? ' active' : ''}`} aria-pressed={media === option.value} onClick={() => updateParams({ media: option.value })}>{option.label}</button>)}</div>
         <div className="discover-list-filter-actions">
           <label className="discover-list-search">

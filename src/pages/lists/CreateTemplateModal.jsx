@@ -105,6 +105,7 @@ export default function CreateTemplateModal({ templateId, onClose, onSuccess }) 
     const handlePublish = async () => {
         if (!user) { setError('Debes iniciar sesión.'); return; }
         if (!title.trim()) { setError('El título es obligatorio.'); return; }
+        if (listType === 'ranking') { setError('Los rankings se crean como listas y no admiten plantillas.'); return; }
         setError(null);
 
         let type_config = existingConfig || {};
@@ -196,7 +197,6 @@ export default function CreateTemplateModal({ templateId, onClose, onSuccess }) 
                         <div className="ctm-type-cards">
                             {[
                                 { key: 'tierlist', Icon: IconTierlist, name: 'Tierlist', desc: 'Niveles S/A/B/C/D' },
-                                { key: 'ranking',  Icon: IconRanking,  name: 'Ranking',  desc: 'Top del 1 al N' },
                                 { key: 'grid',     Icon: IconGrid,     name: 'Grid',     desc: 'Celdas etiquetadas' },
                             ].map(({ key, Icon, name, desc }) => (
                                 <div

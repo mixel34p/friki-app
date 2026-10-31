@@ -6,6 +6,7 @@ export async function getTemplates({ type = null, mediaType = null, query = '', 
         .from('list_templates')
         .select('*')
         .eq('visibility', 'public')
+        .neq('list_type', 'ranking')
         .order('uses_count', { ascending: false })
         .limit(limit)
     if (type) q = q.eq('list_type', type)
@@ -93,6 +94,7 @@ export async function getDiscoverTemplates({ type = null, mediaType = null, quer
         .from('list_templates')
         .select('*', { count: 'exact' })
         .eq('visibility', 'public')
+        .neq('list_type', 'ranking')
         .order('uses_count', { ascending: false, nullsFirst: false })
         .order('created_at', { ascending: false, nullsFirst: false })
         .order('id', { ascending: true })
@@ -154,6 +156,7 @@ export async function getTemplateById(id) {
         .eq('id', id)
         .single()
     if (error) throw error
+    if (data?.list_type === 'ranking') throw new Error('Las plantillas de ranking ya no están disponibles.')
     
     if (data && data.user_id) {
         const { data: profile } = await supabase.from('profiles').select('username, avatar_url, display_name, featured_badge, theme_color').eq('id', data.user_id).single();
@@ -167,6 +170,7 @@ export async function getUserTemplates(userId) {
         .from('list_templates')
         .select('*')
         .eq('user_id', userId)
+        .neq('list_type', 'ranking')
         .order('created_at', { ascending: false })
     if (error) throw error
     
@@ -180,6 +184,9 @@ export async function getUserTemplates(userId) {
 }
 
 export async function createTemplate(templateData) {
+    if (templateData?.list_type === 'ranking') {
+        throw new Error('Los rankings se crean como listas y no admiten plantillas.')
+    }
     const { data, error } = await supabase
         .from('list_templates')
         .insert(templateData)
@@ -190,10 +197,14 @@ export async function createTemplate(templateData) {
 }
 
 export async function updateTemplate(id, updates) {
+    if (updates?.list_type === 'ranking') {
+        throw new Error('Los rankings se crean como listas y no admiten plantillas.')
+    }
     const { data, error } = await supabase
         .from('list_templates')
         .update({ ...updates, updated_at: new Date().toISOString() })
         .eq('id', id)
+        .neq('list_type', 'ranking')
         .select()
         .single()
     if (error) throw error
@@ -374,7 +385,7 @@ export const DEFAULT_TIER_CONFIG = {
             { id: 'D', label: 'D', color: '#7fbfff' },
         ]
     },
-    ranking: { max_items: 10 },
+    ranking: { max_items: 3 },
     grid: {
         cells: [
             { id: 'c1', label: 'Grid 1' },

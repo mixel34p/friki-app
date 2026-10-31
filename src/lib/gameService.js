@@ -52,7 +52,8 @@ export async function searchGames(query, limit = 20, { signal } = {}) {
             .abortSignal(signal)
 
         if (error) {
-            console.error('Local DB search error:', error)
+            if (signal?.aborted || error?.name === 'AbortError') return []
+            console.error('Local DB search error:', { message: error.message, code: error.code, details: error.details, hint: error.hint })
         }
 
         localResults = await refreshLegacyGameRows((localGames || []).map(formatGame), signal)

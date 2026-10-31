@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams, useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -9,10 +9,13 @@ import {
     SortableContext, useSortable, rectSortingStrategy, arrayMove
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { getTemplateById, createList, updateList, getListById, incrementTemplateUses } from '../../lib/listService';
+import { IoSettingsSharp } from 'react-icons/io5';
+import { getTemplateById, createList, updateList, getListById, incrementTemplateUses, DEFAULT_TIER_CONFIG, TIER_COLORS_PALETTE } from '../../lib/listService';
 import { searchGames } from '../../lib/gameService';
 import { searchAnime } from '../../lib/animeService';
+import { getDiscoverWorks } from '../../lib/discoverWorksService';
 import { getTierLabelFontSize } from '../../lib/tierLabel';
+import TierLabelEditor from './TierLabelEditor';
 import './CreateList.css';
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
@@ -74,6 +77,9 @@ const IconX = () => (
         <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
     </svg>
 );
+const IconSettings = () => <IoSettingsSharp aria-hidden="true" />;
+const IconChevronUp = () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 14 6-6 6 6" /></svg>;
+const IconChevronDown = () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 10 6 6 6-6" /></svg>;
 const IconChevronRight = () => (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="9 18 15 12 9 6" />
@@ -91,6 +97,8 @@ export default function CreateList() {
     const [searchParams] = useSearchParams();
     const templateId = searchParams.get('template');
     const fromListId = searchParams.get('fromList');
+    const publishDraftKey = searchParams.get('publishDraft');
+    const standaloneType = searchParams.get('type');
     const navigate = useNavigate();
     const { user, profile } = useAuth();
 
@@ -105,6 +113,7 @@ export default function CreateList() {
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
+    const defaultResultsCache = useRef({});
 
     const [customName, setCustomName] = useState('');
     const [customImageUrl, setCustomImageUrl] = useState('');
@@ -115,6 +124,7 @@ export default function CreateList() {
     const [visibility, setVisibility] = useState('public');
     const [activeTab, setActiveTab] = useState('search');
     const [modalTarget, setModalTarget] = useState(null);
+    const [rankingSlotTarget, setRankingSlotTarget] = useState(null);
     const [defaultTitleSet, setDefaultTitleSet] = useState(false);
 
     // Sidebar colapsable y edición de título inline
@@ -145,17 +155,47 @@ export default function CreateList() {
             }
         } else if (fromListId) {
             // Handled when list loads
-        } else {
+        } else if (standaloneType === 'ranking') {
             if (profile && !defaultTitleSet) {
-                setTitle(`Nueva Lista (${profile.display_name || profile.username || 'Usuario'})`);
+                setTitle(`Nuevo ranking (${profile.display_name || profile.username || 'Usuario'})`);
                 setDefaultTitleSet(true);
             }
+        } else {
+            navigate('/share?openList=1', { replace: true });
         }
-    }, [id, templateId, fromListId, template, profile, defaultTitleSet]);
+    }, [id, templateId, fromListId, standaloneType, template, profile, defaultTitleSet, navigate]);
 
     // ── Load template or existing list ──
     useEffect(() => {
-        if (templateId) {
+        if (publishDraftKey) {
+            try {
+                const stored = sessionStorage.getItem(`share-list-draft:${publishDraftKey}`);
+                if (!stored) throw new Error('No se encontró el borrador de la lista.');
+                const draft = JSON.parse(stored);
+                const editor = draft.editor;
+                if (!editor?.content || !editor?.typeConfig) throw new Error('El borrador de la lista está incompleto.');
+                setTitle(editor.title || '');
+                setListType(editor.listType || 'tierlist');
+                setMediaType(editor.mediaType || 'game');
+                setTypeConfig(editor.typeConfig);
+                setContent(editor.content);
+                setPool(editor.pool || []);
+                setVisibility(editor.visibility || 'public');
+                setDefaultTitleSet(true);
+                if (editor.templateId) getTemplateById(editor.templateId).then(setTemplate).catch(err => console.error('No se pudo volver a cargar la plantilla:', err));
+            } catch (err) {
+                setError(err.message || 'No se pudo recuperar el borrador de la lista.');
+            }
+        } else if (standaloneType === 'ranking' && !templateId) {
+            const config = { ...DEFAULT_TIER_CONFIG.ranking, max_items: 3 };
+            setTemplate(null);
+            setListType('ranking');
+            setMediaType('game');
+            setTypeConfig(config);
+            setContent(Object.fromEntries(Array.from({ length: config.max_items }, (_, index) => [`r${index}`, []])));
+            setPool([]);
+            setDefaultTitleSet(false);
+        } else if (templateId) {
             getTemplateById(templateId).then(data => {
                 setTemplate(data);
                 setListType(data.list_type);
@@ -243,35 +283,81 @@ export default function CreateList() {
                 }
             }).catch(err => setError(err.message));
         }
-    }, [templateId, fromListId, id, profile]);
+    }, [templateId, fromListId, id, profile, standaloneType]);
 
     // ── Search ──
     useEffect(() => {
-        if (searchQuery.length < 2) { setSearchResults([]); return; }
+        const query = searchQuery.trim();
+        const controller = new AbortController();
+        if (!query) {
+            const cachedResults = defaultResultsCache.current[mediaType];
+            if (cachedResults) {
+                setSearchResults(cachedResults);
+                setIsSearching(false);
+                return () => controller.abort();
+            }
+            setIsSearching(true);
+            getDiscoverWorks(mediaType).then(works => {
+                const popular = [...works]
+                    .sort((a, b) => b.registrations - a.registrations || b.databasePopularity - a.databasePopularity || (b.databaseRating || 0) - (a.databaseRating || 0) || a.title.localeCompare(b.title, 'es'))
+                    .slice(0, 24)
+                    .map(work => ({ ...work, name: work.title, image_url: work.image, release_date: work.release_date || work.first_release_date || work.start_date }));
+                defaultResultsCache.current[mediaType] = popular;
+                if (!controller.signal.aborted) setSearchResults(popular);
+            }).catch(error => {
+                if (!controller.signal.aborted) {
+                    console.error('No se pudieron cargar las obras populares:', error);
+                    setSearchResults([]);
+                }
+            }).finally(() => {
+                if (!controller.signal.aborted) setIsSearching(false);
+            });
+            return () => controller.abort();
+        }
+        if (query.length < 2) return () => controller.abort();
         const timer = setTimeout(async () => {
             setIsSearching(true);
             try {
                 const results = mediaType === 'game'
-                    ? await searchGames(searchQuery)
-                    : await searchAnime(searchQuery);
-                setSearchResults(results);
+                    ? await searchGames(query, 24, { signal: controller.signal })
+                    : await searchAnime(query, 24, { signal: controller.signal });
+                if (!controller.signal.aborted) setSearchResults(results);
             } catch (err) {
-                console.error(err);
+                if (!controller.signal.aborted) console.error(err);
             } finally {
-                setIsSearching(false);
+                if (!controller.signal.aborted) setIsSearching(false);
             }
         }, 350);
-        return () => clearTimeout(timer);
+        return () => { clearTimeout(timer); controller.abort(); };
     }, [searchQuery, mediaType]);
 
     const handleAddToPool = useCallback((item) => {
         const itemId = String(item.id);
-        const newItem = { id: itemId, name: item.name, image_url: item.image_url || item.cover_url || item.cover?.url };
+        const newItem = {
+            id: itemId,
+            name: item.name,
+            image_url: item.image_url || item.cover_url || item.cover?.url,
+            ...(listType === 'ranking' && !template ? { media_type: item.media_type || mediaType } : {}),
+        };
+        if (listType === 'ranking' && !template) {
+            const alreadySelected = Object.values(content || {}).flat().some(existing => String(existing?.id) === itemId)
+                || pool.some(existing => String(existing?.id) === itemId);
+            if (alreadySelected) return;
+            const positions = Array.from({ length: Number(typeConfig.max_items) || 3 }, (_, index) => `r${index}`);
+            const openPosition = rankingSlotTarget && !(content?.[rankingSlotTarget] || []).length
+                ? rankingSlotTarget
+                : positions.find(position => !(content?.[position] || []).length);
+            if (openPosition) {
+                setContent(previous => ({ ...previous, [openPosition]: [newItem] }));
+                setRankingSlotTarget(null);
+                return;
+            }
+        }
         setPool(prev => {
             if (prev.find(i => i.id === itemId)) return prev;
             return [...prev, newItem];
         });
-    }, []);
+    }, [listType, template, content, pool, typeConfig.max_items, mediaType, rankingSlotTarget]);
 
     const handleModalItemSelect = useCallback((item) => {
         const itemId = String(item.id);
@@ -287,18 +373,23 @@ export default function CreateList() {
                 if (prev.find(i => i.id === itemId)) return prev;
                 return [...prev, newItem];
             });
+        } else if (modalTarget && modalTarget.startsWith('r')) {
+            setContent(prev => ({ ...prev, [modalTarget]: [newItem] }));
+            setPool(prev => prev.filter(existing => String(existing.id) !== itemId));
         }
         setModalTarget(null);
     }, [modalTarget]);
 
     const handleAddCustom = () => {
         if (!customName || !customImageUrl) return;
-        const newItem = { id: `custom_${Date.now()}`, name: customName, image_url: customImageUrl };
+        const newItem = { id: `custom_${Date.now()}`, name: customName, image_url: customImageUrl, ...(listType === 'ranking' && !template ? { media_type: mediaType } : {}) };
         if (modalTarget === 'pool') {
             setPool(prev => [...prev, newItem]);
         } else if (modalTarget && modalTarget.startsWith('c')) {
             setContent(prev => ({ ...prev, [modalTarget]: [newItem] }));
             setPool(prev => [...prev, newItem]);
+        } else if (modalTarget && modalTarget.startsWith('r')) {
+            setContent(prev => ({ ...prev, [modalTarget]: [newItem] }));
         }
         setCustomName('');
         setCustomImageUrl('');
@@ -363,9 +454,69 @@ export default function CreateList() {
         }
     }, [pool, content, listType]);
 
+    const changeRankingSize = delta => {
+        const current = Number(typeConfig.max_items) || DEFAULT_TIER_CONFIG.ranking.max_items;
+        const next = Math.max(1, Math.min(30, current + delta));
+        if (next === current) return;
+        if (next < current) {
+            const removed = Array.from({ length: current - next }, (_, offset) => content[`r${next + offset}`]?.[0]).filter(Boolean);
+            setPool(items => [...items, ...removed]);
+            setContent(previous => Object.fromEntries(Object.entries(previous).filter(([key]) => !/^r\d+$/.test(key) || Number(key.slice(1)) < next)));
+        } else {
+            setContent(previous => ({
+                ...previous,
+                ...Object.fromEntries(Array.from({ length: next - current }, (_, offset) => [`r${current + offset}`, []])),
+            }));
+        }
+        setTypeConfig(previous => ({ ...previous, max_items: next }));
+    };
+
+    const isEditableTemplateTierlist = Boolean(!id && template?.id && listType === 'tierlist');
+
+    const updateTier = (tierId, updates) => {
+        setTypeConfig(previous => ({
+            ...previous,
+            tiers: (previous.tiers || []).map(tier => tier.id === tierId ? { ...tier, ...updates } : tier),
+        }));
+    };
+
+    const moveTier = (tierId, direction) => {
+        setTypeConfig(previous => {
+            const tiers = [...(previous.tiers || [])];
+            const currentIndex = tiers.findIndex(tier => tier.id === tierId);
+            const nextIndex = currentIndex + direction;
+            if (currentIndex < 0 || nextIndex < 0 || nextIndex >= tiers.length) return previous;
+            [tiers[currentIndex], tiers[nextIndex]] = [tiers[nextIndex], tiers[currentIndex]];
+            return { ...previous, tiers };
+        });
+    };
+
+    const addTier = () => {
+        if ((typeConfig.tiers || []).length >= 10) return;
+        const tier = { id: `tier_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`, label: 'Nuevo', color: '#6b7280' };
+        setTypeConfig(previous => (previous.tiers || []).length >= 10 ? previous : ({ ...previous, tiers: [...(previous.tiers || []), tier] }));
+        setContent(previous => ({ ...previous, [tier.id]: [] }));
+    };
+
+    const removeTier = tierId => {
+        if ((typeConfig.tiers || []).length <= 1) return;
+        const items = content?.[tierId] || [];
+        setPool(previous => [...previous, ...items.filter(item => !previous.some(existing => existing.id === item.id))]);
+        setContent(previous => {
+            const next = { ...previous };
+            delete next[tierId];
+            return next;
+        });
+        setTypeConfig(previous => ({ ...previous, tiers: (previous.tiers || []).filter(tier => tier.id !== tierId) }));
+    };
+
     // ── Save ──────────────────────────────────────────────────────────────────
     const handleSave = async () => {
         if (!title.trim()) { alert('Ponle un título a la lista'); return; }
+        if (listType === 'tierlist' && (typeConfig.tiers || []).length > 10) {
+            alert('Las tierlists pueden tener un máximo de 10 niveles. Elimina algunos para continuar.');
+            return;
+        }
         setSaving(true);
         try {
             let dbContent = content;
@@ -377,16 +528,35 @@ export default function CreateList() {
                     dbContent[`c${i}`] = (content[`c${i}`] && content[`c${i}`][0]) || null;
                 });
             }
+            const rankingMediaType = listType === 'ranking' && !template
+                ? dbContent.find(item => item?.media_type === 'game' || item?.media_type === 'anime')?.media_type || mediaType
+                : mediaType;
             const payload = {
                 title: title.trim(),
                 list_type: listType,
-                media_type: mediaType,
+                media_type: rankingMediaType,
                 type_config: typeConfig,
                 content: dbContent,
                 visibility,
-                template_id: template?.id,
+                template_id: template?.id || null,
                 user_id: user?.id
             };
+            if (!id && (template?.id || listType === 'ranking')) {
+                const draftKey = publishDraftKey || (typeof crypto !== 'undefined' && crypto.randomUUID
+                    ? crypto.randomUUID()
+                    : `${Date.now()}-${Math.random().toString(36).slice(2)}`);
+                const draft = {
+                    templateTitle: template?.title || '',
+                    editor: {
+                        title: title.trim(), listType, mediaType, typeConfig, content,
+                        pool, visibility, templateId: template?.id || null,
+                    },
+                    payload,
+                };
+                sessionStorage.setItem(`share-list-draft:${draftKey}`, JSON.stringify(draft));
+                navigate(`/share?listDraft=${encodeURIComponent(draftKey)}`);
+                return;
+            }
             let savedList;
             if (id) {
                 savedList = await updateList(id, payload);
@@ -460,7 +630,7 @@ export default function CreateList() {
                                 <span>Guardando...</span>
                             </>
                         ) : (
-                            <span>{id ? 'Guardar cambios' : 'Publicar'}</span>
+                            <span>{id ? 'Guardar cambios' : template?.id || listType === 'ranking' ? 'Continuar' : 'Publicar'}</span>
                         )}
                     </button>
                 </div>
@@ -482,24 +652,58 @@ export default function CreateList() {
                         {/* TIERLIST */}
                         {listType === 'tierlist' && (
                             <div className="cl-tierlist">
-                                {typeConfig.tiers?.map(tier => (
-                                    <TierRow key={tier.id} tier={tier} items={content[tier.id] || []} />
+                                {typeConfig.tiers?.map((tier, index) => (
+                                    <TierRow
+                                        key={tier.id}
+                                        tier={tier}
+                                        items={content[tier.id] || []}
+                                        editable={isEditableTemplateTierlist}
+                                        onLabelChange={label => updateTier(tier.id, { label })}
+                                        onColorChange={color => updateTier(tier.id, { color })}
+                                        onRemove={() => removeTier(tier.id)}
+                                        onMove={direction => moveTier(tier.id, direction)}
+                                        canMoveUp={index > 0}
+                                        canMoveDown={index < typeConfig.tiers.length - 1}
+                                        canRemove={(typeConfig.tiers || []).length > 1}
+                                    />
                                 ))}
+                                {isEditableTemplateTierlist && <button type="button" className="cl-add-tier-btn" onClick={addTier} disabled={(typeConfig.tiers || []).length >= 10}>
+                                    {(typeConfig.tiers || []).length < 10 && <IconPlus />} {(typeConfig.tiers || []).length >= 10 ? 'Máximo de 10 tiers' : 'Añadir fila'}
+                                </button>}
                             </div>
                         )}
 
                         {/* RANKING */}
                         {listType === 'ranking' && (
+                            <>
+                            {!template && <div className="cl-ranking-count-control" aria-label="Cantidad de puestos">
+                                <span>Puestos</span>
+                                <button type="button" onClick={() => changeRankingSize(-1)} disabled={(typeConfig.max_items || 10) <= 1} aria-label="Quitar un puesto">−</button>
+                                <strong>{typeConfig.max_items || 10}</strong>
+                                <button type="button" onClick={() => changeRankingSize(1)} disabled={(typeConfig.max_items || 10) >= 30} aria-label="Añadir un puesto">+</button>
+                            </div>}
                             <div className="cl-ranking-stack">
                                 {Array.from({ length: typeConfig.max_items || 10 }).map((_, i) => (
                                     <div key={i} className={`cl-ranking-row top-${i}`}>
                                         <div className="cl-ranking-badge">{i + 1}</div>
                                         <div className="cl-ranking-slot">
-                                            <DropZone id={`r${i}`} items={content[`r${i}`] || []} isRanking />
+                                        <DropZone
+                                            id={`r${i}`}
+                                            items={content[`r${i}`] || []}
+                                            isRanking
+                                            onEmptyClick={() => {
+                                                setRankingSlotTarget(`r${i}`);
+                                                setActiveTab('search');
+                                                setSearchQuery('');
+                                                setSidebarCollapsed(false);
+                                                setIsMobileSearchOpen(window.matchMedia('(max-width: 900px)').matches);
+                                            }}
+                                        />
                                         </div>
                                     </div>
                                 ))}
                             </div>
+                            </>
                         )}
 
                         {/* GRID */}
@@ -616,6 +820,10 @@ export default function CreateList() {
                                 {/* Search tab */}
                                 {activeTab === 'search' && (
                                     <>
+                                        {listType === 'ranking' && !template && <div className="cl-ranking-media-control in-search" role="group" aria-label="Filtrar la búsqueda por categoría">
+                                            <button type="button" className={mediaType === 'game' ? 'active' : ''} aria-pressed={mediaType === 'game'} onClick={() => { setMediaType('game'); setSearchQuery(''); }}>Juegos</button>
+                                            <button type="button" className={mediaType === 'anime' ? 'active' : ''} aria-pressed={mediaType === 'anime'} onClick={() => { setMediaType('anime'); setSearchQuery(''); }}>Anime</button>
+                                        </div>}
                                         <div className="cl-search-wrap">
                                             <span className="cl-search-icon"><IconSearch /></span>
                                             <input
@@ -635,11 +843,13 @@ export default function CreateList() {
                                                     <IconX />
                                                 </button>
                                             )}
-                                            {isSearching && <div className="cl-search-spinner" />}
                                         </div>
 
                                         <div className="cl-results">
-                                            {!isSearching && searchQuery.length < 2 && (
+                                            {searchQuery.trim().length === 0 && !isSearching && searchResults.length > 0 && <div className="cl-results-heading">Más registradas</div>}
+                                            <div className="cl-results-grid">
+                                            {isSearching && Array.from({ length: 9 }, (_, index) => <div className="cl-result-skeleton" key={`result-skeleton-${index}`}><span/><i/><b/></div>)}
+                                            {!isSearching && searchQuery.length < 2 && searchResults.length === 0 && (
                                                 <div className="cl-results-empty">
                                                     <div className="cl-results-empty-icon-wrap">
                                                         <IconSearch />
@@ -659,12 +869,13 @@ export default function CreateList() {
                                             )}
                                             {!isSearching && searchResults.map(item => {
                                                 const imgUrl = item.image_url || item.cover_url || item.cover?.url;
-                                                const isAdded = pool.some(p => p.id === String(item.id));
+                                                const isAdded = pool.some(p => p.id === String(item.id))
+                                                    || Object.values(content || {}).flat().some(placed => String(placed?.id) === String(item.id));
                                                 return (
                                                     <button
                                                         key={item.id}
                                                         className={`cl-result-item ${isAdded ? 'is-added' : ''}`}
-                                                        onClick={() => !isAdded && handleAddToPool(item)}
+                                                    onClick={() => !isAdded && handleAddToPool(item)}
                                                         disabled={isAdded}
                                                         title={item.name}
                                                     >
@@ -688,6 +899,7 @@ export default function CreateList() {
                                                     </button>
                                                 );
                                             })}
+                                            </div>
                                         </div>
                                     </>
                                 )}
@@ -728,7 +940,7 @@ export default function CreateList() {
                                             onClick={() => {
                                                 if (!customName || !customImageUrl) return;
                                                 const newItem = { id: `custom_${Date.now()}`, name: customName, image_url: customImageUrl };
-                                                setPool(prev => [...prev, newItem]);
+                                                handleAddToPool(newItem);
                                                 setCustomName('');
                                                 setCustomImageUrl('');
                                             }}
@@ -867,19 +1079,48 @@ export default function CreateList() {
 }
 
 // ─── Tier Row ─────────────────────────────────────────────────────────────────
-function TierRow({ tier, items }) {
+function TierRow({ tier, items, editable = false, onLabelChange, onColorChange, onRemove, onMove, canMoveUp = true, canMoveDown = true, canRemove = false }) {
+    const [isColorMenuOpen, setIsColorMenuOpen] = useState(false);
+    const tierRowRef = useRef(null);
+    useEffect(() => {
+        if (!isColorMenuOpen) return;
+        const closeOnOutsideClick = event => {
+            if (!tierRowRef.current?.contains(event.target)) setIsColorMenuOpen(false);
+        };
+        const closeOnEscape = event => {
+            if (event.key === 'Escape') setIsColorMenuOpen(false);
+        };
+        document.addEventListener('mousedown', closeOnOutsideClick);
+        document.addEventListener('keydown', closeOnEscape);
+        return () => {
+            document.removeEventListener('mousedown', closeOnOutsideClick);
+            document.removeEventListener('keydown', closeOnEscape);
+        };
+    }, [isColorMenuOpen]);
     return (
-        <div className="cl-tier-row">
+        <div className="cl-tier-row" ref={tierRowRef}>
             <div className="cl-tier-label" style={{ backgroundColor: tier.color }}>
-                <span className="cl-tier-text" style={{ fontSize: getTierLabelFontSize(tier.label) }}>{tier.label}</span>
+                {editable
+                    ? <TierLabelEditor className="cl-tier-label-input" aria-label={`Nombre del nivel ${tier.label}`} label={tier.label} style={{ fontSize: getTierLabelFontSize(tier.label) }} onChange={label => onLabelChange?.(label)} />
+                    : <span className="cl-tier-text" style={{ fontSize: getTierLabelFontSize(tier.label) }}>{tier.label}</span>}
             </div>
             <DropZone id={tier.id} items={items} />
+            {editable && <div className="cl-tier-controls" aria-label={`Controles del nivel ${tier.label}`}>
+                <button type="button" className="cl-tier-control-btn" aria-label={`Editar color de ${tier.label}`} title="Color" onClick={() => setIsColorMenuOpen(open => !open)}><IconSettings /></button>
+                <button type="button" className="cl-tier-control-btn" aria-label={`Subir ${tier.label}`} title="Subir nivel" disabled={!canMoveUp} onClick={() => onMove?.(-1)}><IconChevronUp /></button>
+                <button type="button" className="cl-tier-control-btn" aria-label={`Bajar ${tier.label}`} title="Bajar nivel" disabled={!canMoveDown} onClick={() => onMove?.(1)}><IconChevronDown /></button>
+            </div>}
+            {editable && isColorMenuOpen && <div className="cl-tier-color-menu" onClick={event => event.stopPropagation()}>
+                <div className="cl-tier-color-grid">{TIER_COLORS_PALETTE.map(color => <button key={color} type="button" className={`cl-tier-color-swatch${tier.color === color ? ' is-active' : ''}`} aria-label={`Elegir color ${color}`} title={color} style={{ backgroundColor: color }} onClick={() => onColorChange?.(color)} />)}</div>
+                <label className="cl-tier-custom-color">Personalizado<input type="color" value={tier.color || '#6b7280'} aria-label="Color personalizado" onChange={event => onColorChange?.(event.target.value)} /></label>
+                {canRemove && <button type="button" className="cl-tier-delete-action" onClick={() => { onRemove?.(); setIsColorMenuOpen(false); }}>Eliminar tier</button>}
+            </div>}
         </div>
     );
 }
 
 // ─── Drop Zone ────────────────────────────────────────────────────────────────
-function DropZone({ id, items, isPool, onRemoveItem, isRanking = false }) {
+function DropZone({ id, items, isPool, onRemoveItem, isRanking = false, onEmptyClick }) {
     const { setNodeRef, isOver } = useDroppable({ id });
     return (
         <div
@@ -891,6 +1132,12 @@ function DropZone({ id, items, isPool, onRemoveItem, isRanking = false }) {
                     <SortableItem key={item.id} item={item} isRanking={isRanking} onRemove={onRemoveItem ? () => onRemoveItem(item.id) : null} />
                 ))}
             </SortableContext>
+            {items.length === 0 && isRanking && onEmptyClick && (
+                <button type="button" className="cl-ranking-empty-select" onClick={onEmptyClick}>
+                    <IconPlus />
+                    <span>Elegir obra</span>
+                </button>
+            )}
             {items.length === 0 && isPool && (
                 <span className="cl-drop-hint">
                     Los elementos añadidos aparecen aquí

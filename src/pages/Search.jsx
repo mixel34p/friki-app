@@ -105,7 +105,7 @@ function ResultLink({ item, active, id, onClick, display = 'row' }) {
       <span className="search-list-card-content">
         <strong>{nameOf(item)}</strong>
         <span className="search-list-card-author"><span className="search-list-author-avatar">{authorAvatar ? <img src={authorAvatar} alt="" loading="lazy"/> : authorName.slice(0, 1).toUpperCase()}</span>@{authorName}</span>
-        <span className="search-list-tags"><span className={`search-list-tag type-${item.list_type || 'tierlist'}`}>{typeIcon}{listType}</span>{item.media_type && <span className={`search-list-tag media-${item.media_type}`}>{item.media_type === 'game' ? 'Videojuegos' : item.media_type === 'anime' ? 'Anime' : item.media_type}</span>}</span>
+        <span className="search-list-tags"><span className={`search-list-tag type-${item.list_type || 'tierlist'}`}>{typeIcon}{listType}</span>{item.list_type !== 'ranking' && item.media_type && <span className={`search-list-tag media-${item.media_type}`}>{item.media_type === 'game' ? 'Videojuegos' : item.media_type === 'anime' ? 'Anime' : item.media_type}</span>}</span>
       </span>
     </Link>
     const username = item.author?.username || 'usuario'

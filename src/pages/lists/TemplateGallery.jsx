@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import CreateTemplateModal from './CreateTemplateModal';
 import './TemplateGallery.css';
 
-const TYPE_LABELS = { tierlist: 'Tierlist', ranking: 'Ranking', grid: 'Grid' };
+const TYPE_LABELS = { tierlist: 'Tierlist', grid: 'Grid' };
 const MEDIA_LABELS = { game: 'Videojuegos', anime: 'Anime' };
 
 export default function TemplateGallery() {
@@ -76,7 +76,7 @@ export default function TemplateGallery() {
 
                     <div className="tg-filters">
                         <div className="tg-filter-group">
-                            {[null, 'tierlist', 'ranking', 'grid'].map(t => (
+                            {[null, 'tierlist', 'grid'].map(t => (
                                 <button key={String(t)} className={`tg-filter-btn ${filterType === t ? 'active' : ''}`} onClick={() => setFilterType(t)}>
                                     {t === null ? 'Todos' : TYPE_LABELS[t]}
                                 </button>

@@ -136,6 +136,7 @@ export async function searchGamesIGDB(query, limit = 20, signal) {
             }
         }).slice(0, limit)
     } catch (error) {
+        if (signal?.aborted || error?.name === 'AbortError') throw error
         console.error('IGDB search error:', error)
         throw error
     }

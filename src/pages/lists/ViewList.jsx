@@ -385,6 +385,9 @@ export default function ViewList() {
     const sharePreviewImages = collectListPreviewImages(list?.content, 3);
 
     const [menuOpen, setMenuOpen] = useState(false);
+    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+    const [deletingList, setDeletingList] = useState(false);
+    const [deleteListError, setDeleteListError] = useState('');
     const menuRef = useRef(null);
 
     const [comments, setComments] = useState([]);
@@ -438,6 +441,20 @@ export default function ViewList() {
         return () => { document.body.style.overflow = prev; };
     }, [lightboxOpen]);
 
+    useEffect(() => {
+        if (!deleteConfirmOpen) return;
+        const previousOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        const handleKeyDown = event => {
+            if (event.key === 'Escape' && !deletingList) setDeleteConfirmOpen(false);
+        };
+        document.addEventListener('keydown', handleKeyDown);
+        return () => {
+            document.body.style.overflow = previousOverflow;
+            document.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [deleteConfirmOpen, deletingList]);
+
     // Cerrar menú 3 puntos al hacer clic fuera
     useEffect(() => {
         if (!menuOpen) return;
@@ -446,11 +463,24 @@ export default function ViewList() {
         return () => document.removeEventListener('mousedown', fn);
     }, [menuOpen]);
 
-    const handleDelete = async () => {
+    const handleDelete = () => {
         setMenuOpen(false);
-        if (!window.confirm('¿Estás seguro de eliminar esta lista?')) return;
-        try { await deleteList(id); navigate('/profile'); }
-        catch (err) { alert(err.message); }
+        setDeleteListError('');
+        setDeleteConfirmOpen(true);
+    };
+
+    const confirmDeleteList = async () => {
+        if (deletingList) return;
+        setDeletingList(true);
+        setDeleteListError('');
+        try {
+            await deleteList(id);
+            navigate('/profile');
+        } catch (err) {
+            setDeleteListError(err.message || 'No se pudo eliminar la lista. Inténtalo de nuevo.');
+        } finally {
+            setDeletingList(false);
+        }
     };
 
     const handleSubmitComment = async e => {
@@ -614,27 +644,7 @@ export default function ViewList() {
                 </header>
 
                 {/* ── Preview: bloque negro con título + visual fusionados (comportamiento tipo imagen) ── */}
-                <div
-                    className="vl-preview-block is-preview-card"
-                    onClick={() => setLightboxOpen(true)}
-                    role="button"
-                    tabIndex={0}
-                    aria-label={`Ver lista completa: ${list.title}`}
-                    onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setLightboxOpen(true); } }}
-                >
-                    <div className="vl-locked-preview">
-                        <div className="vl-preview-titlebar">
-                            <h1 className="vl-preview-title">{list.title}</h1>
-                        </div>
-                        <div className="vl-post-visual-wrapper">
-                            <div className="vl-post-visual">
-                                {list.list_type === 'tierlist' && <TierlistView list={list} />}
-                                {list.list_type === 'ranking'  && <RankingView  list={list} />}
-                                {list.list_type === 'grid'     && <GridView     list={list} />}
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <ListPostPreview list={list} onClick={() => setLightboxOpen(true)} />
 
                 {/* ── Acciones ── */}
                 <div className="review-post-actions">
@@ -837,11 +847,64 @@ export default function ViewList() {
                     </div>
                 </div>
             ), document.body)}
+            {deleteConfirmOpen && createPortal((
+                <div
+                    className="vl-delete-overlay"
+                    onMouseDown={event => {
+                        if (event.target === event.currentTarget && !deletingList) setDeleteConfirmOpen(false);
+                    }}
+                >
+                    <section className="vl-delete-dialog" role="alertdialog" aria-modal="true" aria-labelledby="vl-delete-title" aria-describedby="vl-delete-description">
+                        <span className="vl-delete-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6m4-6v6M5 7l1 13h12l1-13M9 7V4h6v3"/></svg>
+                        </span>
+                        <h2 id="vl-delete-title">¿Eliminar esta lista?</h2>
+                        <p id="vl-delete-description">Se eliminarán la lista y sus comentarios. Esta acción no se puede deshacer.</p>
+                        {deleteListError && <p className="vl-delete-error" role="alert">{deleteListError}</p>}
+                        <div className="vl-delete-actions">
+                            <button type="button" className="vl-delete-cancel" onClick={() => setDeleteConfirmOpen(false)} disabled={deletingList}>Cancelar</button>
+                            <button type="button" className="vl-delete-confirm" onClick={confirmDeleteList} disabled={deletingList}>
+                                {deletingList ? 'Eliminando…' : 'Eliminar lista'}
+                            </button>
+                        </div>
+                    </section>
+                </div>
+            ), document.body)}
         </main>
     );
 }
 
 // ─── Vistas de lista ──────────────────────────────────────────────────────────
+export function ListPostPreview({ list, onClick, className = '', ariaLabel }) {
+    const activateWithKeyboard = event => {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            onClick?.();
+        }
+    };
+    return (
+        <div
+            className={`vl-preview-block is-preview-card ${className}`.trim()}
+            onClick={onClick}
+            role="button"
+            tabIndex={0}
+            aria-label={ariaLabel || `Ver lista completa: ${list.title}`}
+            onKeyDown={activateWithKeyboard}
+        >
+            <div className="vl-locked-preview">
+                <div className="vl-preview-titlebar"><h1 className="vl-preview-title">{list.title}</h1></div>
+                <div className="vl-post-visual-wrapper">
+                    <div className="vl-post-visual">
+                        {list.list_type === 'tierlist' && <TierlistView list={list} />}
+                        {list.list_type === 'ranking' && <RankingView list={list} />}
+                        {list.list_type === 'grid' && <GridView list={list} />}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 function TierlistView({ list }) {
     const tiers = list.type_config?.tiers || [];
     return (

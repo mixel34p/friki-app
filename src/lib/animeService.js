@@ -31,7 +31,8 @@ export async function searchAnime(query, limit = 20, { signal } = {}) {
             .abortSignal(signal)
 
         if (error) {
-            console.error('Local DB anime search error:', error)
+            if (signal?.aborted || error?.name === 'AbortError') return []
+            console.error('Local DB anime search error:', { message: error.message, code: error.code, details: error.details, hint: error.hint })
         }
 
         localResults = dedupeAnime((localAnime || []).map(formatAnime))

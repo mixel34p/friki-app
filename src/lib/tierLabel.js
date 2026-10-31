@@ -7,27 +7,32 @@ export function getTierLabelFontSize(label, options = {}) {
     const fontFamily = getComputedStyle(document.documentElement)
         .getPropertyValue('--font-sans').trim() || 'sans-serif';
     const measureContext = document.createElement('canvas').getContext('2d');
-    const words = String(label || '').trim().split(/\s+/).filter(Boolean);
+    const explicitLines = String(label || '').split(/\r?\n/);
     for (let size = maxSize; size >= 4; size -= 0.5) {
         measureContext.font = `400 ${size}px ${fontFamily}`;
         const spaceWidth = measureContext.measureText(' ').width;
-        let lineCount = 1;
-        let lineWidth = 0;
+        let lineCount = 0;
         let fitsWidth = true;
 
-        for (const word of words) {
-            const wordWidth = measureContext.measureText(word).width;
-            if (wordWidth > availableWidth) {
-                fitsWidth = false;
-                break;
+        for (const explicitLine of explicitLines) {
+            const words = explicitLine.trim().split(/\s+/).filter(Boolean);
+            lineCount += 1;
+            let lineWidth = 0;
+            for (const word of words) {
+                const wordWidth = measureContext.measureText(word).width;
+                if (wordWidth > availableWidth) {
+                    fitsWidth = false;
+                    break;
+                }
+                const nextWidth = lineWidth ? lineWidth + spaceWidth + wordWidth : wordWidth;
+                if (nextWidth > availableWidth) {
+                    lineCount += 1;
+                    lineWidth = wordWidth;
+                } else {
+                    lineWidth = nextWidth;
+                }
             }
-            const nextWidth = lineWidth ? lineWidth + spaceWidth + wordWidth : wordWidth;
-            if (nextWidth > availableWidth) {
-                lineCount += 1;
-                lineWidth = wordWidth;
-            } else {
-                lineWidth = nextWidth;
-            }
+            if (!fitsWidth) break;
         }
 
         if (fitsWidth && lineCount * size * lineHeight <= availableHeight) return `${size}px`;

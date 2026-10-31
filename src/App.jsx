@@ -24,6 +24,7 @@ import UserTemplates from './pages/UserTemplates'
 import WorkReviews from './pages/WorkReviews'
 import ReviewDetail from './pages/ReviewDetail'
 import SharePage from './pages/SharePage'
+import PostDetail from './pages/PostDetail'
 import Search from './pages/Search'
 import DiscoverWorks from './pages/DiscoverWorks'
 import DiscoverLists from './pages/DiscoverLists'
@@ -52,6 +53,7 @@ function getPageTitle(pathname) {
   }
   if (section === 'game' || section === 'anime') return identifier && parts[2] === 'reviews' ? `Reseñas de ${section === 'game' ? 'videojuegos' : 'anime'}` : section === 'game' ? 'Videojuego' : 'Anime'
   if (section === 'spaces' && identifier) return 'Espacio'
+  if (section === 'posts' && identifier) return 'Publicación'
   if (section === 'lists' && identifier) return parts[2] === 'edit' ? 'Editar lista' : 'Lista'
   if (section === 'templates' && identifier) return parts[2] === 'edit' ? 'Editar plantilla' : 'Plantilla'
   if (section === 'tierlist' && identifier) return 'Tierlist'
@@ -196,6 +198,7 @@ function App() {
             <Route path="/update-password" element={<UpdatePassword />} />
             <Route path="/home" element={<Home />} />
             <Route path="/share" element={<ProtectedRoute><SharePage /></ProtectedRoute>} />
+            <Route path="/posts/:postId" element={<PostDetail />} />
             <Route path="/activity" element={<ProtectedRoute><ActivityPage /></ProtectedRoute>} />
             <Route path="/search" element={<Search />} />
             <Route path="/search/results" element={<Search />} />

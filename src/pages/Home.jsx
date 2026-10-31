@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import LoadingSpinner from '../components/LoadingSpinner'
+import { getRecentPosts } from '../lib/postService'
+import { formatRelativeDate } from '../lib/formatRelativeDate'
 import './Home.css'
 
 function getPreviewImage(tierlist) {
@@ -23,6 +25,7 @@ function getPreviewImage(tierlist) {
 export default function Home() {
     const { user, profile, loading: authLoading } = useAuth()
     const [trendingTierlists, setTrendingTierlists] = useState([])
+    const [recentPosts, setRecentPosts] = useState([])
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
@@ -31,6 +34,11 @@ export default function Home() {
         setLoading(true)
         const loadPublicHome = async () => {
             try {
+                const posts = await getRecentPosts(6).catch(error => {
+                    console.error('Error loading recent posts:', error)
+                    return []
+                })
+                if (active) setRecentPosts(posts)
                 const { data: trends } = await supabase
                     .from('tierlists')
                     .select('*')
@@ -82,6 +90,27 @@ export default function Home() {
                 <article><span>✧</span><h2>Comparte tu opinión</h2><p>Puntúa, escribe reseñas y crea listas para recomendar.</p></article>
                 <article><span>◎</span><h2>Encuentra a tu gente</h2><p>Conecta con fans que disfrutan de las mismas historias.</p></article>
             </section>
+
+            {recentPosts.length > 0 && <section className="guest-home-posts">
+                <div className="guest-home-section-heading"><div><span>DE LA COMUNIDAD</span><h2>Publicaciones recientes</h2></div></div>
+                <div className="guest-home-post-grid">
+                    {recentPosts.map(post => {
+                        const author = post.author || {}
+                        const media = Array.isArray(post.media) ? post.media : []
+                        return <Link className="guest-home-post-card" to={`/posts/${post.id}`} key={post.id} style={{ '--post-card-accent': author.theme_color || 'var(--brand-primary)' }}>
+                            <div className="guest-home-post-author">
+                                {author.avatar_url ? <img src={author.avatar_url} alt="" /> : <span>{(author.display_name || author.username || 'U').slice(0, 1).toLocaleUpperCase()}</span>}
+                                <div><strong>{author.display_name || author.username || 'Usuario'}</strong><small>@{author.username || 'usuario'}</small></div>
+                            </div>
+                            {post.contains_spoiler || post.is_sensitive
+                                ? <p className="guest-home-post-hidden">{post.contains_spoiler ? 'Contiene spoilers' : 'Contenido sensible'} · abrir publicación para ver</p>
+                                : <p className="guest-home-post-body">{post.body || 'Compartió una imagen.'}</p>}
+                            {!!media.length && !post.contains_spoiler && !post.is_sensitive && <div className={`guest-home-post-media count-${Math.min(media.length, 3)}`}>{media.slice(0, 3).map((item, index) => <img key={`${item.url}-${index}`} src={item.url} alt="" loading="lazy" />)}</div>}
+                            <small className="guest-home-post-date">{formatRelativeDate(post.created_at)}</small>
+                        </Link>
+                    })}
+                </div>
+            </section>}
 
             {trendingTierlists.length > 0 && <section className="guest-home-trending">
                 <div className="guest-home-section-heading"><div><span>DE LA COMUNIDAD</span><h2>Listas recientes</h2></div><Link to="/discover/lists">Ver todas <span aria-hidden="true">→</span></Link></div>

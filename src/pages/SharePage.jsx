@@ -3,11 +3,15 @@ import { createPortal } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
-import { deleteWorkLog, getWorkLog, logWork } from '../lib/libraryService'
+import { deleteWorkLog, getUserLibrary, getWorkLog, logWork } from '../lib/libraryService'
 import { getAccentTextColor } from '../lib/colorContrast'
 import { useToast } from '../components/Toast'
 import { searchGames } from '../lib/gameService'
 import { searchAnime } from '../lib/animeService'
+import { createList, getTemplateById, getTemplates, incrementTemplateUses } from '../lib/listService'
+import { createPost } from '../lib/postService'
+import { uploadChatImage } from '../lib/socialDiscoveryService'
+import { ListPostPreview } from './lists/ViewList'
 import './SharePage.css'
 
 const PLACEHOLDERS = [
@@ -20,10 +24,60 @@ const POST_LIMIT = 2000
 const INPUT_LIMIT = 2100
 const GIPHY_API_KEY = import.meta.env.VITE_GIPHY_API_KEY || ''
 
+function readListDraft(search) {
+  const token = new URLSearchParams(search).get('listDraft')
+  if (!token) return { token: null, draft: null }
+  try {
+    const raw = sessionStorage.getItem(`share-list-draft:${token}`)
+    return { token, draft: raw ? JSON.parse(raw) : null }
+  } catch (error) {
+    console.error('No se pudo leer el borrador de la lista:', error)
+    return { token, draft: null }
+  }
+}
+
+function getListBackdropImage(draft) {
+  const content = draft?.payload?.content
+  const items = Array.isArray(content) ? content : Object.values(content || {}).flatMap(value => Array.isArray(value) ? value : [value])
+  const first = items.find(item => item && typeof item === 'object' && (item.image_url || item.cover_url || item.cover?.url))
+  return first ? first.image_url || first.cover_url || first.cover?.url : ''
+}
+
+function makeEmptyTemplateList(template) {
+  const config = template?.type_config || {}
+  let content = {}
+  if (template?.list_type === 'tierlist') {
+    ;(config.tiers || []).forEach(tier => { content[tier.id] = [] })
+  } else if (template?.list_type === 'ranking') {
+    content = Array.from({ length: config.max_items || 10 }, () => null)
+  } else if (template?.list_type === 'grid') {
+    ;(config.cells || []).forEach((_, index) => { content[`c${index}`] = null })
+  }
+  return { ...template, content }
+}
+
+function makeEmptyStandaloneRanking() {
+  return {
+    title: 'Nuevo ranking',
+    list_type: 'ranking',
+    media_type: 'mixed',
+    type_config: { max_items: 3 },
+    content: [null, null, null],
+  }
+}
+
+function getTemplateCoverUrls(template, max = 2) {
+  const selected = template?.cover_items?.length ? template.cover_items : template?.default_items || []
+  return selected.slice(0, max).map(item => typeof item === 'string'
+    ? item
+    : item?.image_url || item?.cover_url || item?.cover_image || item?.image || item?.cover?.url
+  ).filter(Boolean)
+}
+
 const TOOLS = [
   { id: 'image', label: 'Añadir imagen', icon: <><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></> },
   { id: 'gif', label: 'Añadir GIF', icon: <><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M10 9.5a2.5 2.5 0 1 0 0 5h1.5v-1.7H10M15 9.5v5M18 9.5h-2v5"/></> },
-  { id: 'poll', label: 'Crear encuesta', icon: <><path d="M4 19.5h16M6 16V9M12 16V4M18 16v-4"/><circle cx="6" cy="7" r="1"/><circle cx="12" cy="2.5" r="1"/><circle cx="18" cy="10" r="1"/></> },
+  { id: 'list', label: 'Añadir lista', icon: <><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></> },
   { id: 'emoji', label: 'Añadir reacción', icon: <><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></> },
 ]
 
@@ -32,13 +86,28 @@ export default function SharePage() {
   const navigate = useNavigate()
   const { profile, user } = useAuth()
   const { toast } = useToast()
+  const [initialListDraft, setInitialListDraft] = useState(() => readListDraft(location.search))
+  const listDraftToken = initialListDraft.token
+  const listDraft = initialListDraft.draft
+  const isListPublishingFlow = Boolean(listDraftToken)
   const textareaRef = useRef(null)
   const fileInputRef = useRef(null)
   const imageGridRef = useRef(null)
+  const calendarWrapRef = useRef(null)
+  const templatePickerRef = useRef(null)
+  const templateTriggerRef = useRef(null)
   const imagesRef = useRef([])
   const [text, setText] = useState('')
   const [placeholder] = useState(() => PLACEHOLDERS[Math.floor(Math.random() * PLACEHOLDERS.length)])
   const [selectedTool, setSelectedTool] = useState(null)
+  const [selectedTemplate, setSelectedTemplate] = useState(null)
+  const [selectedStandaloneRanking, setSelectedStandaloneRanking] = useState(false)
+  const [templatePickerOpen, setTemplatePickerOpen] = useState(false)
+  const [templatePickerSection, setTemplatePickerSection] = useState('templates')
+  const [templateQuery, setTemplateQuery] = useState('')
+  const [templateResults, setTemplateResults] = useState([])
+  const [templateLoading, setTemplateLoading] = useState(false)
+  const [templateError, setTemplateError] = useState('')
   const [toolHint, setToolHint] = useState('')
   const [images, setImages] = useState([])
   const [gifOpen, setGifOpen] = useState(false)
@@ -63,7 +132,14 @@ export default function SharePage() {
   const [selectedReview, setSelectedReview] = useState(null)
   const [reviewRating, setReviewRating] = useState(0)
   const [reviewDate, setReviewDate] = useState('')
+  const [calendarOpen, setCalendarOpen] = useState(false)
+  const [calendarMonth, setCalendarMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1))
+  const [diaryEntries, setDiaryEntries] = useState([])
   const [reviewSubmitting, setReviewSubmitting] = useState(false)
+  const [postSubmitting, setPostSubmitting] = useState(false)
+  const [listPublishing, setListPublishing] = useState(false)
+  const [removeListConfirmOpen, setRemoveListConfirmOpen] = useState(false)
+  const [pendingReviewWork, setPendingReviewWork] = useState(null)
   const [loadingExistingReview, setLoadingExistingReview] = useState(false)
   const [existingWorkEntry, setExistingWorkEntry] = useState(null)
   const [deletingEntry, setDeletingEntry] = useState(false)
@@ -73,6 +149,67 @@ export default function SharePage() {
   const isOverLimit = text.length > POST_LIMIT
   const overage = Math.max(0, text.length - POST_LIMIT)
   const canPost = (Boolean(text.trim()) || images.length > 0) && !isOverLimit
+  const isTemplateComposerFlow = Boolean(selectedTemplate && !isListPublishingFlow && !selectedReview)
+  const isStandaloneRankingComposer = selectedStandaloneRanking && !isListPublishingFlow && !selectedReview
+  const isListSetupComposerFlow = isTemplateComposerFlow || isStandaloneRankingComposer
+  const isListAttachmentFlow = isListPublishingFlow || isListSetupComposerFlow
+
+  useEffect(() => {
+    if (new URLSearchParams(location.search).get('openList') !== '1') return
+    setTemplatePickerSection('templates')
+    setTemplatePickerOpen(true)
+    setSelectedTool('list')
+  }, [location.search])
+
+  useEffect(() => {
+    const standaloneType = new URLSearchParams(location.search).get('listType')
+    setSelectedStandaloneRanking(standaloneType === 'ranking' && !isListPublishingFlow)
+  }, [location.search, isListPublishingFlow])
+
+  useEffect(() => {
+    const templateId = new URLSearchParams(location.search).get('listTemplate')
+    if (!templateId || isListPublishingFlow) {
+      if (!isListPublishingFlow) setSelectedTemplate(null)
+      return undefined
+    }
+    let active = true
+    getTemplateById(templateId).then(template => { if (active) setSelectedTemplate(template) }).catch(error => {
+      console.error('No se pudo cargar la plantilla seleccionada:', error)
+      if (active) setSelectedTemplate(null)
+    })
+    return () => { active = false }
+  }, [location.search, isListPublishingFlow])
+
+  useEffect(() => {
+    if (!templatePickerOpen || templatePickerSection !== 'templates') return undefined
+    let active = true
+    const timer = window.setTimeout(async () => {
+      setTemplateLoading(true)
+      setTemplateError('')
+      try {
+        const results = await getTemplates({ query: templateQuery.trim(), limit: 24 })
+        if (active) setTemplateResults(results)
+      } catch (error) {
+        console.error('No se pudieron cargar las plantillas:', error)
+        if (active) { setTemplateResults([]); setTemplateError('No se pudieron cargar las plantillas. Inténtalo de nuevo.') }
+      } finally { if (active) setTemplateLoading(false) }
+    }, templateQuery.trim() ? 220 : 0)
+    return () => { active = false; window.clearTimeout(timer) }
+  }, [templatePickerOpen, templatePickerSection, templateQuery])
+
+  useEffect(() => {
+    if (!templatePickerOpen) return undefined
+    const closeOnOutsidePointer = event => {
+      if (!templatePickerRef.current?.contains(event.target) && !templateTriggerRef.current?.contains(event.target)) setTemplatePickerOpen(false)
+    }
+    const closeOnEscape = event => { if (event.key === 'Escape') setTemplatePickerOpen(false) }
+    document.addEventListener('pointerdown', closeOnOutsidePointer)
+    document.addEventListener('keydown', closeOnEscape)
+    return () => {
+      document.removeEventListener('pointerdown', closeOnOutsidePointer)
+      document.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [templatePickerOpen])
 
   useEffect(() => { imagesRef.current = images }, [images])
   useEffect(() => {
@@ -334,6 +471,15 @@ export default function SharePage() {
   }
 
   const chooseTool = tool => {
+    if (tool.id === 'list') {
+      const shouldOpen = !templatePickerOpen
+      setSelectedTool(shouldOpen ? 'list' : null)
+      setGifOpen(false)
+      if (shouldOpen) setTemplateQuery('')
+      setTemplatePickerOpen(shouldOpen)
+      setToolHint('')
+      return
+    }
     if (tool.id === 'image') {
       setSelectedTool('image')
       setGifOpen(false)
@@ -353,7 +499,7 @@ export default function SharePage() {
     setToolHint(`${tool.label} estará disponible en una siguiente fase.`)
   }
 
-  const handlePost = () => {
+  const handlePost = async () => {
     if (isOverLimit) return
     if (selectedReview) {
       if (!user?.id) return
@@ -384,7 +530,100 @@ export default function SharePage() {
       toast({ title: 'Tu post está vacío', message: 'Escribe algo antes de continuar.', type: 'warning' })
       return
     }
-    toast({ title: 'Compositor preparado', message: 'La publicación se conectará en la siguiente fase.', type: 'info' })
+    if (!user?.id || postSubmitting) return
+
+    setPostSubmitting(true)
+    try {
+      const media = await Promise.all(images.map(async image => {
+        const url = image.remoteUrl || (image.file ? await uploadChatImage(image.file) : null)
+        if (!url) throw new Error(`No se pudo subir ${image.name || 'una de las imágenes'}.`)
+        const isGif = image.source === 'giphy' || image.file?.type === 'image/gif' || /\.gif(?:$|\?)/i.test(url)
+        return { url, name: image.name || '', type: isGif ? 'gif' : 'image' }
+      }))
+      const created = await createPost({
+        user_id: user.id,
+        body: text.trim(),
+        media,
+        contains_spoiler: spoilerEnabled,
+        is_sensitive: sensitive,
+        spoiler_work_id: spoilerWork?.id,
+        spoiler_work_type: spoilerWork?.type,
+        spoiler_work_title: spoilerWork?.title,
+      })
+      toast({ title: 'Publicación compartida', message: 'Tu post ya está publicado.', type: 'success' })
+      navigate(`/posts/${created.id}`)
+    } catch (error) {
+      console.error('No se pudo publicar el post:', error)
+      toast({ title: 'No se pudo publicar', message: error.message || 'Inténtalo de nuevo.', type: 'error' })
+    } finally { setPostSubmitting(false) }
+  }
+
+  const handlePublishList = async () => {
+    if (!listDraft?.payload || listPublishing) return
+    if (!user?.id || listDraft.payload.user_id !== user.id) {
+      toast({ title: 'No se pudo publicar', message: 'Vuelve al editor y prepara la lista con tu cuenta actual.', type: 'error' })
+      return
+    }
+    setListPublishing(true)
+    try {
+      const savedList = await createList(listDraft.payload)
+      if (listDraft.payload.template_id) {
+        try { await incrementTemplateUses(listDraft.payload.template_id) }
+        catch (error) { console.error('La lista se publicó, pero no se pudo actualizar el contador de usos de la plantilla:', error) }
+      }
+      if (listDraftToken) sessionStorage.removeItem(`share-list-draft:${listDraftToken}`)
+      navigate(`/lists/${savedList.id}`, { replace: true })
+    } catch (error) {
+      console.error('No se pudo publicar la lista:', error)
+      toast({ title: 'No se pudo publicar la lista', message: error.message || 'Inténtalo de nuevo.', type: 'error' })
+    } finally { setListPublishing(false) }
+  }
+
+  const handleReturnToListEditor = () => {
+    if (!listDraftToken) return navigate('/templates')
+    navigate(`/lists/new?publishDraft=${encodeURIComponent(listDraftToken)}`)
+  }
+
+  const handleRemoveListFromComposer = () => {
+    if (listDraftToken) sessionStorage.removeItem(`share-list-draft:${listDraftToken}`)
+    setRemoveListConfirmOpen(false)
+    setInitialListDraft({ token: null, draft: null })
+    setSelectedTemplate(null)
+    setSelectedStandaloneRanking(false)
+    navigate('/share', { replace: true })
+    if (pendingReviewWork) {
+      const work = pendingReviewWork
+      setPendingReviewWork(null)
+      selectWorkForReview(work)
+    }
+  }
+
+  const handleRegisterWorkSelection = work => {
+    if (!isListAttachmentFlow) return selectWorkForReview(work)
+    setPendingReviewWork(work)
+    setRemoveListConfirmOpen(true)
+  }
+
+  const handleChooseTemplate = template => {
+    setSelectedTemplate(template)
+    setSelectedStandaloneRanking(false)
+    setSelectedTool(null)
+    setTemplatePickerOpen(false)
+    setTemplateQuery('')
+    navigate(`/share?listTemplate=${encodeURIComponent(template.id)}`, { replace: true })
+  }
+
+  const handleChooseStandaloneRanking = () => {
+    setSelectedTemplate(null)
+    setSelectedStandaloneRanking(true)
+    setSelectedTool(null)
+    setTemplatePickerOpen(false)
+    navigate('/share?listType=ranking', { replace: true })
+  }
+
+  const handleEditSelectedList = () => {
+    if (selectedStandaloneRanking) navigate('/lists/new?type=ranking')
+    else if (selectedTemplate?.id) navigate(`/lists/new?template=${encodeURIComponent(selectedTemplate.id)}`)
   }
 
   const selectWorkForReview = async work => {
@@ -406,6 +645,10 @@ export default function SharePage() {
       setText(existing.review_text || '')
       setReviewRating(Number(existing.rating) || 0)
       setReviewDate(existing.finished_date || '')
+      if (existing.finished_date) {
+        const finished = new Date(`${String(existing.finished_date).slice(0, 10)}T12:00:00`)
+        if (!Number.isNaN(finished.getTime())) setCalendarMonth(new Date(finished.getFullYear(), finished.getMonth(), 1))
+      }
       setSpoilerEnabled(Boolean(existing.contains_spoiler))
     } catch (error) {
       console.error('No se pudo cargar la reseña anterior:', error)
@@ -439,13 +682,61 @@ export default function SharePage() {
     navigate(location.pathname, { replace: true, state: null })
   }, [location.key])
 
+  useEffect(() => {
+    if (!calendarOpen) return undefined
+    const closeOnOutsidePointer = event => {
+      if (!calendarWrapRef.current?.contains(event.target)) setCalendarOpen(false)
+    }
+    const closeOnEscape = event => { if (event.key === 'Escape') setCalendarOpen(false) }
+    document.addEventListener('pointerdown', closeOnOutsidePointer)
+    document.addEventListener('keydown', closeOnEscape)
+    return () => {
+      document.removeEventListener('pointerdown', closeOnOutsidePointer)
+      document.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [calendarOpen])
+
+  useEffect(() => {
+    if (!selectedReview || !user?.id) return undefined
+    let cancelled = false
+    getUserLibrary(user.id).then(async entries => {
+      const rows = entries || []
+      const coverMap = new Map()
+      for (const type of ['game', 'anime']) {
+        const ids = rows.filter(entry => entry.work_type === type).map(entry => entry.work_id)
+        if (!ids.length) continue
+        const { data } = await supabase.from(type === 'game' ? 'games' : 'anime').select(type === 'game' ? 'id, name, cover_url' : 'id, title, image_url').in('id', ids)
+        ;(data || []).forEach(work => coverMap.set(`${type}:${work.id}`, { title: work.name || work.title, image: work.cover_url || work.image_url }))
+      }
+      if (!cancelled) setDiaryEntries(rows.map(entry => ({ ...entry, ...coverMap.get(`${entry.work_type}:${entry.work_id}`) })))
+    }).catch(error => console.error('No se pudo cargar el diario para el calendario:', error))
+    return () => { cancelled = true }
+  }, [selectedReview?.id, selectedReview?.type, user?.id])
+
+  const calendarDays = (() => {
+    const firstDay = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 1)
+    const offset = (firstDay.getDay() + 6) % 7
+    const count = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 0).getDate()
+    return [...Array(offset).fill(null), ...Array.from({ length: count }, (_, index) => index + 1)]
+  })()
+  const today = new Date()
+  const todayCalendarKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+  const entriesByDate = diaryEntries.reduce((map, entry) => {
+    if (!entry.finished_date) return map
+    const key = String(entry.finished_date).slice(0, 10)
+    map[key] = [...(map[key] || []), entry]
+    return map
+  }, {})
+  const formatCalendarDate = date => date ? new Date(`${date}T12:00:00`).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Elegir fecha'
+
   return (
     <section
-      className={`share-page${selectedReview ? ' has-selected-review' : ''}`}
+      className={`share-page${selectedReview ? ' has-selected-review' : ''}${isListAttachmentFlow ? ' has-list-draft' : ''}`}
       style={{
         '--share-accent': accent,
         '--share-accent-ink': getAccentTextColor(accent),
         '--share-avatar-backdrop': avatarBackground,
+        '--share-list-backdrop': (getListBackdropImage(listDraft) || getListBackdropImage({ payload: { content: selectedTemplate?.default_items || [] } })) ? `url("${getListBackdropImage(listDraft) || getListBackdropImage({ payload: { content: selectedTemplate?.default_items || [] } })}")` : 'none',
       }}
     >
       <div key={selectedReview?.id || 'default-share-backdrop'} className={`share-selected-backdrop${selectedReview?.image ? ' is-visible' : ''}`} style={{ backgroundImage: selectedReview?.image ? `url("${selectedReview.image}")` : 'none' }} aria-hidden="true" />
@@ -453,7 +744,47 @@ export default function SharePage() {
         <h1>Compartir</h1>
       </header>
 
-      <article className={`share-composer${isOverLimit ? ' is-over-limit' : ''}${selectedReview ? ' is-review-composer' : ''}`} aria-label={selectedReview ? 'Escribir reseña' : 'Crear un post'}>
+      <article className={`share-composer${isOverLimit ? ' is-over-limit' : ''}${selectedReview ? ' is-review-composer' : ''}${isListAttachmentFlow ? ' is-list-composer' : ''}`} aria-label={isListAttachmentFlow ? 'Publicar una lista' : selectedReview ? 'Escribir reseña' : 'Crear un post'}>
+        {isListAttachmentFlow ? listDraft?.payload ? <>
+          <div className="share-list-composer-entry">
+            <span className="share-composer-avatar" aria-label={`Foto de ${displayName}`}>
+              {avatar ? <img src={avatar} alt="" /> : <span>{displayName.slice(0, 1).toLocaleUpperCase()}</span>}
+            </span>
+            <div className="share-list-attachment">
+              <ListPostPreview list={listDraft.payload} onClick={handleReturnToListEditor} className="share-list-published-preview" ariaLabel="Volver a editar la lista" />
+            </div>
+          </div>
+          <div className="share-list-publish-actions">
+            <button className="share-review-clear share-list-remove-button" type="button" onClick={() => setRemoveListConfirmOpen(true)} disabled={listPublishing} aria-label="Quitar lista" title="Quitar lista"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m18 6-12 12M6 6l12 12"/></svg></button>
+            <button className="share-post-button" type="button" onClick={handlePublishList} disabled={listPublishing}>{listPublishing ? 'Publicando…' : 'Postear'}</button>
+          </div>
+        </> : isTemplateComposerFlow ? <>
+          <div className="share-list-composer-entry">
+            <span className="share-composer-avatar" aria-label={`Foto de ${displayName}`}>
+              {avatar ? <img src={avatar} alt="" /> : <span>{displayName.slice(0, 1).toLocaleUpperCase()}</span>}
+            </span>
+            <div className="share-list-attachment">
+              <ListPostPreview list={makeEmptyTemplateList(selectedTemplate)} onClick={handleEditSelectedList} className="share-list-published-preview" ariaLabel={`Editar lista basada en ${selectedTemplate.title}`} />
+            </div>
+          </div>
+          <div className="share-list-publish-actions">
+            <button className="share-review-clear share-list-remove-button" type="button" onClick={() => setRemoveListConfirmOpen(true)} aria-label="Quitar plantilla" title="Quitar plantilla"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m18 6-12 12M6 6l12 12"/></svg></button>
+            <button className="share-post-button" type="button" onClick={handleEditSelectedList}>Editar lista</button>
+          </div>
+        </> : isStandaloneRankingComposer ? <>
+          <div className="share-list-composer-entry">
+            <span className="share-composer-avatar" aria-label={`Foto de ${displayName}`}>
+              {avatar ? <img src={avatar} alt="" /> : <span>{displayName.slice(0, 1).toLocaleUpperCase()}</span>}
+            </span>
+            <div className="share-list-attachment">
+              <ListPostPreview list={makeEmptyStandaloneRanking()} onClick={handleEditSelectedList} className="share-list-published-preview" ariaLabel="Editar ranking" />
+            </div>
+          </div>
+          <div className="share-list-publish-actions">
+            <button className="share-review-clear share-list-remove-button" type="button" onClick={() => setRemoveListConfirmOpen(true)} aria-label="Quitar ranking" title="Quitar ranking"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m18 6-12 12M6 6l12 12"/></svg></button>
+            <button className="share-post-button" type="button" onClick={handleEditSelectedList}>Editar lista</button>
+          </div>
+        </> : <div className="share-list-draft-error" role="alert"><p>No se pudo recuperar la lista o plantilla seleccionada.</p><button type="button" className="share-post-button" onClick={() => navigate('/templates')}>Volver a plantillas</button></div> : <>
         <div className={`share-composer-entry${images.length ? ' has-images' : ''}${selectedReview ? ' has-review-work' : ''}`}>
           {selectedReview ? <div className="share-review-identity">
             {selectedReview.image && <div className="share-review-cover"><img src={selectedReview.image} alt={selectedReview.title} /></div>}
@@ -516,11 +847,31 @@ export default function SharePage() {
         </div>}
 
         <div className="share-composer-footer">
-          {selectedReview ? <div className="share-review-date"><label htmlFor="share-review-finished-date">Terminada el</label><input id="share-review-finished-date" type="date" value={reviewDate} onChange={event => setReviewDate(event.target.value)} /></div> : <div className="share-composer-tools" aria-label="Opciones del post">
+          {selectedReview ? <div className="share-review-date-wrap" ref={calendarWrapRef}><button className="share-review-date-trigger" type="button" onClick={() => setCalendarOpen(value => !value)} aria-expanded={calendarOpen}>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>{reviewDate ? formatCalendarDate(reviewDate) : 'Fecha de registro'}<span className="share-review-date-chevron">{calendarOpen ? '−' : '+'}</span>
+          </button>{calendarOpen && <div className="share-calendar-popover">
+            <div className="share-calendar-header">
+              <div className="share-calendar-nav-group"><button type="button" onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear() - 1, calendarMonth.getMonth(), 1))} aria-label="Año anterior"><svg viewBox="0 0 24 24"><path d="m18 6-6 6 6 6M11 6l-6 6 6 6"/></svg></button><button type="button" onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1))} aria-label="Mes anterior"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button></div>
+              <strong>{calendarMonth.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}</strong>
+              <div className="share-calendar-nav-group"><button type="button" onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1))} aria-label="Mes siguiente"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button><button type="button" onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear() + 1, calendarMonth.getMonth(), 1))} aria-label="Año siguiente"><svg viewBox="0 0 24 24"><path d="m6 6 6 6-6 6m7-12 6 6-6 6"/></svg></button></div>
+            </div>
+            <div className="share-calendar-grid share-calendar-weekdays">{'LMXJVSD'.split('').map((day, index) => <span key={`${day}-${index}`}>{day}</span>)}</div>
+            <div className="share-calendar-grid">{calendarDays.map((day, index) => {
+              if (!day) return <span className="share-calendar-empty" key={`empty-${index}`} />
+              const date = `${calendarMonth.getFullYear()}-${String(calendarMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+              const covers = entriesByDate[date] || []
+              const isFutureDate = date > todayCalendarKey
+              return <button key={date} className={`share-calendar-day${reviewDate === date ? ' is-selected' : ''}${covers.length ? ' has-entries' : ''}`} type="button" disabled={isFutureDate} onClick={() => { setReviewDate(date); setCalendarOpen(false) }} aria-label={`${day}${covers.length ? `, ${covers.length} obras registradas` : ''}${isFutureDate ? ', fecha futura no disponible' : ''}`}>
+                <span>{day}</span>{covers.length > 0 && <i>{covers.slice(0, 2).map(entry => entry.image ? <img key={`${entry.work_type}-${entry.work_id}`} src={entry.image} alt="" title={entry.title || ''} /> : <b key={`${entry.work_type}-${entry.work_id}`} />)}</i>}
+              </button>
+            })}</div>
+            <div className="share-calendar-footer"><span>{reviewDate ? formatCalendarDate(reviewDate) : 'Selecciona un día'}</span>{reviewDate && <button type="button" onClick={() => { setReviewDate(''); setCalendarOpen(false) }}>Quitar fecha</button>}</div>
+          </div>}</div> : <div className="share-composer-tools" aria-label="Opciones del post">
             <input ref={fileInputRef} className="share-image-file-input" type="file" accept="image/*" multiple onChange={handleImageSelection} aria-label="Elegir imágenes para el post" />
             {TOOLS.map(tool => (
               <button
                 key={tool.id}
+                ref={tool.id === 'list' ? templateTriggerRef : undefined}
                 className={`share-tool-button${selectedTool === tool.id ? ' is-selected' : ''}`}
                 type="button"
                 aria-label={tool.label}
@@ -541,7 +892,7 @@ export default function SharePage() {
             <span id="share-character-count" className={isOverLimit ? 'is-over-limit' : ''} aria-live="polite">
               {isOverLimit && <strong>-{overage}</strong>}
             </span>
-            <button className="share-post-button" type="button" onClick={handlePost} disabled={selectedReview ? reviewSubmitting || isOverLimit : !canPost} aria-disabled={selectedReview ? reviewSubmitting || isOverLimit : !canPost}>{selectedReview ? reviewSubmitting ? 'Guardando…' : 'Reseñar' : 'Postear'}</button>
+            <button className="share-post-button" type="button" onClick={handlePost} disabled={selectedReview ? reviewSubmitting || isOverLimit : postSubmitting || !canPost} aria-disabled={selectedReview ? reviewSubmitting || isOverLimit : postSubmitting || !canPost}>{selectedReview ? reviewSubmitting ? 'Guardando…' : 'Reseñar' : postSubmitting ? 'Publicando…' : 'Postear'}</button>
             {selectedReview && <button className="share-review-clear" type="button" onClick={() => { setSelectedReview(null); setText(''); setReviewRating(0); setReviewDate(''); setSpoilerEnabled(false); if (textareaRef.current) textareaRef.current.style.height = '' }} aria-label="Volver a escribir un post" title="Quitar reseña"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m18 6-12 12M6 6l12 12"/></svg></button>}
           </div>
         </div>
@@ -571,18 +922,46 @@ export default function SharePage() {
             </div>
           </section>
         )}
+        {templatePickerOpen && <section className="share-template-picker-panel share-gif-panel" ref={templatePickerRef} aria-label="Añadir una lista">
+          <header className="share-template-picker-header"><div><h2>Añadir una lista</h2><p>Elige cómo quieres empezar</p></div></header>
+          <div className="share-list-kind-tabs" role="tablist" aria-label="Tipo de lista"><button type="button" role="tab" aria-selected={templatePickerSection === 'standalone'} className={templatePickerSection === 'standalone' ? 'active' : ''} onClick={() => setTemplatePickerSection('standalone')}>Sin plantillas</button><button type="button" role="tab" aria-selected={templatePickerSection === 'templates'} className={templatePickerSection === 'templates' ? 'active' : ''} onClick={() => setTemplatePickerSection('templates')}>Plantillas</button></div>
+          {templatePickerSection === 'standalone' ? <div className="share-template-picker-results share-list-kind-results">
+            <button className="share-list-kind-pill" type="button" onClick={handleChooseStandaloneRanking}>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 3 6.2 6.8 1-4.9 4.8 1.2 6.8-6.1-3.2-6.1 3.2L7 14 2.1 9.2l6.8-1L12 2Z"/></svg>
+              <span>Ranking</span>
+            </button>
+          </div> : <>
+          <label className="share-template-picker-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="7.3"/><path d="m16.2 16.2 4.3 4.3"/></svg><input autoFocus type="search" value={templateQuery} onChange={event => setTemplateQuery(event.target.value)} placeholder="Buscar plantillas…" /></label>
+          <div className="share-template-picker-results" aria-live="polite">
+            {templateLoading && <div className="share-template-picker-state">Buscando plantillas…</div>}
+            {!templateLoading && templateError && <div className="share-template-picker-state is-error">{templateError}</div>}
+            {!templateLoading && !templateError && templateResults.map(template => {
+              const covers = getTemplateCoverUrls(template, 2)
+              const type = template.list_type === 'ranking' ? 'Ranking' : template.list_type === 'grid' ? 'Grid' : 'Tierlist'
+              const media = template.media_type === 'anime' ? 'Anime' : template.media_type === 'game' ? 'Videojuegos' : template.media_type || ''
+              return <button className="share-template-result" type="button" key={template.id} onClick={() => handleChooseTemplate(template)}>
+                <span className={`share-template-result-art type-${template.list_type || 'tierlist'}`} aria-hidden="true">{covers.length ? covers.map((cover, index) => <img key={`${cover}-${index}`} src={cover} alt="" loading="lazy" />) : <svg viewBox="0 0 24 24">{template.list_type === 'ranking' ? <path d="m12 2 3 6.2 6.8 1-4.9 4.8 1.2 6.8-6.1-3.2-6.1 3.2L7 14 2.1 9.2l6.8-1L12 2Z"/> : template.list_type === 'grid' ? <><rect x="3" y="3" width="8" height="8"/><rect x="13" y="3" width="8" height="8"/><rect x="3" y="13" width="8" height="8"/><rect x="13" y="13" width="8" height="8"/></> : <><path d="M8 5h13M8 12h13M8 19h13"/><path d="M3 5h.01M3 12h.01M3 19h.01"/></>}</svg>}</span>
+                <span className="share-template-result-copy"><strong>{template.title}</strong><small>{type}{media ? ` · ${media}` : ''}</small><small className="share-template-result-author">por {template.profiles?.display_name || template.profiles?.username || 'Usuario'} · {template.uses_count || 0} usos</small></span>
+                <svg className="share-template-result-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+              </button>
+            })}
+            {!templateLoading && !templateError && templateResults.length === 0 && <div className="share-template-picker-state">No se encontraron plantillas.</div>}
+          </div>
+          </>}
+        </section>}
         {toolHint && <p className="share-tool-hint" role="status">{toolHint}</p>}
+        </>}
       </article>
 
       <section className="share-register" aria-label="Registrar obras">
         <h2>REGISTRAR</h2>
         <div className="share-register-controls">
-          <div className="share-register-switch" role="tablist" aria-label="Categoría"><button type="button" role="tab" aria-selected={registerCategory === 'game'} className={registerCategory === 'game' ? 'active' : ''} onClick={() => { setRegisterCategory('game'); setRegisterQuery('') }}>Juegos</button><button type="button" role="tab" aria-selected={registerCategory === 'anime'} className={registerCategory === 'anime' ? 'active' : ''} onClick={() => { setRegisterCategory('anime'); setRegisterQuery('') }}>Anime</button></div>
+          <div className={`share-register-switch${registerCategory === 'anime' ? ' anime-selected' : ''}`} role="tablist" aria-label="Categoría"><button type="button" role="tab" aria-selected={registerCategory === 'game'} className={registerCategory === 'game' ? 'active' : ''} onClick={() => { setRegisterCategory('game'); setRegisterQuery('') }}>Juegos</button><button type="button" role="tab" aria-selected={registerCategory === 'anime'} className={registerCategory === 'anime' ? 'active' : ''} onClick={() => { setRegisterCategory('anime'); setRegisterQuery('') }}>Anime</button></div>
         </div>
         <label className="share-register-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="7.3"/><path d="m16.2 16.2 4.3 4.3"/></svg><input value={registerQuery} onChange={event => setRegisterQuery(event.target.value)} placeholder={`Buscar ${registerCategory === 'game' ? 'juegos' : 'anime'}…`} /></label>
         <h3>{registerQuery.trim().length >= 2 ? 'RESULTADOS' : 'LO MÁS REGISTRADO'}</h3>
         <div className="share-register-grid">
-          {(registerQuery.trim().length >= 2 ? registerResults : recommended).map(work => <button className="share-register-card" type="button" key={work.id} onClick={() => selectWorkForReview(work)}>
+          {(registerQuery.trim().length >= 2 ? registerResults : recommended).map(work => <button className="share-register-card" type="button" key={work.id} onClick={() => handleRegisterWorkSelection(work)}>
             {work.image ? <img src={work.image} alt="" loading="lazy" /> : <span className="share-register-no-cover" />}
             <strong>{work.title}</strong>{registerQuery.trim().length < 2 && <small>{work.count} {work.count === 1 ? 'registrado' : 'registrados'}</small>}
           </button>)}
@@ -590,6 +969,14 @@ export default function SharePage() {
           {!registerLoading && !recommendedLoading && (registerQuery.trim().length >= 2 ? registerResults : recommended).length === 0 && <span className="share-register-state">No se encontraron obras.</span>}
         </div>
       </section>
+      {removeListConfirmOpen && createPortal(<div className="share-delete-overlay" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) { setRemoveListConfirmOpen(false); setPendingReviewWork(null) } }}>
+        <section className="share-delete-dialog" role="dialog" aria-modal="true" aria-labelledby="share-remove-list-title">
+          <span className="share-delete-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m18 6-12 12M6 6l12 12"/></svg></span>
+          <h2 id="share-remove-list-title">{selectedTemplate && isTemplateComposerFlow ? '¿Quitar esta plantilla?' : '¿Quitar esta lista?'}</h2>
+          <p>{pendingReviewWork ? `La lista dejará de estar adjunta y abrirás la reseña de ${pendingReviewWork.name || pendingReviewWork.title}.` : 'La selección se quitará del compositor y volverás al modo normal de compartir.'}</p>
+          <div className="share-delete-actions"><button type="button" className="share-delete-cancel" onClick={() => { setRemoveListConfirmOpen(false); setPendingReviewWork(null) }}>Cancelar</button><button type="button" className="share-delete-confirm" onClick={handleRemoveListFromComposer}>{selectedTemplate && isTemplateComposerFlow ? 'Quitar plantilla' : 'Quitar lista'}</button></div>
+        </section>
+      </div>, document.body)}
       {deleteConfirmOpen && createPortal(<div className="share-delete-overlay" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget && !deletingEntry) setDeleteConfirmOpen(false) }}>
         <section className="share-delete-dialog" role="dialog" aria-modal="true" aria-labelledby="share-delete-title">
           <span className="share-delete-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 14h10l1-14M9 7V4h6v3"/></svg></span>
