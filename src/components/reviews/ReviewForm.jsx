@@ -2,26 +2,8 @@ import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { createReview, updateReview } from '../../lib/reviewService'
 import { useAuth } from '../../context/AuthContext'
+import { formatRelativeDate } from '../../lib/formatRelativeDate'
 import './Reviews.css'
-
-function formatReviewAge(dateValue) {
-    const date = new Date(dateValue)
-    if (Number.isNaN(date.getTime())) return ''
-
-    const elapsedSeconds = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000))
-    if (elapsedSeconds < 60) return `hace ${elapsedSeconds} ${elapsedSeconds === 1 ? 'segundo' : 'segundos'}`
-
-    const elapsedMinutes = Math.floor(elapsedSeconds / 60)
-    if (elapsedMinutes < 60) return `hace ${elapsedMinutes} ${elapsedMinutes === 1 ? 'minuto' : 'minutos'}`
-
-    const elapsedHours = Math.floor(elapsedMinutes / 60)
-    if (elapsedHours < 24) return `hace ${elapsedHours} ${elapsedHours === 1 ? 'hora' : 'horas'}`
-
-    const elapsedDays = Math.floor(elapsedHours / 24)
-    if (elapsedDays < 7) return `hace ${elapsedDays} ${elapsedDays === 1 ? 'día' : 'días'}`
-
-    return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })
-}
 
 export default function ReviewForm({ workId, workType, onClose, onReviewAdded, initialData = null }) {
     const { user, profile } = useAuth()
@@ -92,7 +74,7 @@ export default function ReviewForm({ workId, workType, onClose, onReviewAdded, i
                 <button className="close-btn" onClick={onClose}>&times;</button>
                 {initialData?.created_at && (
                     <time className="review-modal-date" dateTime={initialData.created_at}>
-                        {formatReviewAge(initialData.created_at)}
+                        {formatRelativeDate(initialData.created_at)}
                     </time>
                 )}
                 <div className="modal-title">

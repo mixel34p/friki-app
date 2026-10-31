@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { getTemplateById, deleteTemplate } from '../../lib/listService';
 import { BADGES_MAP } from '../../lib/badges';
 import { getTierLabelFontSize } from '../../lib/tierLabel';
+import { formatRelativeDate } from '../../lib/formatRelativeDate';
 import './ViewList.css';
 import '../lists/CreateList.css'; // Same styling as ViewList for structure
 
@@ -56,19 +57,7 @@ export default function ViewTemplate() {
   const authorAvatar = template.profiles?.avatar_url || '/default-avatar.png';
   const authorBadge = template.profiles?.featured_badge;
   const authorThemeColor = template.profiles?.theme_color || 'var(--brand-primary)';
-  const date = new Date(template.created_at);
-  const diffMs = new Date() - date;
-  const diffSecs = Math.floor(diffMs / 1000);
-  const diffMins = Math.floor(diffSecs / 60);
-  const diffHours = Math.floor(diffMins / 60);
-  const diffDays = Math.floor(diffHours / 24);
-  const timeDisplay = diffDays < 1
-    ? diffHours > 0
-      ? `hace ${diffHours} ${diffHours === 1 ? 'hora' : 'horas'}`
-      : diffMins > 0
-        ? `hace ${diffMins} ${diffMins === 1 ? 'minuto' : 'minutos'}`
-        : 'hace unos segundos'
-    : date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+  const timeDisplay = formatRelativeDate(template.created_at);
   const columns = template.type_config?.columns || 2;
 
   return (

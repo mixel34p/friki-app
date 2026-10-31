@@ -5,7 +5,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import {
-    getListById, deleteList,
+    getListById, getMoreListsByUser, deleteList,
     getListComments, addListComment, updateListComment, deleteListComment,
 } from '../../lib/listService';
 import { BADGES_MAP } from '../../lib/badges';
@@ -376,6 +376,8 @@ export default function ViewList() {
     const { user, profile: currentProfile } = useAuth();
 
     const [list, setList] = useState(null);
+    const [moreLists, setMoreLists] = useState([]);
+    const [moreListsLoading, setMoreListsLoading] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
@@ -417,6 +419,17 @@ export default function ViewList() {
             .then(data => { setList(data); setLoading(false); })
             .catch(err => { setError(err.message); setLoading(false); });
     }, [id]);
+
+    useEffect(() => {
+        if (!list?.user_id) { setMoreLists([]); return; }
+        let active = true;
+        setMoreListsLoading(true);
+        getMoreListsByUser(list.user_id, list.id, 3)
+            .then(items => { if (active) setMoreLists(items); })
+            .catch(err => { console.error('No se pudieron cargar más listas del autor:', err); if (active) setMoreLists([]); })
+            .finally(() => { if (active) setMoreListsLoading(false); });
+        return () => { active = false; };
+    }, [list?.user_id, list?.id]);
 
     useEffect(() => { loadComments(); }, [loadComments]);
 
@@ -751,6 +764,27 @@ export default function ViewList() {
                     </div>
                 )}
             </article>
+
+            <aside className="vl-more-author" aria-label={`Más listas de ${authorName}`} style={{ '--vl-more-accent': authorThemeColor }}>
+                <div className="vl-more-panel">
+                    <Link className="vl-more-profile" to={`/profile/${authorUsername}`}>
+                        <ProfileAvatar profile={authorProfile} />
+                        <span><strong>Más de {authorName}</strong><small>@{authorUsername}</small></span>
+                    </Link>
+                    {moreListsLoading
+                        ? <p className="vl-more-state">Cargando listas…</p>
+                        : moreLists.length
+                            ? <div className="vl-more-list-grid">
+                                {moreLists.map(item => {
+                                    const cover = collectListPreviewImages(item.content, 1)[0];
+                                    return <Link key={item.id} className={`vl-more-list-card${cover ? ' has-image' : ''}`} to={`/lists/${item.id}`} aria-label={item.title || 'Lista'}>
+                                        {cover ? <img src={cover} alt="" loading="lazy" /> : <span>{item.title || 'Lista'}</span>}
+                                    </Link>;
+                                })}
+                            </div>
+                            : <p className="vl-more-state">Aún no hay más listas.</p>}
+                </div>
+            </aside>
 
             {/* ── Share dialog ── */}
             {shareOpen && createPortal((

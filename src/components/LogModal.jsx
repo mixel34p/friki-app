@@ -2,27 +2,9 @@ import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useAuth } from '../context/AuthContext'
 import { logWork, deleteWorkLog } from '../lib/libraryService'
+import { formatRelativeDate } from '../lib/formatRelativeDate'
 import LoadingSpinner from './LoadingSpinner'
 import './LogModal.css'
-
-function formatReviewAge(dateValue) {
-    const date = new Date(dateValue)
-    if (Number.isNaN(date.getTime())) return ''
-
-    const elapsedSeconds = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000))
-    if (elapsedSeconds < 60) return `hace ${elapsedSeconds} ${elapsedSeconds === 1 ? 'segundo' : 'segundos'}`
-
-    const elapsedMinutes = Math.floor(elapsedSeconds / 60)
-    if (elapsedMinutes < 60) return `hace ${elapsedMinutes} ${elapsedMinutes === 1 ? 'minuto' : 'minutos'}`
-
-    const elapsedHours = Math.floor(elapsedMinutes / 60)
-    if (elapsedHours < 24) return `hace ${elapsedHours} ${elapsedHours === 1 ? 'hora' : 'horas'}`
-
-    const elapsedDays = Math.floor(elapsedHours / 24)
-    if (elapsedDays < 7) return `hace ${elapsedDays} ${elapsedDays === 1 ? 'día' : 'días'}`
-
-    return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })
-}
 
 export default function LogModal({ isOpen, onClose, work, existingLog, onSaveComplete }) {
     const { user } = useAuth()
@@ -164,7 +146,7 @@ export default function LogModal({ isOpen, onClose, work, existingLog, onSaveCom
                 <button className="log-close-btn" onClick={onClose}>&times;</button>
                 {existingLog?.created_at && (
                     <time className="log-review-age" dateTime={existingLog.created_at}>
-                        {formatReviewAge(existingLog.created_at)}
+                        {formatRelativeDate(existingLog.created_at)}
                     </time>
                 )}
                 

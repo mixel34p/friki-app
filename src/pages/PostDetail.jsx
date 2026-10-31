@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import LoadingSpinner from '../components/LoadingSpinner'
-import { addPostComment, deletePostComment, getMorePostsByUser, getPostById, getPostComments, getPostLikeState, togglePostLike, updatePostComment } from '../lib/postService'
+import SpoilerNotice from '../components/reviews/SpoilerNotice'
+import { addPostComment, deletePost, deletePostComment, getMorePostsByUser, getPostById, getPostComments, getPostLikeState, togglePostLike, updatePostBody, updatePostFlags, updatePostComment } from '../lib/postService'
 import { formatRelativeDate } from '../lib/formatRelativeDate'
 import './ReviewDetail.css'
 import './PostDetail.css'
@@ -47,13 +48,17 @@ function getBubbleTextColor(color) {
 }
 
 function MorePostCard({ post }) {
+  const [imageFailed, setImageFailed] = useState(false)
   const image = !post.contains_spoiler && !post.is_sensitive && Array.isArray(post.media) ? post.media[0]?.url : null
   const preview = post.contains_spoiler
     ? 'Publicación con spoiler'
     : post.is_sensitive ? 'Contenido sensible' : post.body || 'Publicación'
-  return <Link className={`post-more-card${image ? ' has-image' : ''}`} to={`/posts/${post.id}`}>
-    {image && <img className="post-more-image" src={image} alt="" loading="lazy" />}
-    {!image && <span className="post-more-copy">{preview}</span>}
+  return <Link className={`post-more-card${image && !imageFailed ? ' has-image' : ''}${imageFailed ? ' is-image-error' : ''}${!image && post.is_sensitive && !post.contains_spoiler ? ' is-sensitive' : ''}`} to={`/posts/${post.id}`} aria-label={imageFailed ? 'No se pudo cargar la imagen' : preview}>
+    {image && !imageFailed && <img className="post-more-image" src={image} alt="" loading="lazy" onError={() => setImageFailed(true)} />}
+    {imageFailed && <span className="post-more-image-error">No se pudo cargar la imagen</span>}
+    {!image && post.is_sensitive && !post.contains_spoiler
+      ? <svg className="post-more-sensitive-icon" viewBox="0 0 24 24" role="img" aria-label="Contenido sensible"><path d="M3 3 21 21"/><path d="M10.6 10.6a2 2 0 0 0 2.8 2.8"/><path d="M9.9 5.2A11.3 11.3 0 0 1 12 5c5.5 0 9.5 4.5 10 7-.2 1.1-1.2 2.6-2.6 3.9"/><path d="M6.6 6.6C3.9 8.2 2.2 10.6 2 12c.5 2.5 4.5 7 10 7 1.2 0 2.3-.2 3.3-.6"/></svg>
+      : !image && <span className="post-more-copy">{preview}</span>}
   </Link>
 }
 
@@ -63,6 +68,7 @@ export default function PostDetail() {
   const { user, profile: currentProfile } = useAuth()
   const [post, setPost] = useState(null)
   const [activeMediaIndex, setActiveMediaIndex] = useState(0)
+  const [failedMediaUrls, setFailedMediaUrls] = useState(() => new Set())
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [morePosts, setMorePosts] = useState([])
   const [morePostsLoading, setMorePostsLoading] = useState(false)
@@ -84,10 +90,19 @@ export default function PostDetail() {
   const [likeBusy, setLikeBusy] = useState(false)
   const [shareCopied, setShareCopied] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [editPostOpen, setEditPostOpen] = useState(false)
+  const [editPostBody, setEditPostBody] = useState('')
+  const [postActionError, setPostActionError] = useState('')
+  const [savingPost, setSavingPost] = useState(false)
+  const [updatingPostFlags, setUpdatingPostFlags] = useState(false)
+  const [postFlagsError, setPostFlagsError] = useState('')
+  const [deletePostOpen, setDeletePostOpen] = useState(false)
+  const [deletingPost, setDeletingPost] = useState(false)
 
   useEffect(() => {
     let active = true
     setActiveMediaIndex(0)
+    setFailedMediaUrls(new Set())
     setLightboxOpen(false)
     setLoading(true); setError('')
     getPostById(postId).then(result => { if (active) setPost(result) })
@@ -168,6 +183,55 @@ export default function PostDetail() {
     setMenuOpen(false)
   }
 
+  function openPostEditor() {
+    setEditPostBody(post?.body || '')
+    setPostActionError('')
+    setMenuOpen(false)
+    setEditPostOpen(true)
+  }
+
+  async function handleSavePost(event) {
+    event.preventDefault()
+    if (!user || savingPost || editPostBody.length > 2000) return
+    setSavingPost(true); setPostActionError('')
+    try {
+      const updated = await updatePostBody(postId, user.id, editPostBody)
+      setPost(current => ({ ...current, body: updated.body }))
+      setEditPostOpen(false)
+    } catch (err) {
+      console.error('No se pudo editar la publicación:', err)
+      setPostActionError(err.message || 'No se pudo guardar la publicación.')
+    } finally { setSavingPost(false) }
+  }
+
+  async function handleToggleSensitive() {
+    if (!user || updatingPostFlags) return
+    const nextValue = !post.is_sensitive
+    setUpdatingPostFlags(true); setPostFlagsError(''); setMenuOpen(false)
+    try {
+      const updated = await updatePostFlags(postId, user.id, { is_sensitive: nextValue })
+      setPost(current => ({ ...current, is_sensitive: updated.is_sensitive }))
+      setRevealed(false)
+    } catch (err) {
+      console.error('No se pudo cambiar la advertencia de contenido sensible:', err)
+      setPostFlagsError('No se pudo actualizar la advertencia del post.')
+    } finally { setUpdatingPostFlags(false) }
+  }
+
+  async function handleDeletePost() {
+    if (!user || deletingPost) return
+    setDeletingPost(true); setPostActionError('')
+    try {
+      await deletePost(postId, user.id)
+      setDeletePostOpen(false)
+      navigate(-1)
+    } catch (err) {
+      console.error('No se pudo eliminar la publicación:', err)
+      setPostActionError(err.message || 'No se pudo eliminar la publicación.')
+      setDeletingPost(false)
+    }
+  }
+
   async function handleSubmitComment(event) {
     event.preventDefault()
     if (!user || !commentText.trim() || submitting) return
@@ -207,13 +271,21 @@ export default function PostDetail() {
 
   const author = post.author || {}
   const displayName = author.display_name || author.username || 'Usuario'
-  const warningLabel = post.contains_spoiler && post.is_sensitive
-    ? 'Esta publicación contiene spoilers y contenido sensible.'
-    : post.contains_spoiler ? 'Esta publicación contiene spoilers.' : 'Esta publicación puede contener contenido sensible.'
   const media = Array.isArray(post.media) ? post.media : []
   const authorPath = author.username ? `/profile/${author.username}` : '/profile'
+  const isOwnPost = user?.id === post.user_id
+  const hasContentWarning = Boolean(post.contains_spoiler || post.is_sensitive)
+  const warningTitle = post.contains_spoiler
+    ? `Spoiler de ${post.spoiler_work_title || 'la publicación'}${post.is_sensitive ? ' · contenido sensible' : ''}`
+    : 'Contenido sensible'
+  const warningLabel = post.contains_spoiler && post.spoiler_work_title
+    ? `Spoiler de ${post.spoiler_work_title}`
+    : post.contains_spoiler ? 'Spoiler de la publicación' : 'Contenido sensible'
+  const warningAriaLabel = post.contains_spoiler ? 'Mostrar publicación con spoiler' : 'Mostrar contenido sensible'
+  const contentHidden = hasContentWarning && !revealed
 
   const activeMedia = media[activeMediaIndex] || media[0]
+  const activeMediaFailed = Boolean(activeMedia?.url && failedMediaUrls.has(activeMedia.url))
 
   return <main className="review-detail-page post-detail-page" style={{ '--review-page-accent': author.theme_color || 'var(--brand-primary)', '--post-bubble-text': getBubbleTextColor(author.theme_color), '--review-backdrop-image': activeMedia?.url ? `url("${activeMedia.url}")` : 'none' }}>
     <article className="review-post post-detail-card">
@@ -223,7 +295,15 @@ export default function PostDetail() {
           <button className="post-detail-dots" type="button" aria-label="Más opciones" aria-expanded={menuOpen} onClick={() => setMenuOpen(open => !open)}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
           </button>
-          {menuOpen && <div className="post-detail-menu"><button type="button" onClick={handleCopyPostLink}>Copiar enlace</button></div>}
+          {menuOpen && <div className="post-detail-menu">
+            <button type="button" onClick={handleCopyPostLink}><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>Copiar enlace</button>
+            {isOwnPost && <>
+              <button type="button" onClick={openPostEditor}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>Editar</button>
+              <button type="button" className="is-unavailable" disabled title="Fijar publicaciones estará disponible próximamente"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m16 3 5 5-4 1-4 4-1 5-2-2-5 5-2-2 5-5-2-2 5-1 4-4Z"/></svg>Fijar</button>
+              <button type="button" className="is-sensitive" onClick={handleToggleSensitive} disabled={updatingPostFlags} title={post.is_sensitive ? 'Quitar advertencia de contenido sensible' : 'Marcar como sensible'}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2.8 19a1.4 1.4 0 0 0 1.2 2.1h16a1.4 1.4 0 0 0 1.2-2.1L12 3Z"/><path d="M12 9v5m0 3h.01"/></svg>{post.is_sensitive ? 'Quitar marca de sensible' : 'Marcar como sensible'}</button>
+              <button type="button" className="is-danger" onClick={() => { setMenuOpen(false); setPostActionError(''); setDeletePostOpen(true) }}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6m4-6v6M5 7l1 14h12l1-14M9 7V4h6v3"/></svg>Eliminar</button>
+            </>}
+          </div>}
         </div>
       </div>
       <header className="review-post-header post-detail-author">
@@ -231,25 +311,26 @@ export default function PostDetail() {
           <span className="review-post-author-copy"><strong>{displayName}</strong><span>@{author.username || 'usuario'} · {formatRelativeDate(post.created_at)}</span></span>
         </Link>
       </header>
-      {(post.contains_spoiler || post.is_sensitive) && !revealed
-        ? <button className="post-detail-warning" type="button" onClick={() => setRevealed(true)}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2.8 19a1.4 1.4 0 0 0 1.2 2.1h16a1.4 1.4 0 0 0 1.2-2.1L12 3Z"/><path d="M12 9v5m0 3h.01"/></svg><span>{warningLabel}<small>Pulsa para mostrar</small></span></button>
-        : <>
-          {(post.contains_spoiler || post.is_sensitive) && <div className="post-detail-warning is-revealed"><span>{warningLabel}</span><button type="button" onClick={() => setRevealed(false)}>Ocultar</button></div>}
-          {post.spoiler_work_title && <div className="post-detail-spoiler-work">Spoiler: {post.spoiler_work_title}</div>}
-          {post.body && <>{media.length === 0
-            ? <><p className="post-detail-body is-text-only">{post.body}</p><time className="post-detail-text-date" dateTime={post.created_at}>{formatPostTimestamp(post.created_at)}</time><div className="post-detail-content-divider" aria-hidden="true" /></>
-            : <p className="post-detail-body">{post.body}</p>}</>}
-          {!!media.length && <div className="post-detail-gallery" aria-label="Imágenes de la publicación">
-            <button className="post-detail-gallery-image" type="button" onClick={() => setLightboxOpen(true)} aria-label={`Ampliar imagen ${activeMediaIndex + 1} de ${media.length}`}>
-              <img src={activeMedia?.url} alt={activeMedia?.name || ''} loading="lazy" />
-            </button>
+      {postFlagsError && <p className="post-detail-flags-error" role="alert">{postFlagsError}</p>}
+      {post.body && (contentHidden
+        ? <SpoilerNotice text={post.body} label={`${warningLabel} · pulsa para ver`} ariaLabel={warningAriaLabel} onReveal={() => setRevealed(true)} />
+        : <>{media.length === 0
+          ? <p className="post-detail-body is-text-only">{post.body}</p>
+          : <p className="post-detail-body">{post.body}</p>}</>)}
+      {post.body && media.length === 0 && !contentHidden && <><time className="post-detail-text-date" dateTime={post.created_at}>{formatPostTimestamp(post.created_at)}</time><div className="post-detail-content-divider" aria-hidden="true" /></>}
+      {!!media.length && <div className={`post-detail-gallery${contentHidden ? ' is-obscured' : ''}${activeMediaFailed ? ' has-load-error' : ''}`} aria-label="Imágenes de la publicación">
+            {activeMediaFailed && !contentHidden
+              ? <div className="post-detail-image-failed" role="img" aria-label="No se pudo cargar la imagen"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/><path d="m4 4 16 16"/></svg><span>No se pudo cargar la imagen</span></div>
+              : <button className={`post-detail-gallery-image${contentHidden ? ' is-obscured' : ''}${activeMediaFailed ? ' is-load-error' : ''}`} type="button" onClick={() => contentHidden ? setRevealed(true) : setLightboxOpen(true)} aria-label={contentHidden ? warningAriaLabel : `Ampliar imagen ${activeMediaIndex + 1} de ${media.length}`}>
+                <img src={activeMedia?.url} alt={contentHidden ? '' : activeMedia?.name || ''} loading="lazy" onError={() => setFailedMediaUrls(current => new Set(current).add(activeMedia?.url))} />
+                {contentHidden && <span className="post-detail-image-warning"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3 21 21"/><path d="M10.6 10.6a2 2 0 0 0 2.8 2.8"/><path d="M9.9 5.2A11.3 11.3 0 0 1 12 5c5.5 0 9.5 4.5 10 7-.2 1.1-1.2 2.6-2.6 3.9"/><path d="M6.6 6.6C3.9 8.2 2.2 10.6 2 12c.5 2.5 4.5 7 10 7 1.2 0 2.3-.2 3.3-.6"/></svg><strong>{warningTitle}</strong><small>Pulsa para ver</small></span>}
+              </button>}
             {media.length > 1 && <>
               <span className="post-detail-gallery-count">{activeMediaIndex + 1}/{media.length}</span>
               <button className="post-detail-gallery-arrow previous" type="button" onClick={() => setActiveMediaIndex(index => (index - 1 + media.length) % media.length)} aria-label="Imagen anterior"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
               <button className="post-detail-gallery-arrow next" type="button" onClick={() => setActiveMediaIndex(index => (index + 1) % media.length)} aria-label="Imagen siguiente"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
             </>}
           </div>}
-        </>}
 
       <div className="review-post-actions post-detail-actions">
         <button className={`review-like-btn${liked ? ' liked' : ''}`} type="button" onClick={handleLike} disabled={likeBusy} aria-pressed={liked} aria-label={liked ? 'Quitar me gusta' : 'Me gusta'} title={liked ? 'Quitar like' : 'Dar like'}>
@@ -302,6 +383,25 @@ export default function PostDetail() {
             : <p className="post-more-state">Aún no hay más publicaciones.</p>}
       </div>
     </aside>
+    {editPostOpen && <div className="post-action-overlay" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget && !savingPost) setEditPostOpen(false) }}>
+      <section className="post-action-dialog" role="dialog" aria-modal="true" aria-labelledby="post-edit-title">
+        <h2 id="post-edit-title">Editar publicación</h2>
+        <form onSubmit={handleSavePost}>
+          <textarea autoFocus value={editPostBody} onChange={event => setEditPostBody(event.target.value)} maxLength={2000} rows={5} aria-label="Texto de la publicación" placeholder="Añade texto a tu publicación…" />
+          <div className="post-action-dialog-meta"><span>{editPostBody.length}/2000</span>{postActionError && <p role="alert">{postActionError}</p>}</div>
+          {!media.length && !editPostBody.trim() && <p className="post-action-error" role="status">Escribe algo para mantener la publicación.</p>}
+          <div className="post-action-dialog-buttons"><button type="button" onClick={() => setEditPostOpen(false)} disabled={savingPost}>Cancelar</button><button type="submit" disabled={savingPost || (!media.length && !editPostBody.trim())}>{savingPost ? 'Guardando…' : 'Guardar cambios'}</button></div>
+        </form>
+      </section>
+    </div>}
+    {deletePostOpen && createPortal(<div className="post-action-overlay post-delete-overlay" style={{ '--review-page-accent': author.theme_color || 'var(--brand-primary)' }} role="presentation" onMouseDown={event => { if (event.target === event.currentTarget && !deletingPost) setDeletePostOpen(false) }}>
+      <section className="post-action-dialog post-delete-dialog" role="alertdialog" aria-modal="true" aria-labelledby="post-delete-title" aria-describedby="post-delete-description">
+        <h2 id="post-delete-title">¿Eliminar esta publicación?</h2>
+        <p id="post-delete-description">La publicación y sus comentarios y me gusta se eliminarán.</p>
+        {postActionError && <p className="post-action-error" role="alert">{postActionError}</p>}
+        <div className="post-action-dialog-buttons"><button type="button" onClick={() => setDeletePostOpen(false)} disabled={deletingPost}>Cancelar</button><button className="is-danger" type="button" onClick={handleDeletePost} disabled={deletingPost}>{deletingPost ? 'Eliminando…' : 'Eliminar'}</button></div>
+      </section>
+    </div>, document.body)}
     {lightboxOpen && media.length > 0 && createPortal(
       <div className="post-image-lightbox" style={{ '--post-lightbox-accent': author.theme_color || 'var(--brand-primary)' }} role="presentation" onClick={() => setLightboxOpen(false)}>
         <section className="post-image-lightbox-dialog" role="dialog" aria-modal="true" aria-label="Imagen ampliada">
@@ -310,7 +410,9 @@ export default function PostDetail() {
             <button type="button" onClick={() => setLightboxOpen(false)} aria-label="Cerrar imagen ampliada"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m18 6-12 12M6 6l12 12"/></svg></button>
           </header>
           {media.length > 1 && <button className="post-image-lightbox-arrow previous" type="button" onClick={event => { event.stopPropagation(); setActiveMediaIndex(index => (index - 1 + media.length) % media.length) }} aria-label="Imagen anterior"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>}
-          <img className="post-image-lightbox-image" src={activeMedia?.url} alt={activeMedia?.name || ''} />
+          {activeMediaFailed
+            ? <div className="post-image-lightbox-failed"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/><path d="m4 4 16 16"/></svg><span>No se pudo cargar la imagen</span></div>
+            : <img className="post-image-lightbox-image" src={activeMedia?.url} alt={activeMedia?.name || ''} onError={() => setFailedMediaUrls(current => new Set(current).add(activeMedia?.url))} />}
           {media.length > 1 && <button className="post-image-lightbox-arrow next" type="button" onClick={event => { event.stopPropagation(); setActiveMediaIndex(index => (index + 1) % media.length) }} aria-label="Imagen siguiente"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>}
         </section>
       </div>,

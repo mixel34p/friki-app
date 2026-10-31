@@ -1,129 +1,117 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
-import { supabase } from '../lib/supabase'
 import LoadingSpinner from '../components/LoadingSpinner'
-import { getRecentPosts } from '../lib/postService'
+import SpoilerNotice from '../components/reviews/SpoilerNotice'
+import { getHomePosts } from '../lib/postService'
 import { formatRelativeDate } from '../lib/formatRelativeDate'
 import './Home.css'
 
-function getPreviewImage(tierlist) {
-    if (tierlist.content && typeof tierlist.content === 'object') {
-        const priorities = ['S', '#1', 'Top', 'God Tier', 'A', '#2', 'B', '#3', 'C', '#4', 'D', '#5', 'E', 'F']
-        for (const key of priorities) {
-            const image = tierlist.content[key]?.find?.(item => item.image_url)?.image_url
-            if (image) return image
-        }
-        for (const row of Object.values(tierlist.content)) {
-            const image = Array.isArray(row) ? row.find(item => item?.image_url)?.image_url : row?.image_url
-            if (image) return image
-        }
+function getAccentTextColor(color) {
+    let channels
+    const hex = String(color || '').match(/^#([\da-f]{3}|[\da-f]{6})$/i)
+    if (hex) {
+        let value = hex[1]
+        if (value.length === 3) value = [...value].map(char => char + char).join('')
+        channels = [0, 2, 4].map(index => parseInt(value.slice(index, index + 2), 16))
+    } else {
+        const rgb = String(color || '').match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i)
+        if (rgb) channels = rgb.slice(1, 4).map(Number)
     }
-    return tierlist.tierlist_items?.find(item => item.image_url)?.image_url || null
+    if (!channels) return '#fff'
+    const luminance = channels.map(value => {
+        const channel = value / 255
+        return channel <= .04045 ? channel / 12.92 : ((channel + .055) / 1.055) ** 2.4
+    }).reduce((sum, channel, index) => sum + channel * [0.2126, 0.7152, 0.0722][index], 0)
+    const blackContrast = (luminance + .05) / .058
+    const whiteContrast = 1.05 / (luminance + .05)
+    return blackContrast >= whiteContrast ? '#17151a' : '#fff'
+}
+
+function PostCard({ post }) {
+    const [revealed, setRevealed] = useState(false)
+    const [mediaFrameHeight, setMediaFrameHeight] = useState(null)
+    const author = post.author || {}
+    const name = author.display_name || author.username || 'Usuario'
+    const accent = author.theme_color || 'var(--brand-primary)'
+    const media = Array.isArray(post.media) ? post.media : []
+    const hasWarning = Boolean(post.contains_spoiler || post.is_sensitive)
+    const warning = post.contains_spoiler
+        ? `Spoiler de ${post.spoiler_work_title || 'la publicación'}`
+        : 'Contenido sensible'
+    const profilePath = author.username ? `/profile/${author.username}` : '/profile'
+    const handleMediaLoad = event => {
+        const image = event.currentTarget
+        const isMobile = window.innerWidth <= 600
+        const maxHeight = Math.min(window.innerHeight * (isMobile ? .42 : .42), isMobile ? 220 : 260)
+        const proportionalHeight = image.parentElement.clientWidth * image.naturalHeight / Math.max(1, image.naturalWidth)
+        setMediaFrameHeight(Math.min(proportionalHeight, maxHeight))
+    }
+
+    const accentText = getAccentTextColor(author.theme_color)
+    const postText = post.body && (hasWarning && !revealed
+        ? <SpoilerNotice text={post.body} label={`${warning} · pulsa para ver`} ariaLabel={`Mostrar ${warning}`} onReveal={() => setRevealed(true)} />
+        : <Link className="home-post-text-link" to={`/posts/${post.id}`}><p className={media.length ? 'home-post-copy' : 'home-post-bubble'}>{post.body}</p></Link>)
+    return <article className="home-post" style={{ '--home-post-accent': accent, '--home-post-text': accentText }}>
+        <header className="home-post-header">
+            <Link className="home-post-author" to={profilePath} aria-label={`Ver perfil de ${name}`}>
+                <span className="home-post-avatar">
+                    {author.avatar_url ? <img src={author.avatar_url} alt="" loading="lazy" /> : <span>{name.slice(0, 1).toLocaleUpperCase()}</span>}
+                </span>
+                <strong>{name}</strong>
+            </Link>
+            <time dateTime={post.created_at}>{formatRelativeDate(post.created_at)}</time>
+        </header>
+        <div className={`home-post-content${media.length ? ' has-media' : ''}`}>
+            {!!media.length && (hasWarning && !revealed
+                ? <button className="home-post-media-trigger" type="button" onClick={() => setRevealed(true)} aria-label={`Mostrar ${warning}`}>
+                    <span className="home-post-media count-1 is-obscured" style={mediaFrameHeight ? { height: `${mediaFrameHeight}px` } : undefined}>
+                        {media[0] && <img src={media[0].url} alt="" loading="lazy" onLoad={handleMediaLoad} />}
+                        <span className="home-post-media-warning"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3 21 21"/><path d="M10.6 10.6a2 2 0 0 0 2.8 2.8"/><path d="M9.9 5.2A11.3 11.3 0 0 1 12 5c5.5 0 9.5 4.5 10 7-.2 1.1-1.2 2.6-2.6 3.9"/><path d="M6.6 6.6C3.9 8.2 2.2 10.6 2 12c.5 2.5 4.5 7 10 7 1.2 0 2.3-.2 3.3-.6"/></svg><strong>{warning}</strong><small>Pulsa para ver</small></span>
+                    </span>
+                </button>
+                : <Link className="home-post-media-link" to={`/posts/${post.id}`} aria-label={`Abrir publicación de ${name}`}><span className="home-post-media count-1" style={mediaFrameHeight ? { height: `${mediaFrameHeight}px` } : undefined}>
+                    {media[0] && <img src={media[0].url} alt={media[0].name || ''} loading="lazy" onLoad={handleMediaLoad} />}
+                </span></Link>)}
+            {postText}
+            {(hasWarning && revealed) && <Link className="home-post-open-link" to={`/posts/${post.id}`}>Abrir publicación</Link>}
+        </div>
+    </article>
 }
 
 export default function Home() {
-    const { user, profile, loading: authLoading } = useAuth()
-    const [trendingTierlists, setTrendingTierlists] = useState([])
-    const [recentPosts, setRecentPosts] = useState([])
+    const [posts, setPosts] = useState([])
     const [loading, setLoading] = useState(true)
+    const [error, setError] = useState('')
 
     useEffect(() => {
-        if (authLoading) return
         let active = true
-        setLoading(true)
-        const loadPublicHome = async () => {
-            try {
-                const posts = await getRecentPosts(6).catch(error => {
-                    console.error('Error loading recent posts:', error)
-                    return []
-                })
-                if (active) setRecentPosts(posts)
-                const { data: trends } = await supabase
-                    .from('tierlists')
-                    .select('*')
-                    .eq('visibility', 'public')
-                    .order('created_at', { ascending: false })
-                    .limit(6)
-
-                if (trends?.length) {
-                    const userIds = [...new Set(trends.map(item => item.user_id).filter(Boolean))]
-                    const { data: trendProfiles } = await supabase
-                        .from('profiles')
-                        .select('user_id, username, display_name, avatar_url')
-                        .in('user_id', userIds)
-                    const profileMap = Object.fromEntries((trendProfiles || []).map(item => [item.user_id, item]))
-                    if (active) setTrendingTierlists(trends.map(item => ({ ...item, profiles: profileMap[item.user_id] })))
-                } else if (active) setTrendingTierlists([])
-            } catch (error) {
-                console.error('Error loading public home:', error)
-            } finally {
-                if (active) setLoading(false)
-            }
-        }
-        loadPublicHome()
+        getHomePosts(30)
+            .then(items => { if (active) setPosts(items) })
+            .catch(err => {
+                console.error('No se pudieron cargar las publicaciones del inicio:', err)
+                if (active) setError('No se pudieron cargar las publicaciones.')
+            })
+            .finally(() => { if (active) setLoading(false) })
         return () => { active = false }
-    }, [user?.id, authLoading])
+    }, [])
 
-    if (loading) return <div className="home-loading"><LoadingSpinner /></div>
-
-    const displayName = profile?.display_name || profile?.username || 'Friki'
-
-    return (
-        <div className="home guest-home">
-            <section className="guest-home-hero">
-                <span className="guest-home-eyebrow">TU UNIVERSO FRIKI, EN UN SOLO LUGAR</span>
-                <h1>{user ? <>Hola, {displayName}.<br /><span>¿Qué te apetece explorar?</span></> : <>Todo lo que te gusta.<br /><span>En tu esfera.</span></>}</h1>
-                <p>Descubre anime y videojuegos, comparte tus opiniones y encuentra gente con tus mismas aficiones.</p>
-                <div className="guest-home-actions">
-                    <Link className="guest-home-primary" to="/search">Explorar GeekSphere</Link>
-                    {user
-                        ? <Link className="guest-home-secondary" to={profile?.username ? `/profile/${profile.username}` : '/profile'}>Mi perfil</Link>
-                        : <Link className="guest-home-secondary" to="/register">Únete gratis</Link>}
-                </div>
-                <div className="guest-home-orbit guest-home-orbit-one" aria-hidden="true" />
-                <div className="guest-home-orbit guest-home-orbit-two" aria-hidden="true" />
-            </section>
-
-            <section className="guest-home-features" aria-label="Qué puedes hacer en GeekSphere">
-                <article><span>✦</span><h2>Organiza lo que ves y juegas</h2><p>Guarda tus obras favoritas y lleva un diario a tu ritmo.</p></article>
-                <article><span>✧</span><h2>Comparte tu opinión</h2><p>Puntúa, escribe reseñas y crea listas para recomendar.</p></article>
-                <article><span>◎</span><h2>Encuentra a tu gente</h2><p>Conecta con fans que disfrutan de las mismas historias.</p></article>
-            </section>
-
-            {recentPosts.length > 0 && <section className="guest-home-posts">
-                <div className="guest-home-section-heading"><div><span>DE LA COMUNIDAD</span><h2>Publicaciones recientes</h2></div></div>
-                <div className="guest-home-post-grid">
-                    {recentPosts.map(post => {
-                        const author = post.author || {}
-                        const media = Array.isArray(post.media) ? post.media : []
-                        return <Link className="guest-home-post-card" to={`/posts/${post.id}`} key={post.id} style={{ '--post-card-accent': author.theme_color || 'var(--brand-primary)' }}>
-                            <div className="guest-home-post-author">
-                                {author.avatar_url ? <img src={author.avatar_url} alt="" /> : <span>{(author.display_name || author.username || 'U').slice(0, 1).toLocaleUpperCase()}</span>}
-                                <div><strong>{author.display_name || author.username || 'Usuario'}</strong><small>@{author.username || 'usuario'}</small></div>
-                            </div>
-                            {post.contains_spoiler || post.is_sensitive
-                                ? <p className="guest-home-post-hidden">{post.contains_spoiler ? 'Contiene spoilers' : 'Contenido sensible'} · abrir publicación para ver</p>
-                                : <p className="guest-home-post-body">{post.body || 'Compartió una imagen.'}</p>}
-                            {!!media.length && !post.contains_spoiler && !post.is_sensitive && <div className={`guest-home-post-media count-${Math.min(media.length, 3)}`}>{media.slice(0, 3).map((item, index) => <img key={`${item.url}-${index}`} src={item.url} alt="" loading="lazy" />)}</div>}
-                            <small className="guest-home-post-date">{formatRelativeDate(post.created_at)}</small>
-                        </Link>
-                    })}
-                </div>
-            </section>}
-
-            {trendingTierlists.length > 0 && <section className="guest-home-trending">
-                <div className="guest-home-section-heading"><div><span>DE LA COMUNIDAD</span><h2>Listas recientes</h2></div><Link to="/discover/lists">Ver todas <span aria-hidden="true">→</span></Link></div>
-                <div className="guest-home-list-grid">
-                    {trendingTierlists.slice(0, 3).map(item => {
-                        const image = getPreviewImage(item)
-                        return <Link className="guest-home-list-card" to={`/tierlist/${item.id}`} key={item.id}>
-                            {image ? <img src={image} alt="" loading="lazy" /> : <div className="guest-home-list-placeholder">✦</div>}
-                            <div><span>{item.media_type === 'game' ? 'VIDEOJUEGOS' : 'ANIME'}</span><h3>{item.title}</h3><small>por @{item.profiles?.username || 'miembro'}</small></div>
-                        </Link>
-                    })}
-                </div>
-            </section>}
-        </div>
-    )
+    return <main className="home-feed-page">
+        {loading
+            ? <div className="home-feed-state"><LoadingSpinner /></div>
+            : error
+                ? <p className="home-feed-state">{error}</p>
+                : posts.length
+                    ? <section className="home-post-grid" aria-label="Publicaciones">
+                        {posts.reduce((columns, post) => {
+                            const estimatedHeight = 64 + (post.body ? Math.min(150, Math.ceil(post.body.length / 34) * 22) : 0) + (post.media?.length ? 190 : 0)
+                            const targetColumn = columns[0].height <= columns[1].height ? 0 : 1
+                            columns[targetColumn].height += estimatedHeight + 12
+                            columns[targetColumn].posts.push(post)
+                            return columns
+                        }, [{ height: 0, posts: [] }, { height: 0, posts: [] }]).map((column, index) => <div className="home-post-column" key={index}>
+                            {column.posts.map(post => <PostCard key={post.id} post={post} />)}
+                        </div>)}
+                    </section>
+                    : <p className="home-feed-state">Todavía no hay publicaciones.</p>}
+    </main>
 }

@@ -1,12 +1,12 @@
 import './SpoilerNotice.css'
 
-export default function SpoilerNotice({ onReveal, text = '' }) {
+export default function SpoilerNotice({ onReveal, text = '', label = 'Spoiler de la reseña', ariaLabel = 'Mostrar reseña con spoilers' }) {
   return (
     <button
       className="spoiler-notice"
       type="button"
       onClick={onReveal}
-      aria-label="Mostrar reseña con spoilers"
+      aria-label={ariaLabel}
       style={{
         position: 'relative',
         display: 'block',
@@ -36,7 +36,7 @@ export default function SpoilerNotice({ onReveal, text = '' }) {
           <path d="M9.9 5.2A11.3 11.3 0 0 1 12 5c5.5 0 9.5 4.5 10 7-.2 1.1-1.2 2.6-2.6 3.9" />
           <path d="M6.6 6.6C3.9 8.2 2.2 10.6 2 12c.5 2.5 4.5 7 10 7 1.2 0 2.3-.2 3.3-.6" />
         </svg>
-        <strong>Spoiler de la reseña</strong>
+        <strong>{label}</strong>
       </span>
     </button>
   )

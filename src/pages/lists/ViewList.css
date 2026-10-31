@@ -350,6 +350,46 @@
 }
 
 .main.list-detail-main { animation: none; transform: none; }
+.vl-more-author { display: none; }
+
+@media (min-width: 1280px) {
+    .review-detail-page.vl-list-page {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(250px, 300px);
+        align-items: start;
+        gap: clamp(.85rem, 1.4vw, 1.15rem);
+        width: min(100%, 1200px);
+        max-width: 1200px;
+    }
+    .vl-list-page > .review-post { min-width: 0; }
+    .vl-more-author { position: sticky; top: 1.5rem; display: block; min-width: 0; padding-top: .2rem; }
+    .vl-more-panel {
+        position: relative;
+        padding: .8rem;
+        overflow: hidden;
+        border: 1px solid color-mix(in srgb, var(--vl-more-accent) 20%, var(--border-subtle));
+        border-radius: 20px;
+        background: color-mix(in srgb, var(--bg-card) 90%, transparent);
+        box-shadow: 0 14px 42px rgba(0,0,0,.22);
+        isolation: isolate;
+    }
+    .vl-more-panel::before,.vl-more-panel::after { position: absolute; inset: -20px; z-index: -1; pointer-events: none; content: ''; }
+    .vl-more-panel::before { background: var(--review-backdrop-image, none) center/cover no-repeat; filter: blur(28px) saturate(1.12); opacity: .22; }
+    .vl-more-panel::after { background: radial-gradient(ellipse 90% 68% at 0 0, color-mix(in srgb, var(--vl-more-accent) 25%, transparent), transparent 78%), linear-gradient(155deg, color-mix(in srgb, var(--vl-more-accent) 12%, transparent), color-mix(in srgb, var(--bg-card) 88%, transparent) 76%); }
+    .vl-more-profile { position: relative; display: flex; align-items: center; gap: .6rem; margin-bottom: .75rem; color: var(--text-primary); text-decoration: none; }
+    .vl-more-profile:hover,.vl-more-profile:hover strong { color: var(--text-primary) !important; }
+    .vl-more-profile .review-detail-avatar { width: 50px; height: 50px; flex: 0 0 50px; border: 2px solid var(--vl-more-accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--vl-more-accent) 30%, transparent); }
+    .vl-more-profile > span:last-child { display: grid; min-width: 0; gap: .22rem; }
+    .vl-more-profile strong { overflow: hidden; font: 750 1rem/1.25 var(--font-display); text-overflow: ellipsis; white-space: nowrap; }
+    .vl-more-profile small { color: var(--text-secondary); font-size: .78rem; }
+    .vl-more-list-grid { position: relative; display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: .4rem; }
+    .vl-more-list-card { position: relative; display: flex; aspect-ratio: 1; min-width: 0; align-items: flex-start; justify-content: flex-start; padding: .55rem .48rem; overflow: hidden; border: 1px solid color-mix(in srgb, var(--vl-more-accent) 32%, transparent); border-radius: 14px; color: #f3f1f5; background: color-mix(in srgb, var(--vl-more-accent) 18%, var(--bg-elevated, #1b1b20)); text-decoration: none; transition: filter .16s ease, border-color .16s ease; }
+    .vl-more-list-card:hover { border-color: color-mix(in srgb, var(--vl-more-accent) 50%, transparent); color: #fff !important; filter: brightness(1.08); }
+    .vl-more-list-card > span { display: -webkit-box; width: 100%; overflow: hidden; font-size: .8rem; font-weight: 650; line-height: 1.32; overflow-wrap: anywhere; -webkit-box-orient: vertical; -webkit-line-clamp: 4; }
+    .vl-more-list-card.has-image { display: block; padding: 0; background: #111; }
+    .vl-more-list-card img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; border-radius: inherit; object-fit: cover; }
+    .vl-more-state { position: relative; margin: 0; padding: .4rem 0 .2rem; color: var(--text-secondary); font-size: .76rem; }
+}
 
 @media (max-width: 768px) {
     .review-detail-page.vl-list-page {
