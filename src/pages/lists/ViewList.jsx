@@ -710,7 +710,7 @@ export default function ViewList() {
                                 </div>
                             )
                     }
-                    {user ? (
+                    {user && currentProfile ? (
                         <>
                             {replyTo && (
                                 <div className="review-comment-reply-context">
@@ -727,7 +727,7 @@ export default function ViewList() {
                             </form>
                         </>
                     ) : (
-                        <p className="review-comments-signin"><Link to="/login">Inicia sesión</Link> para comentar.</p>
+                        <p className="review-comments-signin"><Link to={user ? '/onboarding' : '/register'}>Inicia sesión para comentar</Link></p>
                     )}
                 </section>
 

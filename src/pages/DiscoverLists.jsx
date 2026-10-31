@@ -193,7 +193,7 @@ export default function DiscoverLists() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
   const create = () => {
-    if (!user) return navigate('/login')
+    if (!user) return navigate('/register')
     if (mode === 'templates') setShowTemplateModal(true)
     else navigate('/lists/new')
   }

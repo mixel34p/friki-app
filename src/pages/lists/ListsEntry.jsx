@@ -57,7 +57,7 @@ export function ListsEntryModal({ onClose, onCreateTemplate }) {
         } else if (user) {
             navigate('/templates?new=1');
         } else {
-            navigate('/login');
+            navigate('/register');
         }
     };
 

@@ -247,7 +247,7 @@ export default function SpacesExplore() {
             />
           </div>
           <button className="spaces-create-button" type="button" aria-label="Crear espacio" title="Crear espacio" onClick={() => {
-            if (!user) return navigate('/login');
+            if (!user) return navigate('/register');
             setIsModalOpen(true);
           }}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>

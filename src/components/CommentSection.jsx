@@ -7,7 +7,7 @@ import { es } from 'date-fns/locale'
 import './CommentSection.css'
 
 export default function CommentSection({ tierlistId, ownerId }) {
-    const { user } = useAuth()
+    const { user, profile } = useAuth()
     const [comments, setComments] = useState([])
     const [loading, setLoading] = useState(true)
     const [newComment, setNewComment] = useState('')
@@ -102,7 +102,7 @@ export default function CommentSection({ tierlistId, ownerId }) {
                 )}
             </div>
 
-            {user ? (
+            {user && profile ? (
                 <form onSubmit={handleSubmit} className="comment-form">
                     <textarea
                         value={newComment}
@@ -118,8 +118,9 @@ export default function CommentSection({ tierlistId, ownerId }) {
                 </form>
             ) : (
                 <div className="login-prompt">
-                    <p>Inicia sesión para comentar</p>
-                    <Link to="/login" className="btn btn-secondary">Login</Link>
+                    <Link to={user ? '/onboarding' : '/register'} className="comment-auth-link">
+                        Inicia sesión para comentar
+                    </Link>
                 </div>
             )}
         </section>

@@ -185,9 +185,9 @@ function CategoryCard({ kind, title, items, to, wide = false }) {
   </Link>
 }
 
-function SpotlightRow({ kind, items = [], loading = false }) {
+function SpotlightRow({ kind, items = [], loading = false, isLoggedIn = false }) {
   const people = kind === 'people'
-  const orderedItems = people ? [...items].sort((a, b) => (b.commonWorks || 0) - (a.commonWorks || 0)) : items
+  const orderedItems = people ? [...items].sort((a, b) => (isLoggedIn ? b.commonWorks || 0 : b.registeredWorks || 0) - (isLoggedIn ? a.commonWorks || 0 : a.registeredWorks || 0)) : items
   const title = people ? 'Personas' : 'Espacios'
   const href = people ? '/discover/users' : '/discover/spaces'
   const mobileItems = orderedItems.slice(0, 3)
@@ -200,7 +200,7 @@ function SpotlightRow({ kind, items = [], loading = false }) {
       </span>
       <span className="search-spotlight-mobile-copy">
         <strong>{title}</strong>
-        <small>{people ? 'Tienen mucho en común contigo' : 'Comparte tus aficiones'}</small>
+        <small>{people ? (isLoggedIn ? 'Tienen mucho en común contigo' : 'Obras registradas en GeekSphere') : 'Comparte tus aficiones'}</small>
       </span>
       <svg className="search-spotlight-mobile-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
     </Link>
@@ -218,7 +218,7 @@ function SpotlightRow({ kind, items = [], loading = false }) {
         const name = item.display_name || item.name || item.username || 'Usuario'
         const image = item.avatar_url
         const destination = people ? `/profile/${item.username || item.user_id || item.id}` : `/spaces/${item.id}`
-        const subtitle = `${item.commonWorks || 0} en común`
+        const subtitle = isLoggedIn ? `${item.commonWorks || 0} en común` : `${item.registeredWorks || 0} obras`
         return <Link className={`search-spotlight-card ${people ? 'person' : 'space'}`} to={destination} key={item.user_id || item.id} title={name}>
           {people ? <span className="search-spotlight-avatar" style={{ '--person-theme': item.theme_color || 'var(--brand-primary)' }}>{image ? <img src={image} alt="" loading="lazy"/> : <span>{name.slice(0, 1).toUpperCase()}</span>}</span>
             : <span className="search-spotlight-cover">{image ? <img src={image} alt="" loading="lazy"/> : <span>{name.slice(0, 1).toUpperCase()}</span>}</span>}
@@ -291,7 +291,7 @@ function RecommendationSidebar({ userId }) {
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-    getSearchRecommendations(userId, 6).then(items => {
+    getSearchRecommendations(6, userId).then(items => {
       if (!cancelled) {
         setRecs(items)
         setLoading(false)
@@ -305,7 +305,7 @@ function RecommendationSidebar({ userId }) {
   return (
     <aside className="search-sidebar" aria-label="Te puede gustar">
       <div className="search-explore-heading">
-        <div><h2>TE PUEDE GUSTAR</h2></div>
+        <div><h2>{userId ? 'TE PUEDE GUSTAR' : 'OBRAS POPULARES'}</h2></div>
       </div>
       <div className="srec-grid">
         {loading && Array.from({ length: 6 }).map((_, i) => (
@@ -493,7 +493,7 @@ export default function Search() {
       </section>
       </div>
       <div className="search-landing-divider" aria-hidden="true" />
-      <RecommendationSidebar userId={user?.id}/>
+      <RecommendationSidebar userId={user?.id} />
     </div> : <div className="search-landing-layout">
       <div className="search-landing-main">
         <section className={`search-universal${previewOpen ? ' has-preview' : ''}`} aria-label="Búsqueda global">
@@ -508,14 +508,14 @@ export default function Search() {
           </div>
         </section>
         <div className="search-spotlight-mobile-panel">
-          <SpotlightRow kind="people" items={highlightData.users} loading={highlightsLoading}/>
+          <SpotlightRow kind="people" items={highlightData.users} loading={highlightsLoading} isLoggedIn={Boolean(user)}/>
           <SpotlightRow kind="spaces" items={highlightData.spaces} loading={highlightsLoading}/>
           <FeaturedListsMobile lists={featuredLists} loading={featuredListsLoading}/>
         </div>
         <FeaturedLists lists={featuredLists} loading={featuredListsLoading}/>
       </div>
       <div className="search-landing-divider" aria-hidden="true" />
-      <RecommendationSidebar userId={user?.id}/>
+      <RecommendationSidebar userId={user?.id} />
     </div>}
   </div>
 }

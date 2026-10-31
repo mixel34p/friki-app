@@ -22,6 +22,7 @@ const Icon = ({ name }) => {
     close: <><path d="m18 6-12 12M6 6l12 12"/></>,
     logout: <><path d="M10 17l5-5-5-5M15 12H3"/><path d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"/></>,
     arrow: <><path d="m9 18 6-6-6-6"/></>,
+    user: <><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></>,
   }
   return <svg {...common}>{paths[name]}</svg>
 }
@@ -54,7 +55,7 @@ function MoreMenu({ profile, image, username, accentColor, onSignOut }) {
       <svg className="more-account-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m8 10 4-4 4 4M8 14l4 4 4-4"/></svg>
     </button>
     <nav className="more-menu-links" aria-label="Más opciones">
-      <button className="more-menu-link" type="button" aria-disabled="true">Ajustes</button>
+      <Link className="more-menu-link" to="/settings">Ajustes</Link>
       <button className="more-menu-link" type="button" aria-disabled="true">Guardados</button>
       <button className="more-menu-link" type="button" aria-disabled="true">Invitar</button>
       <button className="more-menu-link" type="button" aria-disabled="true">Términos</button>
@@ -89,6 +90,14 @@ export default function Layout() {
   const isDesktop = typeof window !== 'undefined' && window.innerWidth > 960
 
   const openShareMenu = () => {
+    if (!user) {
+      navigate('/register')
+      return
+    }
+    if (!profile) {
+      navigate('/onboarding')
+      return
+    }
     setShareClosing(false)
     setShareOpen(true)
   }
@@ -103,8 +112,9 @@ export default function Layout() {
   }
 
   const username = profile?.username
-  const profilePath = username ? `/profile/${username}` : '/profile'
-  const image = profile?.avatar_url || profile?.profile_picture
+  const profilePath = username ? `/profile/${username}` : (user ? '/onboarding' : '/profile')
+  const spacesPath = user && !profile ? '/onboarding' : '/spaces'
+  const image = profile?.avatar_url || profile?.profile_picture || '/default-avatar.svg'
   const handleSignOut = async () => { setMoreOpen(false); await signOut(); navigate('/login') }
   const moreMenu = <MoreMenu profile={profile} image={image} username={username} accentColor={getVisibleAccentColor(profile?.theme_color || 'var(--brand-primary)')} onSignOut={handleSignOut} />
   const toggleMoreMenu = () => {
@@ -159,6 +169,7 @@ export default function Layout() {
   }, [])
 
   const active = path => location.pathname === path || (path !== '/home' && location.pathname.startsWith(path))
+  const isAuthEntry = location.pathname === '/login' || location.pathname === '/register'
   const isProfilePage = location.pathname === '/profile' || /^\/profile\/[^/]+$/.test(location.pathname)
   const isWorkPage = /^\/(game|anime)\/[^/]+(\/reviews)?$/.test(location.pathname)
   const mobileNavIndex = shareOpen ? 2 : active('/home') ? 0 : active('/search') ? 1 : active('/spaces') ? 3 : -1
@@ -171,10 +182,19 @@ export default function Layout() {
           <span className="sidebar-brand-name">GeekSphere</span>
         </Link>
 
-        <div className="sidebar-top-space" />
+        <div className={`sidebar-top-space ${!user ? 'guest-sidebar-top-space' : ''}`} />
+        {!user ? (
+          <>
+            <nav className="sidebar-nav guest-sidebar-nav" aria-label="Navegación para visitantes">
+              <Link className={`sidebar-link ${active('/home') ? 'active current-page' : ''}`} to="/home" aria-current={active('/home') ? 'page' : undefined}><Icon name="home"/><span>Inicio</span></Link>
+              <Link className={`sidebar-link ${active('/search') ? 'active current-page' : ''}`} to="/search" aria-current={active('/search') ? 'page' : undefined}><Icon name="search"/><span>Buscar</span></Link>
+              <Link className={`sidebar-link ${isAuthEntry ? 'active current-page' : ''}`} to="/register" aria-current={isAuthEntry ? 'page' : undefined}><Icon name="user"/><span>Únete</span></Link>
+            </nav>
+          </>
+        ) : <>
         <nav className="sidebar-nav">
           <Link className={`sidebar-link ${active('/home') ? 'active current-page' : ''}`} to="/home" aria-label="Inicio" aria-current={active('/home') ? 'page' : undefined}><Icon name="home"/><span className="sidebar-label" style={active('/home') ? { fontWeight: 800 } : undefined}>Inicio</span></Link>
-          <Link className={`sidebar-link ${active('/spaces') ? 'active current-page' : ''}`} to="/spaces" aria-label="Espacios" aria-current={active('/spaces') ? 'page' : undefined}><Icon name="spaces"/><span className="sidebar-label" style={active('/spaces') ? { fontWeight: 800 } : undefined}>Espacios</span></Link>
+          <Link className={`sidebar-link ${active('/spaces') ? 'active current-page' : ''}`} to={spacesPath} aria-label="Espacios" aria-current={active('/spaces') ? 'page' : undefined}><Icon name="spaces"/><span className="sidebar-label" style={active('/spaces') ? { fontWeight: 800 } : undefined}>Espacios</span></Link>
           <Link className={`sidebar-link ${active('/search') ? 'active current-page' : ''}`} to="/search" aria-label="Buscar" aria-current={active('/search') ? 'page' : undefined}><Icon name="search"/><span>Buscar</span></Link>
           <button className="sidebar-link" type="button" aria-label="Compartir" onClick={openShareMenu}><Icon name="share"/><span>Compartir</span></button>
           <Link className={`sidebar-link ${active('/activity') ? 'active current-page' : ''}`} to="/activity" aria-label="Actividad" aria-current={active('/activity') ? 'page' : undefined}>
@@ -191,6 +211,7 @@ export default function Layout() {
           <button ref={moreButtonRef} className="sidebar-link more-link" type="button" aria-label="Más" aria-expanded={moreOpen} onClick={toggleMoreMenu}><Icon name="more"/><span>Más</span></button>
           {moreOpen && !isDesktop && <section className="sidebar-popover more-popover" aria-label="Más opciones">{moreMenu}</section>}
         </div>
+        </>}
       </aside>
 
       <header className="mobile-topbar" ref={mobileTopbarRef}>
@@ -199,33 +220,39 @@ export default function Layout() {
           <span>GeekSphere</span>
         </Link>
         <div className="mobile-topbar-actions">
-          <div className="mobile-topbar-anchor">
+          {user && <div className="mobile-topbar-anchor">
             <Link className={`mobile-topbar-button ${active('/activity') ? 'active' : ''}`} to="/activity" aria-label="Notificaciones" aria-current={active('/activity') ? 'page' : undefined}>
               <Icon name="activity" />
               {unreadCount > 0 && <i className="mobile-topbar-unread-dot" />}
             </Link>
-          </div>
-          <div className="mobile-topbar-anchor">
+          </div>}
+          {user && <div className="mobile-topbar-anchor">
             <button className={`mobile-topbar-button ${moreOpen ? 'active' : ''}`} type="button" aria-label="Abrir menú" aria-expanded={moreOpen} onClick={toggleMoreMenu}><Icon name="more"/></button>
             {moreOpen && <section className="sidebar-popover mobile-topbar-popover mobile-topbar-menu" aria-label="Menú">{moreMenu}</section>}
-          </div>
+          </div>}
         </div>
       </header>
 
       <nav className="mobile-bottom-nav" ref={mobileNavRef} aria-label="Navegación principal">
+        {!user ? <div className="guest-mobile-actions">
+          <Link to="/home" aria-label="Inicio"><Icon name="home"/><span>Inicio</span></Link>
+          <Link to="/search" aria-label="Buscar"><Icon name="search"/><span>Buscar</span></Link>
+          <Link className={isAuthEntry ? 'active' : ''} aria-current={isAuthEntry ? 'page' : undefined} to="/register"><Icon name="user"/><span>Únete</span></Link>
+        </div> : <>
         <div className="mobile-nav-dock">
           {mobileNavIndex >= 0 && <span className="mobile-nav-indicator" style={{ '--active-index': mobileNavIndex }} aria-hidden="true" />}
           <Link className={`mobile-nav-item ${active('/home') ? 'active' : ''}`} to="/home" aria-label="Inicio" aria-current={active('/home') ? 'page' : undefined}><Icon name="home"/></Link>
           <Link className={`mobile-nav-item ${active('/search') ? 'active' : ''}`} to="/search" aria-label="Buscar" aria-current={active('/search') ? 'page' : undefined} onClick={() => setMoreOpen(false)}><Icon name="search"/></Link>
           <button className={`mobile-nav-item mobile-share-item ${shareOpen ? 'active' : ''}`} type="button" aria-label="Compartir" aria-pressed={shareOpen} onClick={() => { openShareMenu(); setMoreOpen(false) }}><Icon name="share"/></button>
-          <Link className={`mobile-nav-item ${active('/spaces') ? 'active' : ''}`} to="/spaces" aria-label="Espacios" aria-current={active('/spaces') ? 'page' : undefined}><Icon name="spaces"/></Link>
+          <Link className={`mobile-nav-item ${active('/spaces') ? 'active' : ''}`} to={spacesPath} aria-label="Espacios" aria-current={active('/spaces') ? 'page' : undefined}><Icon name="spaces"/></Link>
         </div>
         <Link className={`mobile-profile-link ${isProfilePage ? 'active' : ''}`} to={profilePath} aria-label="Mi perfil" aria-current={isProfilePage ? 'page' : undefined}>
           {image ? <img className="mobile-nav-avatar" src={image} alt=""/> : <span className="mobile-nav-avatar mobile-nav-avatar-placeholder">{username?.[0]?.toUpperCase() || 'U'}</span>}
         </Link>
+        </>}
       </nav>
 
-      <main className={`main ${isProfilePage ? 'profile-main' : ''} ${isWorkPage ? 'work-main' : ''} ${location.pathname.startsWith('/discover/anime') || location.pathname.startsWith('/discover/games') ? 'discover-works-main' : ''} ${location.pathname === '/discover/spaces' || location.pathname === '/spaces/explore' ? 'spaces-explore-main' : ''} ${location.pathname === '/spaces' ? 'my-spaces-main' : ''} ${/^\/reviews\/[^/]+/.test(location.pathname) ? 'review-detail-main' : ''}`}><Outlet /></main>
+      <main className={`main ${location.pathname === '/onboarding' ? 'onboarding-main' : ''} ${isProfilePage ? 'profile-main' : ''} ${isWorkPage ? 'work-main' : ''} ${location.pathname.startsWith('/discover/anime') || location.pathname.startsWith('/discover/games') ? 'discover-works-main' : ''} ${location.pathname === '/discover/spaces' || location.pathname === '/spaces/explore' ? 'spaces-explore-main' : ''} ${location.pathname === '/spaces' ? 'my-spaces-main' : ''} ${/^\/reviews\/[^/]+/.test(location.pathname) ? 'review-detail-main' : ''}`}><Outlet /></main>
 
       {shareOpen && <div className={`fullscreen-create-overlay ${shareClosing ? 'closing' : ''}`} onClick={() => closeShareMenu()}>
         <button className="close-fullscreen" aria-label="Cerrar" onClick={event => { event.stopPropagation(); closeShareMenu() }}>&times;</button>

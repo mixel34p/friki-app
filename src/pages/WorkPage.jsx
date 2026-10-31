@@ -27,8 +27,6 @@ export default function WorkPage({ mediaType }) {
     const { id } = useParams()
     const { user, profile, updateProfile } = useAuth()
     const navigate = useNavigate()
-    const isOwner = user && profile
-
     // Data states
     const [work, setWork] = useState(null)
     const [relatedSpaces, setRelatedSpaces] = useState([])
@@ -75,8 +73,12 @@ export default function WorkPage({ mediaType }) {
     const isInWishlist = wishlistIndex >= 0;
 
     const toggleWishlist = async () => {
-        if (!isOwner) {
-            alert('Debes iniciar sesión para añadir a la wishlist.');
+        if (!user) {
+            navigate('/register')
+            return
+        }
+        if (!profile) {
+            navigate('/onboarding')
             return;
         }
 
@@ -100,6 +102,18 @@ export default function WorkPage({ mediaType }) {
         } catch (error) {
             console.error('Error toggling wishlist', error);
         }
+    }
+
+    const openReviewModal = () => {
+        if (!user) {
+            navigate('/register')
+            return
+        }
+        if (!profile) {
+            navigate('/onboarding')
+            return
+        }
+        setShowReviewModal(true)
     }
 
     const loadStats = async () => {
@@ -270,7 +284,7 @@ export default function WorkPage({ mediaType }) {
                     <div className={`work-interaction-panel ${userReview ? 'logged' : ''}`}>
                         {userReview ? (
                             <>
-                                <button className="interaction-btn btn-edit" onClick={() => setShowReviewModal(true)}>
+                                <button className="interaction-btn btn-edit" onClick={openReviewModal}>
                                     <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                     Editar Entrada
                                 </button>
@@ -282,7 +296,7 @@ export default function WorkPage({ mediaType }) {
                                 )}
                             </>
                         ) : (
-                            <button className="interaction-btn" onClick={() => setShowReviewModal(true)}>
+                            <button className="interaction-btn" onClick={openReviewModal}>
                                 <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2"><path d="M12 5v14M5 12h14"></path></svg>
                                 Registrar / Reseñar
                             </button>

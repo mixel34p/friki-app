@@ -7,14 +7,47 @@ import { getAccentTextColor } from '../lib/colorContrast'
 import { searchGames } from '../lib/gameService'
 import { getBlockedUsers, unblockUser } from '../lib/socialDiscoveryService'
 import { BADGES_MAP } from '../lib/badges'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
 import './EditProfile.css'
 import { SocialIcons } from '../components/SocialIcons'
 import ImageCropperModal from '../components/ImageCropperModal'
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { arrayMove, SortableContext, rectSortingStrategy } from '@dnd-kit/sortable'
 import { SortableFavoriteItem } from '../components/profile/SortableFavoriteItem'
+
+const getOwnedAvatarStoragePath = (avatarUrl, userId) => {
+    if (!avatarUrl || !userId) return null
+
+    try {
+        const pathname = new URL(avatarUrl).pathname
+        const bucketMarker = '/storage/v1/object/public/avatars/'
+        const markerIndex = pathname.indexOf(bucketMarker)
+        if (markerIndex === -1) return null
+
+        const objectPath = decodeURIComponent(pathname.slice(markerIndex + bucketMarker.length))
+        const ownedPathPrefix = `avatars/${userId}`
+        if (!objectPath.startsWith(`${ownedPathPrefix}-`) && !objectPath.startsWith(`${ownedPathPrefix}.`)) return null
+        return objectPath
+    } catch {
+        return null
+    }
+}
+
+const getOwnedBannerStoragePath = (bannerUrl, userId) => {
+    if (!bannerUrl || !userId) return null
+
+    try {
+        const pathname = new URL(bannerUrl).pathname
+        const bucketMarker = '/storage/v1/object/public/avatars/'
+        const markerIndex = pathname.indexOf(bucketMarker)
+        if (markerIndex === -1) return null
+
+        const objectPath = decodeURIComponent(pathname.slice(markerIndex + bucketMarker.length))
+        if (!objectPath.startsWith(`banners/${userId}.`)) return null
+        return objectPath
+    } catch {
+        return null
+    }
+}
 
 /* ──────────────────────────────────────
    SVG Icons (no emojis)
@@ -117,28 +150,11 @@ const IconHeart = ({ size = 16 }) => (
    Constants
    ────────────────────────────────────── */
 const THEME_COLORS = [
-    '#14b8a6', // Teal (Brand)
-    '#3b82f6', // Blue
-    '#8b5cf6', // Purple
-    '#f43f5e', // Rose
-    '#f59e0b', // Amber
-    '#10b981', // Emerald
-    '#6366f1', // Indigo
-    '#ec4899', // Pink
-]
-
-const PLATFORMS = ['PC', 'PlayStation', 'Xbox', 'Nintendo', 'Mobile']
-
-const GAME_GENRES = [
-    'RPG', 'Acción', 'Aventura', 'Estrategia', 'Simulación', 'Deportes',
-    'Lucha', 'Shooter', 'Plataformas', 'Terror', 'Puzzle', 'Indie',
-    'MMORPG', 'Battle Royale', 'Souls-like', 'Roguelike', 'Metroidvania'
-]
-
-const ANIME_GENRES = [
-    'Shonen', 'Seinen', 'Shojo', 'Isekai', 'Mecha', 'Romance',
-    'Comedia', 'Terror', 'Ciencia Ficción', 'Fantasy', 'Slice of Life',
-    'Deportes', 'Misterio', 'Acción', 'Histórico', 'Psychological'
+    '#ff3b30', '#ff7a18', '#ffbf1f', '#20c66b', '#3b82f6', '#a445f5', '#e93b9c', '#10b7a6', '#ec3a5c', '#f27087',
+    '#f5a111', '#7dce14', '#0ebd87', '#03b4c5', '#12a9e0', '#625eea', '#9255e9', '#cd33c7', '#e72d2e', '#f0bd00',
+    '#b21b50', '#84252a', '#7022a1', '#155b3f', '#c63d0f', '#874117', '#ae8e69', '#527d14', '#f1d0e2', '#f7b46d',
+    '#fff18e', '#a8eed0', '#bbf0d4', '#c6a2ef', '#e2cff9', '#ade0f7', '#c3cef6', '#66e2cd', '#fcf0c9', '#6d7a89',
+    '#30343a', '#183f95', '#0c0d0f', '#d2d3d7', '#ffffff'
 ]
 
 const SOCIAL_PLATFORMS = [
@@ -154,11 +170,29 @@ const SOCIAL_PLATFORMS = [
     { id: 'website',   label: 'Sitio Web',    placeholder: 'https://tusitio.com',icon: <SocialIcons.Website /> }
 ]
 
+const getEditSocialHref = (platform, handle) => {
+    const value = handle?.trim()
+    if (!value || platform === 'discord') return null
+    if (/^https?:\/\//i.test(value)) return value
+    const clean = value.replace(/^@/, '')
+    const links = {
+        twitter: `https://x.com/${clean}`,
+        instagram: `https://instagram.com/${clean}`,
+        twitch: `https://twitch.tv/${clean}`,
+        youtube: `https://youtube.com/@${clean}`,
+        steam: `https://steamcommunity.com/id/${clean}`,
+        reddit: `https://reddit.com/user/${clean}`,
+        tiktok: `https://tiktok.com/@${clean}`,
+        github: `https://github.com/${clean}`,
+        website: /^https?:\/\//i.test(value) ? value : `https://${value}`
+    }
+    return links[platform] || null
+}
+
 const SECTION_TABS = [
     { id: 'photos',    label: 'Fotos',     icon: <IconImage /> },
     { id: 'info',      label: 'Info',      icon: <IconUser /> },
     { id: 'favorites', label: 'Favoritos', icon: <IconHeart /> },
-    { id: 'interests', label: 'Intereses', icon: <IconGamepad /> },
     { id: 'social',    label: 'Redes',     icon: <IconLink /> },
     { id: 'blocked',   label: 'Bloqueados',icon: <IconShield /> }
 ]
@@ -166,7 +200,7 @@ const SECTION_TABS = [
 /* ──────────────────────────────────────
    Component
    ────────────────────────────────────── */
-export default function EditProfile({ onClose }) {
+export default function EditProfile({ onClose, standalone = false }) {
     const { user, profile, updateProfile } = useAuth()
     const navigate = useNavigate()
     const fileInputRef = useRef(null)
@@ -174,7 +208,6 @@ export default function EditProfile({ onClose }) {
     const textareaRef = useRef(null)
 
     const [activeSection, setActiveSection] = useState('photos')
-    const [bioMode, setBioMode] = useState('write')
 
     const [formData, setFormData] = useState({
         username:        profile?.username        || '',
@@ -193,6 +226,9 @@ export default function EditProfile({ onClose }) {
         theme_color:     profile?.theme_color     || '#14b8a6',
         featured_badge:  profile?.featured_badge  || null
     })
+    const savedFormDataRef = useRef(JSON.stringify(formData))
+    const savedAvatarPreviewRef = useRef(profile?.avatar_url || null)
+    const savedBannerPreviewRef = useRef(profile?.banner_url || null)
 
     const [avatarFile, setAvatarFile] = useState(null)
     const [avatarPreview, setAvatarPreview] = useState(profile?.avatar_url || null)
@@ -201,6 +237,10 @@ export default function EditProfile({ onClose }) {
     const [saving, setSaving] = useState(false)
     const [error, setError] = useState('')
     const [usernameError, setUsernameError] = useState('')
+    const hasUnsavedChanges = JSON.stringify(formData) !== savedFormDataRef.current
+        || !!avatarFile || !!bannerFile
+        || avatarPreview !== savedAvatarPreviewRef.current
+        || bannerPreview !== savedBannerPreviewRef.current
 
     // Cropper State
     const [cropModal, setCropModal] = useState({ isOpen: false, type: null, src: null, aspect: 1 })
@@ -225,10 +265,11 @@ export default function EditProfile({ onClose }) {
     const [isSearchingSong, setIsSearchingSong] = useState(false)
 
     // Tags & socials
-    const [customTagInput, setCustomTagInput] = useState('')
     const [isAddingSocial, setIsAddingSocial] = useState(false)
+    const [copiedSocial, setCopiedSocial] = useState('')
 
     useEffect(() => {
+        if (standalone) return undefined
         const scrollY = window.scrollY;
         const body = document.body;
         const previousStyles = {
@@ -251,7 +292,7 @@ export default function EditProfile({ onClose }) {
             Object.assign(body.style, previousStyles);
             window.scrollTo(0, scrollY);
         };
-    }, []);
+    }, [standalone]);
 
     // Blocked users
     const [blockedUsers, setBlockedUsers] = useState([])
@@ -260,6 +301,7 @@ export default function EditProfile({ onClose }) {
     const availablePlatforms = SOCIAL_PLATFORMS.filter(
         p => !formData.social_links[p.id] && formData.social_links[p.id] !== ''
     )
+    const showProfileSections = !standalone || activeSection !== 'blocked'
 
     /* ── Effects ── */
     useEffect(() => {
@@ -339,32 +381,13 @@ export default function EditProfile({ onClose }) {
         setFormData(prev => ({ ...prev, [field]: field === 'bio' ? value.slice(0, 100) : value }))
 
     const handleUsernameChange = async (value) => {
-        const clean = value.toLowerCase().replace(/[^a-z0-9_]/g, '')
+        const clean = value.toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 20)
         handleChange('username', clean)
         if (clean.length < 3) { setUsernameError('Mínimo 3 caracteres'); return }
         if (clean === profile?.username) { setUsernameError(''); return }
         const { data } = await supabase.from('profiles').select('username').eq('username', clean).maybeSingle()
         setUsernameError(data ? 'Este username ya está en uso' : '')
     }
-
-    const toggleArrayItem = (field, item) => {
-        setFormData(prev => ({
-            ...prev,
-            [field]: prev[field].includes(item)
-                ? prev[field].filter(i => i !== item)
-                : [...prev[field], item]
-        }))
-    }
-
-    const addCustomTag = () => {
-        if (!customTagInput.trim()) return
-        if (formData.custom_tags.includes(customTagInput.trim())) return
-        handleChange('custom_tags', [...formData.custom_tags, customTagInput.trim()])
-        setCustomTagInput('')
-    }
-
-    const removeCustomTag = (tag) =>
-        handleChange('custom_tags', formData.custom_tags.filter(t => t !== tag))
 
     const handleSocialChange = (id, value) =>
         setFormData(prev => ({ ...prev, social_links: { ...prev.social_links, [id]: value } }))
@@ -408,10 +431,13 @@ export default function EditProfile({ onClose }) {
         setCropModal({ isOpen: false, type: null, src: null, aspect: 1 })
     }
 
-    const uploadImage = async (file, bucket, path) => {
+    const uploadImage = async (file, bucket, path, { upsert = true } = {}) => {
         if (!file || !user) return null
-        const { error: err } = await supabase.storage.from(bucket).upload(path, file, { upsert: true })
-        if (err) throw err
+        const { error: err } = await supabase.storage.from(bucket).upload(path, file, { upsert })
+        if (err) {
+            console.error('Storage upload failed:', { bucket, path, upsert, error: err })
+            throw err
+        }
         return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl
     }
 
@@ -496,23 +522,53 @@ export default function EditProfile({ onClose }) {
     const handleSubmit = async (e) => {
         e.preventDefault()
         if (usernameError) { setError(usernameError); return }
+        if (standalone && !/^#[\da-f]{6}$/i.test(formData.theme_color)) { setError('Introduce un color hexadecimal válido'); return }
         if (formData.username.length < 3) { setError('El username debe tener al menos 3 caracteres'); return }
+        if (formData.username.length > 20) { setError('El username no puede superar los 20 caracteres'); return }
         setSaving(true); setError('')
         try {
             let avatarUrl = profile?.avatar_url
             let bannerUrl = profile?.banner_url
+            const previousAvatarPath = avatarFile ? getOwnedAvatarStoragePath(profile?.avatar_url, user?.id) : null
+            const previousBannerPath = bannerFile ? getOwnedBannerStoragePath(profile?.banner_url, user?.id) : null
             if (avatarFile) {
                 const ext = (avatarFile.name && avatarFile.name.includes('.')) ? avatarFile.name.split('.').pop() : 'jpg'
-                let url = await uploadImage(avatarFile, 'avatars', `avatars/${user.id}.${ext}`)
+                const uniqueSuffix = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+                let url = await uploadImage(avatarFile, 'avatars', `avatars/${user.id}.${uniqueSuffix}.${ext}`, { upsert: false })
                 avatarUrl = `${url}?t=${Date.now()}`
             }
             if (bannerFile) {
                 const ext = (bannerFile.name && bannerFile.name.includes('.')) ? bannerFile.name.split('.').pop() : 'jpg'
-                let url = await uploadImage(bannerFile, 'avatars', `banners/${user.id}.${ext}`)
+                const uniqueSuffix = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+                let url = await uploadImage(bannerFile, 'avatars', `banners/${user.id}.${uniqueSuffix}.${ext}`, { upsert: false })
                 bannerUrl = `${url}?t=${Date.now()}`
             }
             await updateProfile({ ...formData, avatar_url: avatarUrl, banner_url: bannerUrl })
-            if (onClose) onClose(); else navigate('/profile')
+            savedFormDataRef.current = JSON.stringify(formData)
+            savedAvatarPreviewRef.current = avatarUrl || null
+            savedBannerPreviewRef.current = bannerUrl || null
+            setAvatarFile(null)
+            setBannerFile(null)
+            setAvatarPreview(avatarUrl || null)
+            setBannerPreview(bannerUrl || null)
+            if (previousAvatarPath) {
+                const nextAvatarPath = getOwnedAvatarStoragePath(avatarUrl, user?.id)
+                if (nextAvatarPath !== previousAvatarPath) {
+                    const { data: removedFiles, error: removeError } = await supabase.storage.from('avatars').remove([previousAvatarPath])
+                    if (removeError) console.warn('No se pudo borrar el avatar anterior del bucket:', removeError)
+                    else if (!removedFiles?.length) console.warn('Supabase no encontró o no permitió borrar el avatar anterior:', previousAvatarPath)
+                }
+            }
+            if (previousBannerPath) {
+                const nextBannerPath = getOwnedBannerStoragePath(bannerUrl, user?.id)
+                if (nextBannerPath !== previousBannerPath) {
+                    const { data: removedFiles, error: removeError } = await supabase.storage.from('avatars').remove([previousBannerPath])
+                    if (removeError) console.warn('No se pudo borrar el banner anterior del bucket:', removeError)
+                    else if (!removedFiles?.length) console.warn('Supabase no encontró o no permitió borrar el banner anterior:', previousBannerPath)
+                }
+            }
+            if (onClose) onClose()
+            else if (!standalone) navigate('/profile')
         } catch (err) {
             console.error(err)
             setError(err.message || 'Error al guardar cambios')
@@ -523,25 +579,240 @@ export default function EditProfile({ onClose }) {
 
     const handleClose = () => { if (onClose) onClose(); else navigate('/profile') }
 
-    /* ──────────────────────────────────────
-       Render
-       ────────────────────────────────────── */
-    return createPortal((
+    const renderWorkSearchResults = (kind) => {
+        const isGame = kind === 'game'
+        const results = isGame ? gameSearchResults : animeSearchResults
+        const isSearching = isGame ? isSearchingGames : isSearchingAnime
+        if (isSearching) return <div className="ep-settings-search-status">Buscando…</div>
+        if (!results.length) return null
+        return <div className="ep-settings-work-results">
+            {results.slice(0, 5).map(item => (
+                <button key={item.id} type="button" className="ep-settings-work-result" onClick={() => isGame ? selectGame(item) : selectAnime(item)}>
+                    {(item.cover_url || item.image_url) && <img src={item.cover_url || item.image_url} alt="" />}
+                    <span>{isGame ? item.name : item.title}</span>
+                    <span className="ep-settings-result-add">Añadir</span>
+                </button>
+            ))}
+        </div>
+    }
+
+    const settingsMarkup = (
         <div className="ep-portal-root" style={{
             '--brand-primary': formData.theme_color || '#14b8a6',
             '--brand-dark': formData.theme_color || '#14b8a6',
             '--profile-theme-color': formData.theme_color || '#14b8a6',
             '--profile-accent-text': getAccentTextColor(formData.theme_color || '#14b8a6')
         }}>
-            <div className="ep-overlay" onClick={e => { if (e.target === e.currentTarget) handleClose() }}>
-                <div className="ep-modal" onClick={e => e.stopPropagation()}>
+            <div className="ep-overlay ep-settings-overlay">
+                <div className="ep-modal ep-settings-shell">
+                    <h1 className="ep-settings-page-title">Ajustes</h1>
+                    <aside className="ep-settings-nav">
+                        <span className="ep-settings-nav-label">PERFIL</span>
+                        <button type="button" className={`ep-settings-nav-item ${activeSection !== 'blocked' ? 'active' : ''}`} onClick={() => setActiveSection('photos')}>Perfil</button>
+                        <span className="ep-settings-nav-label ep-settings-nav-secondary">CUENTA</span>
+                        <button type="button" className={`ep-settings-nav-item ${activeSection === 'blocked' ? 'active' : ''}`} onClick={() => setActiveSection('blocked')}>Bloqueados y silenciados</button>
+                    </aside>
+
+                    <div className="ep-settings-editor">
+                        <div className="ep-modal-header">
+                            <h1 className="ep-modal-title">{activeSection === 'blocked' ? 'Bloqueados y silenciados' : 'Perfil'}</h1>
+                            {activeSection !== 'blocked' && <button type="submit" form="profile-settings-form" className="btn btn-primary ep-settings-save-button" disabled={saving || !!usernameError}>{saving ? 'Guardando…' : 'Guardar'}</button>}
+                        </div>
+                        <input ref={fileInputRef} type="file" accept="image/*" onChange={e => handleFileChange(e, 'avatar')} hidden />
+                        <input ref={bannerInputRef} type="file" accept="image/*" onChange={e => handleFileChange(e, 'banner')} hidden />
+
+                        {activeSection !== 'blocked' ? <form id="profile-settings-form" onSubmit={handleSubmit} className="ep-settings-form">
+                            <section className="ep-settings-card ep-settings-personal-card">
+                                <div className="ep-settings-photo-row">
+                                    <button type="button" className="ep-settings-photo-button" onClick={() => fileInputRef.current?.click()} aria-label="Cambiar foto de perfil">
+                                        {avatarPreview ? <img src={avatarPreview} alt="" /> : <img src="/default-avatar.svg" alt="" />}
+                                        <span><IconPlus size={16} /></span>
+                                    </button>
+                                    <div><strong>Foto</strong><p>Cuadrada, haz clic para cambiarla.</p><small>JPG, PNG o GIF · Máx. 2 MB</small></div>
+                                </div>
+                                <div className="ep-settings-row">
+                                    <label htmlFor="settings-display-name">Nombre a mostrar <small>{formData.display_name.length}/30</small></label>
+                                    <input id="settings-display-name" className="ep-settings-control" value={formData.display_name} onChange={e => handleChange('display_name', e.target.value)} maxLength={30} placeholder="¿Cómo te llamamos?" />
+                                </div>
+                                <div className="ep-settings-row">
+                                    <label htmlFor="settings-username">Usuario</label>
+                                    <div className={`ep-settings-handle ${usernameError ? 'has-error' : ''}`}>
+                                        <span>@</span>
+                                        <input id="settings-username" value={formData.username} onChange={e => handleUsernameChange(e.target.value)} maxLength={20} autoComplete="username" />
+                                    </div>
+                                    {usernameError ? <small className="ep-settings-error">{usernameError}</small> : <small className="ep-settings-help">De 3 a 20 caracteres. Letras, números y guiones bajos.</small>}
+                                </div>
+                                <div className="ep-settings-row">
+                                    <label htmlFor="settings-pronouns">Pronombres</label>
+                                    <input id="settings-pronouns" className="ep-settings-control" value={formData.pronouns} onChange={e => handleChange('pronouns', e.target.value)} placeholder="Ej. él, ella, elle" maxLength={20} />
+                                </div>
+                                <div className="ep-settings-row">
+                                    <label htmlFor="settings-location">Ubicación</label>
+                                    <input id="settings-location" className="ep-settings-control" value={formData.location} onChange={e => handleChange('location', e.target.value)} placeholder="Ciudad, país" maxLength={50} />
+                                </div>
+                                <div className="ep-settings-row">
+                                    <label htmlFor="settings-bio">Bio <small>{formData.bio.length}/100</small></label>
+                                    <textarea id="settings-bio" className="ep-settings-control ep-settings-bio" value={formData.bio} onChange={e => handleChange('bio', e.target.value)} maxLength={100} placeholder="Cuéntale a la gente sobre ti" />
+                                </div>
+                            </section>
+
+                            <h2 className="ep-settings-card-kicker">ESTILO</h2>
+                            <section className="ep-settings-card ep-settings-style-card">
+                                <div className="ep-settings-row">
+                                    <label>Banner <small>Opcional</small></label>
+                                    <button type="button" className="ep-settings-banner" onClick={() => bannerInputRef.current?.click()}>
+                                        {bannerPreview ? <img src={bannerPreview} alt="Banner del perfil" /> : <span>Añadir un banner para tu perfil</span>}
+                                        <span className="ep-settings-banner-action">{bannerPreview ? 'Cambiar' : 'Subir imagen'}</span>
+                                    </button>
+                                </div>
+                                <div className="ep-settings-row ep-settings-accent-row">
+                                    <details className="ep-settings-accent-picker">
+                                        <summary>
+                                            <strong>Acento</strong>
+                                            <span className="ep-settings-accent-value"><i style={{ background: formData.theme_color }} />{formData.theme_color.toUpperCase()}<b aria-hidden="true">⌃</b></span>
+                                        </summary>
+                                        <div className="ep-settings-accent-content">
+                                            <div className="ep-settings-accent-swatches">
+                                                {THEME_COLORS.map(color => <button type="button" key={color} className={formData.theme_color.toLowerCase() === color ? 'selected' : ''} style={{ background: color }} onClick={() => handleChange('theme_color', color)} aria-label={`Usar color ${color}`} title={color} />)}
+                                                <label className={`ep-settings-custom-swatch ${!THEME_COLORS.includes(formData.theme_color.toLowerCase()) ? 'selected' : ''}`} title="Elegir otro color">
+                                                    <input type="color" value={/^#[\da-f]{6}$/i.test(formData.theme_color) ? formData.theme_color : '#14b8a6'} onChange={e => handleChange('theme_color', e.target.value)} aria-label="Elegir otro color" />
+                                                    <span aria-hidden="true" />
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </details>
+                                </div>
+
+                                <div className="ep-settings-row">
+                                    <label htmlFor="settings-game-search">Juegos favoritos <small>{formData.favorite_games.length}/4</small></label>
+                                    <div className="ep-settings-selected-works">
+                                        {formData.favorite_games.map((game, index) => <div className="ep-settings-selected-work" key={game.id}>
+                                            {game.cover_url && <img src={game.cover_url} alt="" />}
+                                            <span>{game.name}</span>
+                                            <button type="button" onClick={() => removeGame(index)} aria-label={`Quitar ${game.name}`}>×</button>
+                                        </div>)}
+                                    </div>
+                                    {formData.favorite_games.length < 4 && <div className="ep-settings-search-wrap">
+                                        <input id="settings-game-search" className="ep-settings-control" value={gameSearchQuery} onChange={e => setGameSearchQuery(e.target.value)} placeholder="Buscar juegos…" />
+                                        {renderWorkSearchResults('game')}
+                                    </div>}
+                                </div>
+                                <div className="ep-settings-row">
+                                    <label htmlFor="settings-anime-search">Animes favoritos <small>{formData.favorite_animes.length}/4</small></label>
+                                    <div className="ep-settings-selected-works">
+                                        {formData.favorite_animes.map((anime, index) => <div className="ep-settings-selected-work" key={anime.id}>
+                                            {anime.cover_url && <img src={anime.cover_url} alt="" />}
+                                            <span>{anime.title}</span>
+                                            <button type="button" onClick={() => removeAnime(index)} aria-label={`Quitar ${anime.title}`}>×</button>
+                                        </div>)}
+                                    </div>
+                                    {formData.favorite_animes.length < 4 && <div className="ep-settings-search-wrap">
+                                        <input id="settings-anime-search" className="ep-settings-control" value={animeSearchQuery} onChange={e => setAnimeSearchQuery(e.target.value)} placeholder="Buscar anime…" />
+                                        {renderWorkSearchResults('anime')}
+                                    </div>}
+                                </div>
+
+                                <div className="ep-settings-row">
+                                    <label>Canción del perfil</label>
+                                    {formData.profile_song && typeof formData.profile_song === 'object' ? <div className="ep-settings-song-selected">
+                                        <img src={formData.profile_song.cover} alt="" />
+                                        <span><strong>{formData.profile_song.name}</strong><small>{formData.profile_song.artist}</small></span>
+                                        <button type="button" onClick={() => handleChange('profile_song', null)} aria-label="Quitar canción">×</button>
+                                    </div> : <div className="ep-settings-search-wrap">
+                                        <input className="ep-settings-control" value={songSearchQuery} onChange={e => setSongSearchQuery(e.target.value)} placeholder="Buscar canción o artista…" />
+                                        {isSearchingSong && <div className="ep-settings-search-status">Buscando…</div>}
+                                        {songSearchResults.length > 0 && <div className="ep-settings-work-results">{songSearchResults.map(track => <button type="button" className="ep-settings-work-result" key={track.trackId} onClick={() => { handleChange('profile_song', track); setSongSearchQuery(''); setSongSearchResults([]) }}><img src={track.cover} alt="" /><span>{track.name}<small>{track.artist}</small></span><span className="ep-settings-result-add">Añadir</span></button>)}</div>}
+                                    </div>}
+                                </div>
+
+                                {profile?.badges?.length > 0 && <div className="ep-settings-row">
+                                    <label>Insignia destacada</label>
+                                    <div className="ep-settings-badges">
+                                        <button type="button" className={!formData.featured_badge ? 'selected' : ''} onClick={() => handleChange('featured_badge', null)}>Ninguna</button>
+                                        {profile.badges.map(badge => BADGES_MAP[badge] && <button type="button" key={badge} className={formData.featured_badge === badge ? 'selected' : ''} onClick={() => handleChange('featured_badge', badge)}>{BADGES_MAP[badge].icon}{BADGES_MAP[badge].title}</button>)}
+                                    </div>
+                                </div>}
+                            </section>
+
+                            <h2 className="ep-settings-card-kicker">ENLACES</h2>
+                            <section className="ep-settings-card ep-settings-links-card">
+                                {SOCIAL_PLATFORMS.map(platform => {
+                                    const value = formData.social_links[platform.id] || ''
+                                    const href = getEditSocialHref(platform.id, value)
+                                    return <div className="ep-settings-social-row" key={platform.id}>
+                                        <div className="ep-settings-social-heading">
+                                            <span className={`ep-settings-social-icon ${platform.id}`}>{platform.icon}</span>
+                                            <strong>{platform.label}</strong>
+                                            {platform.id === 'discord' ? value && <button type="button" onClick={async () => { try { await navigator.clipboard.writeText(value); setCopiedSocial(platform.id); window.setTimeout(() => setCopiedSocial(''), 1600) } catch {} }}>{copiedSocial === platform.id ? 'copiado' : 'copiar'}</button> : href && <a href={href} target="_blank" rel="noopener noreferrer">abrir ↗</a>}
+                                        </div>
+                                        <input className="ep-settings-control" value={value} onChange={e => handleSocialChange(platform.id, e.target.value)} placeholder={platform.placeholder} aria-label={platform.label} />
+                                        {platform.id === 'discord' && <small>El usuario se copia; los demás enlaces abren tu perfil.</small>}
+                                    </div>
+                                })}
+                            </section>
+                            {error && <div className="ep-alert ep-alert--error">{error}</div>}
+                        </form> : <div className="ep-settings-card ep-settings-blocked-card">
+                            {loadingBlocked ? <p>Cargando usuarios bloqueados…</p> : blockedUsers.length === 0 ? <p>No tienes usuarios bloqueados.</p> : blockedUsers.map(block => <div key={block.blocked_id} className="ep-blocked-item">
+                                <div className="ep-blocked-user">{block.blocked?.avatar_url ? <img src={block.blocked.avatar_url} alt="" className="ep-blocked-avatar" /> : <div className="ep-blocked-avatar">{block.blocked?.display_name?.charAt(0) || '?'}</div>}<div className="ep-blocked-names"><span className="ep-blocked-display-name">{block.blocked?.display_name || 'Usuario'}</span><span className="ep-blocked-username">@{block.blocked?.username}</span></div></div>
+                                <button type="button" className="ep-unblock-btn" onClick={() => handleUnblock(block.blocked_id)}>Desbloquear</button>
+                            </div>)}
+                        </div>}
+                    </div>
+
+                    <aside className="ep-settings-preview-column">
+                        <div className="ep-settings-preview-heading">
+                            <span className="ep-settings-nav-label">PERFIL</span>
+                        </div>
+                        <article className="ep-settings-profile-preview" style={{ '--preview-accent': formData.theme_color || '#14b8a6' }}>
+                            <div className="ep-settings-preview-banner">{bannerPreview && <img src={bannerPreview} alt="" />}</div>
+                            <div className="ep-settings-preview-content">
+                                <div className="ep-settings-preview-avatar">{avatarPreview ? <img src={avatarPreview} alt="" /> : <img src="/default-avatar.svg" alt="" />}</div>
+                                <div className="ep-settings-preview-name-row"><strong>{formData.display_name || 'Tu nombre'}</strong>{formData.pronouns && <span className="ep-settings-preview-pronouns">{formData.pronouns}</span>}</div>
+                                <div className="ep-settings-preview-identity-row"><span className="ep-settings-preview-username">@{formData.username || 'usuario'}</span>{formData.featured_badge && BADGES_MAP[formData.featured_badge] && <span className="ep-settings-preview-badge" style={{ '--badge-accent': BADGES_MAP[formData.featured_badge].color }} aria-label={BADGES_MAP[formData.featured_badge].title} title={BADGES_MAP[formData.featured_badge].title}>{BADGES_MAP[formData.featured_badge].icon}</span>}</div>
+                                <p>{formData.bio || 'Tu biografía aparecerá aquí.'}</p>
+                                {formData.profile_song && typeof formData.profile_song === 'object' && <div className="ep-settings-preview-song"><img src={formData.profile_song.cover} alt="" /><span><strong>{formData.profile_song.name}</strong><small>{formData.profile_song.artist}</small></span></div>}
+                            </div>
+                        </article>
+                        <p className={`ep-settings-preview-hint${hasUnsavedChanges ? ' ep-settings-preview-hint--dirty' : ''}`}>{hasUnsavedChanges ? 'Tienes cambios sin guardar.' : 'No te olvides de guardar los cambios.'}</p>
+                    </aside>
+                </div>
+            </div>
+            {cropModal.isOpen && <ImageCropperModal imageSrc={cropModal.src} aspect={cropModal.aspect} onCropComplete={handleCropComplete} onCancel={() => setCropModal({ isOpen: false, type: null, src: null, aspect: 1 })} />}
+        </div>
+    )
+
+    /* ──────────────────────────────────────
+       Render
+       ────────────────────────────────────── */
+    const editorMarkup = (
+        <div className="ep-portal-root" style={{
+            '--brand-primary': formData.theme_color || '#14b8a6',
+            '--brand-dark': formData.theme_color || '#14b8a6',
+            '--profile-theme-color': formData.theme_color || '#14b8a6',
+            '--profile-accent-text': getAccentTextColor(formData.theme_color || '#14b8a6')
+        }}>
+            <div className={`ep-overlay ${standalone ? 'ep-settings-overlay' : ''}`} onClick={e => { if (!standalone && e.target === e.currentTarget) handleClose() }}>
+                <div className={`ep-modal ${standalone ? 'ep-settings-shell' : ''}`} onClick={e => e.stopPropagation()}>
+
+                {standalone && <h1 className="ep-settings-page-title">Ajustes</h1>}
+                {standalone && <aside className="ep-settings-nav">
+                    <span className="ep-settings-nav-label">PERFIL</span>
+                    <button type="button" className={`ep-settings-nav-item ${activeSection !== 'blocked' ? 'active' : ''}`} onClick={() => setActiveSection('photos')}>
+                        <span>Perfil</span>
+                    </button>
+                    <span className="ep-settings-nav-label ep-settings-nav-secondary">CUENTA</span>
+                    <button type="button" className={`ep-settings-nav-item ${activeSection === 'blocked' ? 'active' : ''}`} onClick={() => setActiveSection('blocked')}>
+                        <span>Bloqueados y silenciados</span>
+                    </button>
+                </aside>}
+
+                <div className={standalone ? 'ep-settings-editor' : 'ep-modal-inner'}>
 
                 {/* Header */}
                 <div className="ep-modal-header">
-                    <h1 className="ep-modal-title">Editar Perfil</h1>
-                    <button className="ep-close-btn" onClick={handleClose} type="button">
-                        <IconClose />
-                    </button>
+                    <h1 className="ep-modal-title">{standalone ? (activeSection === 'blocked' ? 'Bloqueados y silenciados' : 'Perfil') : 'Editar Perfil'}</h1>
+                    {standalone ? <button type="submit" form="profile-settings-form" className="btn btn-primary" disabled={saving || !!usernameError}>{saving ? 'Guardando…' : 'Guardar'}</button> :
+                        <button className="ep-close-btn" onClick={handleClose} type="button"><IconClose /></button>}
                 </div>
 
                 {/* Section tabs */}
@@ -562,14 +833,37 @@ export default function EditProfile({ onClose }) {
                 <input ref={fileInputRef}   type="file" accept="image/*" onChange={e => handleFileChange(e, 'avatar')} style={{ display: 'none' }} />
                 <input ref={bannerInputRef} type="file" accept="image/*" onChange={e => handleFileChange(e, 'banner')} style={{ display: 'none' }} />
 
-                <form onSubmit={handleSubmit} style={{ display: 'contents' }}>
+                <form id={standalone ? 'profile-settings-form' : undefined} onSubmit={handleSubmit} style={{ display: 'contents' }}>
                     {/* Scrollable body */}
                     <div className="ep-modal-body ep-animate-in" key={activeSection}>
                         {error && <div className="ep-alert ep-alert--error">{error}</div>}
 
                         {/* ── FOTOS ── */}
-                        {activeSection === 'photos' && (
+                        {(activeSection === 'photos' || standalone && activeSection !== 'blocked') && (
                             <>
+                                {/* Avatar */}
+                                <div className="ep-field">
+                                    <label className="ep-label">Foto</label>
+                                    <div className="ep-avatar-row">
+                                        <button type="button" className="ep-avatar-upload" onClick={() => fileInputRef.current?.click()}>
+                                            {avatarPreview ? (
+                                                <img src={avatarPreview} alt="Avatar" className="ep-avatar-img" />
+                                            ) : (
+                                                <div className="ep-avatar-placeholder">
+                                                    {formData.display_name?.charAt(0).toUpperCase() || '?'}
+                                                </div>
+                                            )}
+                                            <div className="ep-avatar-overlay">
+                                                <IconPlus size={16} />
+                                            </div>
+                                        </button>
+                                        <div className="ep-avatar-hints">
+                                            <p>Haz clic en la imagen para cambiarla</p>
+                                            <span>Formato JPG, PNG o GIF · Máx. 2MB</span>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 {/* Banner */}
                                 <div className="ep-field">
                                     <label className="ep-label">Banner <span className="ep-optional">opcional</span></label>
@@ -589,31 +883,8 @@ export default function EditProfile({ onClose }) {
                                     </button>
                                 </div>
 
-                                {/* Avatar */}
-                                <div className="ep-field">
-                                    <label className="ep-label">Foto de perfil</label>
-                                    <div className="ep-avatar-row">
-                                        <button type="button" className="ep-avatar-upload" onClick={() => fileInputRef.current?.click()}>
-                                            {avatarPreview ? (
-                                                <img src={avatarPreview} alt="Avatar" className="ep-avatar-img" />
-                                            ) : (
-                                                <div className="ep-avatar-placeholder">
-                                                    {formData.display_name?.charAt(0).toUpperCase() || '?'}
-                                                </div>
-                                            )}
-                                            <div className="ep-avatar-overlay">
-                                                <IconCamera />
-                                            </div>
-                                        </button>
-                                        <div className="ep-avatar-hints">
-                                            <p>Haz clic en la imagen para cambiarla</p>
-                                            <span>Formato JPG, PNG o GIF · Máx. 2MB</span>
-                                        </div>
-                                    </div>
-                                </div>
-
                                 {/* Theme Color */}
-                                <div className="ep-field" style={{ marginTop: '24px' }}>
+                                <div className="ep-field">
                                     <label className="ep-label">Color del Tema</label>
                                     <div className="ep-color-grid">
                                         {THEME_COLORS.map(color => (
@@ -650,7 +921,8 @@ export default function EditProfile({ onClose }) {
                         )}
 
                         {/* ── INFO ── */}
-                        {activeSection === 'info' && (
+                        {showProfileSections && standalone && <div className="ep-settings-section-divider" aria-hidden="true" />}
+                        {(activeSection === 'info' || standalone && activeSection !== 'blocked') && (
                             <>
 
                                 <div className="ep-two-col">
@@ -667,6 +939,7 @@ export default function EditProfile({ onClose }) {
                                             />
                                         </div>
                                         {usernameError && <span className="ep-error-text">{usernameError}</span>}
+                                        <span className="ep-hint">Entre 3 y 20 caracteres.</span>
                                     </div>
                                     <div className="ep-field">
                                         <label className="ep-label">Nombre para mostrar</label>
@@ -712,41 +985,23 @@ export default function EditProfile({ onClose }) {
                                 {/* Bio */}
                                 <div className="ep-field">
                                     <div className="ep-bio-header">
-                                        <label className="ep-label" style={{ margin: 0 }}>
-                                            Biografía <span className="ep-optional">Markdown soportado</span>
-                                        </label>
-                                        <div className="ep-bio-tabs">
-                                            <button type="button" className={`ep-bio-tab ${bioMode === 'write' ? 'active' : ''}`} onClick={() => setBioMode('write')}>Escribir</button>
-                                            <button type="button" className={`ep-bio-tab ${bioMode === 'preview' ? 'active' : ''}`} onClick={() => setBioMode('preview')}>Vista previa</button>
-                                        </div>
+                                        <label className="ep-label" style={{ margin: 0 }}>Biografía <span className="ep-optional">Markdown soportado</span></label>
                                     </div>
-
-                                    {bioMode === 'write' ? (
-                                        <>
-                                            <div className="ep-md-toolbar">
-                                                <button type="button" className="ep-md-btn" title="Negrita" onClick={() => insertMarkdown('**', '**')}><IconBold /></button>
-                                                <button type="button" className="ep-md-btn" title="Cursiva" onClick={() => insertMarkdown('*', '*')}><IconItalic /></button>
-                                                <button type="button" className="ep-md-btn" title="Enlace" onClick={() => insertMarkdown('[', '](url)')}><IconLinkSmall /></button>
-                                            </div>
-                                            <textarea
-                                                ref={textareaRef}
-                                                className="ep-input ep-textarea"
-                                                value={formData.bio}
-                                                onChange={e => handleChange('bio', e.target.value)}
-                                                placeholder="Cuéntanos sobre ti..."
-                                                maxLength={100}
-                                                rows={6}
-                                            />
-                                            <span className="ep-char-count">{formData.bio.length}/100</span>
-                                        </>
-                                    ) : (
-                                        <div className="ep-bio-preview markdown-content">
-                                            {formData.bio
-                                                ? <ReactMarkdown remarkPlugins={[remarkGfm]}>{formData.bio}</ReactMarkdown>
-                                                : <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>Nada que previsualizar...</span>
-                                            }
-                                        </div>
-                                    )}
+                                    <div className="ep-md-toolbar">
+                                        <button type="button" className="ep-md-btn" title="Negrita" onClick={() => insertMarkdown('**', '**')}><IconBold /></button>
+                                        <button type="button" className="ep-md-btn" title="Cursiva" onClick={() => insertMarkdown('*', '*')}><IconItalic /></button>
+                                        <button type="button" className="ep-md-btn" title="Enlace" onClick={() => insertMarkdown('[', '](url)')}><IconLinkSmall /></button>
+                                    </div>
+                                    <textarea
+                                        ref={textareaRef}
+                                        className="ep-input ep-textarea"
+                                        value={formData.bio}
+                                        onChange={e => handleChange('bio', e.target.value)}
+                                        placeholder="Cuéntanos sobre ti..."
+                                        maxLength={100}
+                                        rows={6}
+                                    />
+                                    <span className="ep-char-count">{formData.bio.length}/100</span>
                                 </div>
 
                                 <div className="ep-field">
@@ -853,7 +1108,8 @@ export default function EditProfile({ onClose }) {
                         )}
 
                         {/* ── FAVORITOS ── */}
-                        {activeSection === 'favorites' && (
+                        {showProfileSections && standalone && <div className="ep-settings-section-divider" aria-hidden="true" />}
+                        {(activeSection === 'favorites' || standalone && activeSection !== 'blocked') && (
                             <>
                                 {/* Favorite Games */}
                                 <div className="ep-field">
@@ -935,102 +1191,9 @@ export default function EditProfile({ onClose }) {
                             </>
                         )}
 
-                        {/* ── INTERESES ── */}
-                        {activeSection === 'interests' && (
-                            <>
-                                {/* Platforms */}
-                                <div className="ep-field">
-                                    <label className="ep-label">Plataformas de juego</label>
-                                    <div className="ep-pill-grid">
-                                        {PLATFORMS.map(p => (
-                                            <button
-                                                key={p} type="button"
-                                                className={`ep-pill-btn ${formData.platforms.includes(p) ? 'active' : ''}`}
-                                                onClick={() => toggleArrayItem('platforms', p)}
-                                            >
-                                                {p}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Game genres */}
-                                <div className="ep-field">
-                                    <label className="ep-label">
-                                        <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                            <IconGamepad /> Géneros de videojuegos
-                                        </span>
-                                    </label>
-                                    <div className="ep-pill-grid">
-                                        {GAME_GENRES.map(g => (
-                                            <button
-                                                key={g} type="button"
-                                                className={`ep-pill-btn ${formData.favorite_genres.includes(g) ? 'active' : ''}`}
-                                                onClick={() => toggleArrayItem('favorite_genres', g)}
-                                            >
-                                                {g}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Anime genres */}
-                                <div className="ep-field">
-                                    <label className="ep-label">
-                                        <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                            <IconTV /> Géneros de anime
-                                        </span>
-                                    </label>
-                                    <div className="ep-pill-grid">
-                                        {ANIME_GENRES.map(g => (
-                                            <button
-                                                key={g} type="button"
-                                                className={`ep-pill-btn ${formData.anime_tags.includes(g) ? 'active' : ''}`}
-                                                onClick={() => toggleArrayItem('anime_tags', g)}
-                                            >
-                                                {g}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Custom tags */}
-                                <div className="ep-field">
-                                    <label className="ep-label">
-                                        Otros intereses <span className="ep-optional">personalizados</span>
-                                    </label>
-                                    <div className="ep-tag-input-row">
-                                        <input
-                                            type="text"
-                                            className="ep-input"
-                                            placeholder="Ej: Cómics, Cosplay, DnD..."
-                                            value={customTagInput}
-                                            onChange={e => setCustomTagInput(e.target.value)}
-                                            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustomTag() } }}
-                                            maxLength={30}
-                                        />
-                                        <button type="button" className="btn btn-secondary btn-sm" onClick={addCustomTag}>
-                                            <IconPlus />
-                                        </button>
-                                    </div>
-                                    {formData.custom_tags.length > 0 && (
-                                        <div className="ep-tags-cloud">
-                                            {formData.custom_tags.map(tag => (
-                                                <span key={tag} className="ep-tag-item">
-                                                    {tag}
-                                                    <button type="button" className="ep-tag-remove" onClick={() => removeCustomTag(tag)}>
-                                                        <IconClose />
-                                                    </button>
-                                                </span>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            </>
-                        )}
-
                         {/* ── REDES SOCIALES ── */}
-                        {activeSection === 'social' && (
+                        {showProfileSections && standalone && <div className="ep-settings-section-divider" aria-hidden="true" />}
+                        {(activeSection === 'social' || standalone && activeSection !== 'blocked') && (
                             <>
                                 <div className="ep-social-list">
                                     {Object.entries(formData.social_links).map(([platformId, value]) => {
@@ -1120,16 +1283,27 @@ export default function EditProfile({ onClose }) {
                     </div>
 
                     {/* Footer actions */}
-                    <div className="ep-modal-footer">
-                        <button type="button" className="btn btn-secondary" onClick={handleClose}>
-                            Cancelar
-                        </button>
-                        <button type="submit" className="btn btn-primary" disabled={saving || !!usernameError}>
-                            {saving ? 'Guardando...' : 'Guardar cambios'}
-                        </button>
-                    </div>
+                    {!standalone && <div className="ep-modal-footer">
+                        <button type="button" className="btn btn-secondary" onClick={handleClose}>Cancelar</button>
+                        <button type="submit" className="btn btn-primary" disabled={saving || !!usernameError}>{saving ? 'Guardando...' : 'Guardar cambios'}</button>
+                    </div>}
                 </form>
-            </div>
+                </div>
+
+                {standalone && <aside className="ep-settings-preview-column">
+                    <span className="ep-settings-nav-label">PERFIL</span>
+                    <article className="ep-settings-profile-preview" style={{ '--preview-accent': formData.theme_color || '#14b8a6' }}>
+                        <div className="ep-settings-preview-banner">{bannerPreview && <img src={bannerPreview} alt="" />}</div>
+                        <div className="ep-settings-preview-content">
+                            <div className="ep-settings-preview-avatar">{avatarPreview ? <img src={avatarPreview} alt="" /> : <img src="/default-avatar.svg" alt="" />}</div>
+                            <div className="ep-settings-preview-name-row"><strong>{formData.display_name || 'Tu nombre'}</strong>{formData.pronouns && <span className="ep-settings-preview-pronouns">{formData.pronouns}</span>}</div>
+                            <div className="ep-settings-preview-identity-row"><span className="ep-settings-preview-username">@{formData.username || 'usuario'}</span>{formData.featured_badge && BADGES_MAP[formData.featured_badge] && <span className="ep-settings-preview-badge" style={{ '--badge-accent': BADGES_MAP[formData.featured_badge].color }} aria-label={BADGES_MAP[formData.featured_badge].title} title={BADGES_MAP[formData.featured_badge].title}>{BADGES_MAP[formData.featured_badge].icon}</span>}</div>
+                            <p>{formData.bio || 'Tu biografía aparecerá aquí.'}</p>
+                            {formData.profile_song && typeof formData.profile_song === 'object' && <div className="ep-settings-preview-song"><img src={formData.profile_song.cover} alt="" /><span><strong>{formData.profile_song.name}</strong><small>{formData.profile_song.artist}</small></span></div>}
+                        </div>
+                    </article>
+                    <p className={`ep-settings-preview-hint${hasUnsavedChanges ? ' ep-settings-preview-hint--dirty' : ''}`}>{hasUnsavedChanges ? 'Tienes cambios sin guardar.' : 'No te olvides de guardar los cambios.'}</p>
+                </aside>}
         </div>
 
         {cropModal.isOpen && (
@@ -1205,5 +1379,8 @@ export default function EditProfile({ onClose }) {
             </div>
         )}
         </div>
-), document.body)
+        </div>
+    )
+
+    return standalone ? settingsMarkup : createPortal(editorMarkup, document.body)
 }

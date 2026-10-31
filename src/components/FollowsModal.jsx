@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import LoadingSpinner from './LoadingSpinner'
@@ -14,7 +14,8 @@ const IconClose = () => (
 )
 
 export default function FollowsModal({ isOpen, onClose, type, userId, themeColor }) {
-    const { user: currentUser } = useAuth()
+    const { user: currentUser, profile } = useAuth()
+    const navigate = useNavigate()
     const [currentTab, setCurrentTab] = useState(type)
     const [users, setUsers] = useState([])
     const [loading, setLoading] = useState(true)
@@ -77,7 +78,14 @@ export default function FollowsModal({ isOpen, onClose, type, userId, themeColor
     const handleToggleFollow = async (e, targetUserId) => {
         e.preventDefault()
         e.stopPropagation()
-        if (!currentUser) return
+        if (!currentUser) {
+            navigate('/register')
+            return
+        }
+        if (!profile) {
+            navigate('/onboarding')
+            return
+        }
 
         const isFollowing = myFollowingIds.has(targetUserId)
         const newSet = new Set(myFollowingIds)

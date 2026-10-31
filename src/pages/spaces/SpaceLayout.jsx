@@ -251,7 +251,7 @@ export default function SpaceLayout() {
   };
 
   const handleJoinSpace = async () => {
-    if (!user) return navigate('/login');
+    if (!user) return navigate('/register');
     try {
       setIsJoining(true);
       await joinSpace(spaceId, user.id);

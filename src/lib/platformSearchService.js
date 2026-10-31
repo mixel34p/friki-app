@@ -87,10 +87,20 @@ export async function getSearchHighlights(userId) {
       || items.find(item => normalized(item.name || item.title).startsWith(expectedName))
       || null
   }
+  const usersList = users.status === 'fulfilled' ? (userId ? users.value : users.value.data || []).slice(0, 12) : []
+  const registeredCounts = await Promise.all(usersList.map(async person => {
+    const personId = person.user_id || person.id
+    if (!personId) return 0
+    const { count, error } = await supabase
+      .from('library_entries')
+      .select('work_id', { count: 'exact', head: true })
+      .eq('user_id', personId)
+    return error ? 0 : count || 0
+  }))
   return {
     games: [selectTitle(minecraft, 'Minecraft'), selectTitle(zelda, 'The Legend of Zelda: Breath of the Wild')].filter(Boolean),
     anime: [selectTitle(naruto, 'Naruto'), selectTitle(attackOnTitan, 'Attack on Titan')].filter(Boolean),
     spaces: spaces.status === 'fulfilled' ? (spaces.value.data || []).map(space => ({ ...space, member_count: space.space_members?.[0]?.count || 0 })).sort((a, b) => b.member_count - a.member_count) : [],
-    users: users.status === 'fulfilled' ? (userId ? users.value : users.value.data || []).slice(0, 12) : [],
+    users: usersList.map((person, index) => ({ ...person, registeredWorks: registeredCounts[index] })),
   }
 }

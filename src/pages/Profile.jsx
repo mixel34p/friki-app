@@ -265,7 +265,18 @@ export default function Profile() {
     }
 
     const handleFollow = async () => {
-        if (!user || !profile) return
+        if (!user) {
+            navigate('/register')
+            return
+        }
+        if (!profile) {
+            navigate('/onboarding')
+            return
+        }
+        if (!myProfile) {
+            navigate('/onboarding')
+            return
+        }
         try {
             if (isFollowing) {
                 await supabase.from('follows').delete()
@@ -503,7 +514,7 @@ export default function Profile() {
                             )}
                             <div className="profile-actions">
                                 {isOwnProfile ? (
-                                    <button onClick={() => setSearchParams({ edit: 'true' })} className="btn btn-secondary profile-edit-button">
+                                    <button onClick={() => navigate('/settings')} className="btn btn-secondary profile-edit-button">
                                         <IconEdit /> Editar perfil
                                     </button>
                                 ) : (

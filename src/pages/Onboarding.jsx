@@ -1,48 +1,94 @@
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ImageCropperModal from '../components/ImageCropperModal'
-import { STATIC_COVERS } from '../lib/constants'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, rectSortingStrategy } from '@dnd-kit/sortable';
 import { SortableFavoriteItem } from '../components/profile/SortableFavoriteItem';
 
+import './Auth.css'
 import './Onboarding.css'
 
-const THEME_COLORS = ['#14b8a6', '#3b82f6', '#8b5cf6', '#f43f5e', '#f59e0b', '#10b981', '#6366f1', '#ec4899']
+const DEFAULT_AVATAR = '/default-avatar.svg'
+const DEFAULT_THEME_COLOR = '#14b8a6'
+
+const getAgeFromBirthDate = (value) => {
+    const [year, month, day] = value.split('-').map(Number)
+    const today = new Date()
+    let age = today.getFullYear() - year
+    const birthdayHasNotPassed = today.getMonth() + 1 < month ||
+        (today.getMonth() + 1 === month && today.getDate() < day)
+    if (birthdayHasNotPassed) age -= 1
+    return age
+}
+
+const getBirthDateError = (value) => {
+    const [year, month, day] = value.split('-').map(Number)
+    if (!year || !month || !day) return 'La fecha no es correcta.'
+
+    const birthDate = new Date(year, month - 1, day)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    if (
+        birthDate.getFullYear() !== year ||
+        birthDate.getMonth() !== month - 1 ||
+        birthDate.getDate() !== day ||
+        birthDate > today
+    ) return 'La fecha no es correcta.'
+
+    const age = getAgeFromBirthDate(value)
+    if (age < 16) return 'Tienes que tener 16 años o más para acceder.'
+
+    return ''
+}
 
 export default function Onboarding() {
     const { user, refreshProfile, signOut } = useAuth()
     const navigate = useNavigate()
+    const onboardingStepStorageKey = user?.id ? `geeksphere-onboarding-step:${user.id}` : null
+    const onboardingDraftStorageKey = user?.id ? `geeksphere-onboarding-draft:${user.id}` : null
+    const [savedDraft] = useState(() => {
+        if (!onboardingDraftStorageKey || typeof window === 'undefined') return {}
+        try {
+            return JSON.parse(window.sessionStorage.getItem(onboardingDraftStorageKey) || '{}')
+        } catch {
+            return {}
+        }
+    })
     
-    const [step, setStep] = useState(1)
+    const [step, setStep] = useState(() => {
+        if (!onboardingStepStorageKey || typeof window === 'undefined') return 1
+        try {
+            return window.sessionStorage.getItem(onboardingStepStorageKey) === '2' ? 2 : 1
+        } catch {
+            return 1
+        }
+    })
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
+    const [fieldErrors, setFieldErrors] = useState({})
     
     // Form State
-    const [displayName, setDisplayName] = useState('')
-    const [bio, setBio] = useState('')
-    const [bioMode, setBioMode] = useState('write')
-    const textareaRef = useRef(null)
-    const [pronouns, setPronouns] = useState('')
-    const [themeColor, setThemeColor] = useState('#14b8a6')
-    
+    const [username, setUsername] = useState(savedDraft.username || '')
+    const [usernameAvailability, setUsernameAvailability] = useState('idle')
+    const [displayName, setDisplayName] = useState(savedDraft.displayName || '')
+    // Collected in the onboarding UI; persistence will be added with the profile schema change.
+    const [birthDate, setBirthDate] = useState(savedDraft.birthDate || '')
+    const [showBirthDateConfirm, setShowBirthDateConfirm] = useState(false)
+    const birthDateInputRef = useRef(null)
     // Files
     const [avatarFile, setAvatarFile] = useState(null)
-    const [avatarPreview, setAvatarPreview] = useState(null)
-    const [bannerFile, setBannerFile] = useState(null)
-    const [bannerPreview, setBannerPreview] = useState(null)
+    const [avatarPreview, setAvatarPreview] = useState(DEFAULT_AVATAR)
 
     // Cropper State
     const [cropModal, setCropModal] = useState({ isOpen: false, type: null, src: null, aspect: 1 })
 
     // Favorites
-    const [favorite_games, setFavoriteGames] = useState([])
-    const [favorite_animes, setFavoriteAnimes] = useState([])
+    const [favorite_games, setFavoriteGames] = useState(savedDraft.favorite_games || [])
+    const [favorite_animes, setFavoriteAnimes] = useState(savedDraft.favorite_animes || [])
     const [gameSearchQuery, setGameSearchQuery] = useState('')
     const [gameSearchResults, setGameSearchResults] = useState([])
     const [isSearchingGames, setIsSearchingGames] = useState(false)
@@ -57,24 +103,117 @@ export default function Onboarding() {
         useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
     )
 
-    const insertMarkdown = (prefix, suffix) => {
-        const textarea = textareaRef.current
-        if (!textarea) return
-        const { selectionStart, selectionEnd } = textarea
-        const nextBio = bio.slice(0, selectionStart) + prefix + bio.slice(selectionStart, selectionEnd) + suffix + bio.slice(selectionEnd)
-        setBio(nextBio)
-        setTimeout(() => {
-            textarea.focus()
-            textarea.setSelectionRange(selectionStart + prefix.length, selectionEnd + prefix.length)
-        }, 0)
-    }
+    useEffect(() => {
+        if (!onboardingStepStorageKey) return
+        try {
+            window.sessionStorage.setItem(onboardingStepStorageKey, String(step))
+        } catch {}
+    }, [onboardingStepStorageKey, step])
 
     useEffect(() => {
-        // Pre-fill from auth metadata if available
-        if (user?.user_metadata?.username) {
-            setDisplayName(user.user_metadata.username)
+        if (!onboardingDraftStorageKey) return
+        try {
+            window.sessionStorage.setItem(onboardingDraftStorageKey, JSON.stringify({
+                username,
+                displayName,
+                birthDate,
+                favorite_games,
+                favorite_animes
+            }))
+        } catch {}
+    }, [onboardingDraftStorageKey, username, displayName, birthDate, favorite_games, favorite_animes])
+
+    useEffect(() => {
+        if (!user) return
+        const metadata = user.user_metadata || {}
+        const emailName = user.email?.split('@')[0] || ''
+        const discordIdentity = user.identities?.find(identity => identity.provider === 'discord')
+        const discordMetadata = discordIdentity?.identity_data || {}
+        const twitchIdentity = user.identities?.find(identity => identity.provider === 'twitch')
+        const twitchMetadata = twitchIdentity?.identity_data || {}
+        const discordCustomClaims = discordMetadata.custom_claims || metadata.custom_claims || {}
+        const isDiscordSignup = user.app_metadata?.provider === 'discord' || Boolean(discordIdentity)
+        const isTwitchSignup = user.app_metadata?.provider === 'twitch' || Boolean(twitchIdentity)
+        const discordUsername = discordMetadata.username || discordMetadata.user_name || discordMetadata.preferred_username ||
+            metadata.username || metadata.user_name || metadata.preferred_username || metadata.full_name || metadata.name || emailName
+        const twitchUsername = twitchMetadata.login || twitchMetadata.preferred_username || twitchMetadata.user_name || twitchMetadata.username ||
+            metadata.login || metadata.preferred_username || metadata.user_name || metadata.username || metadata.name || metadata.full_name || emailName
+        const sourceUsername = isDiscordSignup
+            ? discordUsername
+            : isTwitchSignup
+                ? twitchUsername
+                : metadata.username || metadata.preferred_username || metadata.user_name || emailName || metadata.name || metadata.full_name || ''
+        const safeUsername = sourceUsername
+            .split('#')[0]
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .replace(/[^a-z0-9_]/g, '')
+            .slice(0, 20)
+        const autoTwitchUsernameCandidates = [emailName, metadata.login, metadata.preferred_username, metadata.user_name, metadata.username, metadata.name, metadata.full_name]
+            .filter(Boolean)
+            .map(value => value.replace(/^@/, '').trim().toLowerCase())
+        const savedUsernameIsOldAutoTwitchValue = isTwitchSignup && savedDraft.username &&
+            autoTwitchUsernameCandidates.includes(savedDraft.username.replace(/^@/, '').trim().toLowerCase())
+        if (!savedDraft.username || savedUsernameIsOldAutoTwitchValue) {
+            setUsername(safeUsername.length >= 3 ? safeUsername : `geek${user.id.replace(/-/g, '').slice(0, 8)}`)
         }
-    }, [user])
+        const discordDisplayName = discordMetadata.global_name || discordCustomClaims.global_name ||
+            discordMetadata.display_name || metadata.global_name || metadata.custom_claims?.global_name ||
+            metadata.display_name || metadata.full_name || metadata.name || metadata.username || emailName
+        const previousDiscordNameSuggestions = [
+            discordMetadata.username,
+            discordMetadata.user_name,
+            discordMetadata.full_name,
+            discordMetadata.name,
+            metadata.username,
+            metadata.user_name,
+            metadata.full_name,
+            metadata.name
+        ].filter(Boolean).map(value => value.split('#')[0].replace(/^@/, '').trim().toLowerCase())
+        const savedDisplayNameIsOldDiscordUsername = isDiscordSignup && savedDraft.displayName &&
+            previousDiscordNameSuggestions.includes(savedDraft.displayName.replace(/^@/, '').trim().toLowerCase())
+        const autoTwitchDisplayNameCandidates = [emailName, metadata.name, metadata.full_name, metadata.display_name, metadata.username, metadata.user_name]
+            .filter(Boolean)
+            .map(value => value.replace(/^@/, '').trim().toLowerCase())
+        const savedDisplayNameIsOldAutoTwitchValue = isTwitchSignup && savedDraft.displayName &&
+            autoTwitchDisplayNameCandidates.includes(savedDraft.displayName.replace(/^@/, '').trim().toLowerCase())
+        if (!savedDraft.displayName || savedDisplayNameIsOldAutoTwitchValue) setDisplayName(isDiscordSignup
+            ? discordDisplayName
+            : isTwitchSignup
+                ? twitchUsername
+                : metadata.full_name || metadata.name || metadata.display_name || metadata.username || emailName || '')
+        else if (savedDisplayNameIsOldDiscordUsername && discordDisplayName) setDisplayName(discordDisplayName)
+        setAvatarPreview(DEFAULT_AVATAR)
+        setAvatarFile(null)
+    }, [user, savedDraft.username, savedDraft.displayName])
+
+    useEffect(() => {
+        const normalizedUsername = username.trim().toLowerCase()
+        if (!/^[a-zA-Z0-9_]{3,20}$/.test(normalizedUsername)) {
+            setUsernameAvailability('idle')
+            return
+        }
+
+        let isCurrent = true
+        setUsernameAvailability('checking')
+        const timeout = setTimeout(async () => {
+            const { data, error: availabilityError } = await supabase
+                .from('profiles')
+                .select('id')
+                .eq('username', normalizedUsername)
+                .maybeSingle()
+
+            if (!isCurrent) return
+            if (availabilityError) setUsernameAvailability('error')
+            else setUsernameAvailability(data ? 'taken' : 'available')
+        }, 350)
+
+        return () => {
+            isCurrent = false
+            clearTimeout(timeout)
+        }
+    }, [username])
 
     useEffect(() => {
         if (gameSearchQuery.length < 3) { setGameSearchResults([]); return }
@@ -169,24 +308,19 @@ export default function Onboarding() {
     }
 
     const handleCropComplete = (croppedBlob, croppedUrl) => {
-        if (cropModal.type === 'avatar') {
-            setAvatarFile(croppedBlob)
-            setAvatarPreview(croppedUrl)
-        } else {
-            setBannerFile(croppedBlob)
-            setBannerPreview(croppedUrl)
-        }
+        setAvatarFile(croppedBlob)
+        setAvatarPreview(croppedUrl)
         setCropModal({ isOpen: false, type: null, src: null, aspect: 1 })
     }
 
     const uploadImage = async (file, folder) => {
-        const fileExt = file.name.split('.').pop()
+        const fileExt = file.name?.split('.').pop() || file.type?.split('/')[1] || 'jpg'
         const fileName = `${user.id}-${Math.random()}.${fileExt}`
         const filePath = `${folder}/${fileName}`
         
         const { error: uploadError } = await supabase.storage
             .from('avatars')
-            .upload(filePath, file)
+            .upload(filePath, file, { contentType: file.type || `image/${fileExt}` })
             
         if (uploadError) throw uploadError
         
@@ -200,12 +334,12 @@ export default function Onboarding() {
     const checkUsernameAvailability = async () => {
         if (!username || username.length < 3) return false
         
-        const { data } = await supabase
+        const { data, error } = await supabase
             .from('profiles')
             .select('id')
-            .ilike('username', username)
+            .eq('username', username)
             .maybeSingle()
-            
+        if (error) throw error
         return !data // True if not taken
     }
 
@@ -213,15 +347,36 @@ export default function Onboarding() {
         setError(null)
         
         if (step === 1) {
-            if (!displayName.trim()) {
-                setError('El nombre para mostrar no puede estar vacío')
+            const nextFieldErrors = {
+                username: !username.trim() ? 'Añade un nombre de usuario.' : '',
+                displayName: !displayName.trim() ? 'Añade un nombre para mostrar.' : '',
+                birthDate: !birthDate ? 'Añade tu fecha de nacimiento.' : ''
+            }
+            setFieldErrors(nextFieldErrors)
+            if (Object.values(nextFieldErrors).some(Boolean)) return
+
+            const birthDateError = getBirthDateError(birthDate)
+            if (birthDateError) {
+                setFieldErrors(current => ({ ...current, birthDate: birthDateError }))
+                return
+            }
+
+            if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
+                setFieldErrors(current => ({ ...current, username: 'Usa entre 3 y 20 letras, números o guiones bajos.' }))
+                return
+            }
+            try {
+                if (!(await checkUsernameAvailability())) {
+                    setUsernameAvailability('taken')
+                    return
+                }
+            } catch {
+                setError('No se pudo comprobar el nombre de usuario. Inténtalo de nuevo.')
                 return
             }
             
-            setStep(2)
+            setShowBirthDateConfirm(true)
         } else if (step === 2) {
-            setStep(3)
-        } else if (step === 3) {
             handleSubmit()
         }
     }
@@ -231,30 +386,24 @@ export default function Onboarding() {
         setError(null)
         
         try {
-            let finalAvatarUrl = null
+            let finalAvatarUrl = DEFAULT_AVATAR
             if (avatarFile) {
                 let url = await uploadImage(avatarFile, 'avatars')
-                finalAvatarUrl = url ? `${url}?t=${Date.now()}` : null
+                finalAvatarUrl = url ? `${url}?t=${Date.now()}` : DEFAULT_AVATAR
             }
 
-            let finalBannerUrl = null
-            if (bannerFile) {
-                let url = await uploadImage(bannerFile, 'banners')
-                finalBannerUrl = url ? `${url}?t=${Date.now()}` : null
-            }
-            
             const { error: profileError } = await supabase
                 .from('profiles')
                 .insert({
                     id: user.id,
-                    username: user.user_metadata.username.toLowerCase(),
+                    username: username.toLowerCase(),
                     display_name: displayName,
-                    bio: bio,
+                    bio: '',
                     avatar_url: finalAvatarUrl,
-                    banner_url: finalBannerUrl,
-                    pronouns,
+                    banner_url: null,
+                    pronouns: '',
                     platforms: [],
-                    theme_color: themeColor,
+                    theme_color: DEFAULT_THEME_COLOR,
                     favorite_games,
                     favorite_animes,
                     onboarding_completed: true
@@ -267,8 +416,12 @@ export default function Onboarding() {
                 throw profileError
             }
             
+            try {
+                if (onboardingStepStorageKey) window.sessionStorage.removeItem(onboardingStepStorageKey)
+                if (onboardingDraftStorageKey) window.sessionStorage.removeItem(onboardingDraftStorageKey)
+            } catch {}
             await refreshProfile()
-            navigate('/home')
+            navigate(`/profile/${username.toLowerCase()}`)
             
         } catch (err) {
             console.error('Onboarding Error:', err)
@@ -278,182 +431,125 @@ export default function Onboarding() {
     }
 
     return (
-        <div className="onboarding-page" style={{ '--brand-primary': themeColor, '--brand-dark': themeColor }}>
-            <aside className="onboarding-brand-panel" aria-label="GeekSphere">
-                <div className="onboarding-brand-mosaic" aria-hidden="true">
-                    {STATIC_COVERS.slice(0, 16).map((cover, index) => (
-                        <div key={`${cover}-${index}`} className="onboarding-mosaic-tile" style={{ backgroundImage: `url(${cover})` }} />
-                    ))}
-                </div>
-                <div className="onboarding-brand-overlay" />
-                <div className="onboarding-brand-copy"><h1>Te damos la<br /><span>bienvenida</span></h1></div>
-                <div className="onboarding-brand-footer">
-                    <span className="onboarding-brand-mark"><img src="/icons/logo.png" alt="" /></span>
-                    <span className="onboarding-brand-name">GeekSphere</span>
-                </div>
-            </aside>
+        <div className="onboarding-page onboarding-in-layout" style={{ '--brand-primary': DEFAULT_THEME_COLOR, '--brand-dark': DEFAULT_THEME_COLOR }}>
+            <div className="onboarding-content-shell">
+                <header className="onboarding-hero">
+                    <img src="/icons/logo.png" alt="GeekSphere" />
+                    <h1>Solo un paso<br /><span>más</span></h1>
+                </header>
 
-            <main className="onboarding-container">
-                <div className="onboarding-card-topline">
-                    <span>CONFIGURACIÓN DE PERFIL</span>
-                    <span className="onboarding-step-count">0{step}<i>/</i>03</span>
-                </div>
+                <section className="onboarding-container" aria-label="Completa tu perfil">
+                    <div className="register-progress" aria-label={`Paso ${step} de 2`}>
+                        <div className="register-progress-track"><span style={{ width: `${(step / 2) * 100}%` }} /></div>
+                        <div className="register-progress-labels">
+                            {['Identidad', 'Favoritos'].map((label, index) => (
+                                <span className={index + 1 <= step ? 'active' : ''} key={label}>{label}</span>
+                            ))}
+                        </div>
+                    </div>
 
-                <nav className="onboarding-stepper" aria-label={`Paso ${step} de 3`}>
-                    {['Identidad', 'Apariencia', 'Favoritos'].map((label, index) => {
-                        const stepNumber = index + 1
-                        const state = stepNumber < step ? 'complete' : stepNumber === step ? 'current' : ''
-                        return (
-                            <div className={`onboarding-step-item ${state}`} key={label} aria-current={stepNumber === step ? 'step' : undefined}>
-                                <span className="onboarding-step-dot">{stepNumber < step ? '✓' : `0${stepNumber}`}</span>
-                                <span className="onboarding-step-label">{label}</span>
-                            </div>
-                        )
-                    })}
-                </nav>
+                    {error && <div className="onboarding-error">{error}</div>}
 
-                {error && <div className="onboarding-error">{error}</div>}
-
-                <div key={step} className={`onboarding-stage onboarding-stage-${step}`}>
+                    <div key={step} className={`onboarding-stage onboarding-stage-${step}`}>
                 {step === 1 && (
-                    <div className="onboarding-step step-1">
-                        <div className="form-group">
-                            <label>Nombre a mostrar</label>
+                    <div className="onboarding-step step-1 onboarding-identity-form auth-form">
+                        <div className="onboarding-avatar-field">
+                            <div className="onboarding-avatar-control">
+                                <input id="onboarding-avatar" type="file" accept="image/*" onChange={event => handleFileChange(event, 'avatar')} hidden />
+                                <label className="onboarding-avatar-photo" htmlFor="onboarding-avatar" title="Cambiar foto de perfil">
+                                    <img src={avatarPreview || DEFAULT_AVATAR} alt="Cambiar foto de perfil" />
+                                </label>
+                                <label className="onboarding-avatar-add" htmlFor="onboarding-avatar" title="Cambiar foto de perfil" aria-label="Cambiar foto de perfil">
+                                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+                                </label>
+                            </div>
+                            <span>Foto de perfil</span>
+                        </div>
+
+                        <div className="input-group">
+                            <label className="input-label" htmlFor="onboarding-username">Nombre de usuario</label>
+                            <div className="onboarding-username-input">
+                                <span aria-hidden="true">@</span>
+                                <input
+                                    id="onboarding-username"
+                                    type="text"
+                                    className="auth-input"
+                                    value={username}
+                                    onChange={event => {
+                                        setUsername(event.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 20))
+                                        setShowBirthDateConfirm(false)
+                                        setFieldErrors(current => ({ ...current, username: '' }))
+                                    }}
+                                    placeholder="Ej.: mikasa_42"
+                                    autoComplete="username"
+                                    maxLength={20}
+                                    aria-invalid={Boolean(fieldErrors.username)}
+                                />
+                            </div>
+                            <div className="onboarding-username-preview" aria-live="polite">
+                                <span className="onboarding-username-url">geeksphere.vercel.app/profile/</span>
+                                <span className="onboarding-username-highlight">{username || 'tu_usuario'}</span>
+                                {usernameAvailability !== 'idle' && (
+                                    <span className={`onboarding-username-status is-${usernameAvailability}`}>
+                                        {usernameAvailability === 'checking' && 'Comprobando...'}
+                                        {usernameAvailability === 'taken' && 'En uso'}
+                                        {usernameAvailability === 'available' && 'Es tuyo'}
+                                        {usernameAvailability === 'error' && 'No se pudo comprobar'}
+                                    </span>
+                                )}
+                            </div>
+                            {fieldErrors.username && <span className="onboarding-field-error">{fieldErrors.username}</span>}
+                        </div>
+                        <div className="input-group">
+                            <label className="input-label" htmlFor="onboarding-display-name">Nombre a mostrar</label>
                             <input 
+                                id="onboarding-display-name"
                                 type="text" 
-                                className="input"
+                                className="auth-input"
                                 value={displayName}
-                                onChange={(e) => setDisplayName(e.target.value)}
+                                onChange={(e) => {
+                                    setDisplayName(e.target.value)
+                                    setShowBirthDateConfirm(false)
+                                    setFieldErrors(current => ({ ...current, displayName: '' }))
+                                }}
                                 placeholder="Tu apodo genial"
                                 maxLength={30}
+                                aria-invalid={Boolean(fieldErrors.displayName)}
                             />
+                            {fieldErrors.displayName && <span className="onboarding-field-error">{fieldErrors.displayName}</span>}
                         </div>
-
-                        <div className="form-group">
-                            <label>Pronombres (Opcional)</label>
-                            <input 
-                                type="text" 
-                                className="input"
-                                value={pronouns}
-                                onChange={(e) => setPronouns(e.target.value)}
-                                placeholder="Ej: él/él, ella/ella, they/them"
-                                maxLength={20}
+                        <div className="input-group">
+                            <label className="input-label" htmlFor="onboarding-birth-date">Fecha de nacimiento</label>
+                            <input
+                                id="onboarding-birth-date"
+                                type="date"
+                                className="auth-input onboarding-date-input"
+                                ref={birthDateInputRef}
+                                value={birthDate}
+                                onChange={event => {
+                                    setBirthDate(event.target.value)
+                                    setShowBirthDateConfirm(false)
+                                    setFieldErrors(current => ({ ...current, birthDate: '' }))
+                                }}
+                                max={new Date().toISOString().slice(0, 10)}
+                                aria-invalid={Boolean(fieldErrors.birthDate)}
                             />
-                        </div>
-
-                        <div className="form-group">
-                            <div className="ep-bio-header onboarding-bio-header">
-                                <label className="input-label" htmlFor="onboarding-bio">Biografía <span className="ep-optional">Markdown compatible</span></label>
-                                <div className="ep-bio-tabs">
-                                    <button type="button" className={`ep-bio-tab ${bioMode === 'write' ? 'active' : ''}`} onClick={() => setBioMode('write')}>Escribir</button>
-                                    <button type="button" className={`ep-bio-tab ${bioMode === 'preview' ? 'active' : ''}`} onClick={() => setBioMode('preview')}>Vista previa</button>
-                                </div>
-                            </div>
-
-                            {bioMode === 'write' ? (
-                                <>
-                                    <div className="ep-md-toolbar">
-                                        <button type="button" className="ep-md-btn" title="Negrita" aria-label="Insertar negrita" onClick={() => insertMarkdown('**', '**')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z" /><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z" /></svg></button>
-                                        <button type="button" className="ep-md-btn" title="Cursiva" aria-label="Insertar cursiva" onClick={() => insertMarkdown('*', '*')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="19" y1="4" x2="10" y2="4" /><line x1="14" y1="20" x2="5" y2="20" /><line x1="15" y1="4" x2="9" y2="20" /></svg></button>
-                                        <button type="button" className="ep-md-btn" title="Enlace" aria-label="Insertar enlace" onClick={() => insertMarkdown('[', '](url)')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></button>
-                                    </div>
-                                    <textarea
-                                        id="onboarding-bio"
-                                        ref={textareaRef}
-                                        className="ep-input ep-textarea onboarding-bio-editor"
-                                        value={bio}
-                                        onChange={e => setBio(e.target.value)}
-                                        placeholder="Cuéntanos sobre ti..."
-                                        maxLength={500}
-                                        rows={6}
-                                    />
-                                    <span className="ep-char-count">{bio.length}/500</span>
-                                </>
-                            ) : (
-                                <div className="ep-bio-preview markdown-content onboarding-bio-preview">
-                                    {bio
-                                        ? <ReactMarkdown remarkPlugins={[remarkGfm]}>{bio}</ReactMarkdown>
-                                        : <span className="onboarding-bio-empty">Nada que previsualizar...</span>}
-                                </div>
-                            )}
+                            {fieldErrors.birthDate
+                                ? <span className="onboarding-field-error">{fieldErrors.birthDate}</span>
+                                : <span className="onboarding-field-hint">No registramos tu fecha de nacimiento; es para comprobar que cumples con los requisitos de edad.</span>}
                         </div>
                     </div>
                 )}
 
                 {step === 2 && (
                     <div className="onboarding-step step-2">
-                        <div className="onboarding-visuals">
-                            <label 
-                                className="banner-upload"
-                                style={{ backgroundImage: bannerPreview ? `url(${bannerPreview})` : 'none', backgroundColor: 'var(--bg-tertiary)', cursor: 'pointer' }}
-                            >
-                                <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'banner')} hidden />
-                                <div className="upload-btn">
-                                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                                    Subir Banner
-                                </div>
-                            </label>
-                            
-                            <div className="avatar-upload-wrapper">
-                                <label className="avatar-upload" style={{ backgroundImage: avatarPreview ? `url(${avatarPreview})` : 'none', backgroundColor: 'var(--brand-primary)', cursor: 'pointer', display: 'block' }}>
-                                    <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'avatar')} hidden />
-                                    {!avatarPreview && (
-                                        <div className="avatar-placeholder">
-                                            {displayName.charAt(0).toUpperCase() || '?'}
-                                        </div>
-                                    )}
-                                    <div className="upload-icon-btn">
-                                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                                    </div>
-                                </label>
-                            </div>
-                        </div>
-
-                        <div className="ep-field onboarding-theme-field">
-                            <label className="ep-label">Color del Tema</label>
-                            <div className="ep-color-grid">
-                                {THEME_COLORS.map(color => (
-                                    <button
-                                        type="button"
-                                        key={color}
-                                        className={`ep-color-btn ${themeColor === color ? 'selected' : ''}`}
-                                        style={{ backgroundColor: color }}
-                                        onClick={() => setThemeColor(color)}
-                                        title={color}
-                                        aria-label={`Elegir color ${color}`}
-                                    />
-                                ))}
-                                <div className="ep-custom-color">
-                                    <input
-                                        type="color"
-                                        value={THEME_COLORS.includes(themeColor) ? '#ffffff' : themeColor}
-                                        onChange={e => setThemeColor(e.target.value)}
-                                        aria-label="Elegir un color personalizado"
-                                    />
-                                    <div
-                                        className={`ep-color-btn ${!THEME_COLORS.includes(themeColor) ? 'selected' : ''}`}
-                                        style={{
-                                            backgroundColor: !THEME_COLORS.includes(themeColor) ? themeColor : 'transparent',
-                                            border: `2px dashed ${!THEME_COLORS.includes(themeColor) ? 'transparent' : 'var(--border-subtle)'}`
-                                        }}
-                                    >
-                                        {!THEME_COLORS.includes(themeColor) ? '' : '+'}
-                                    </div>
-                                </div>
-                            </div>
-                            <p className="ep-hint">Elige el color principal que destacará en tu perfil.</p>
-                        </div>
-                    </div>
-                )}
-
-                {step === 3 && (
-                    <div className="onboarding-step step-3">
                         <div className="ep-field onboarding-favorite-field">
-                            <label className="ep-label">
-                                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <label className="ep-label onboarding-favorite-heading">
+                                <span className="onboarding-favorite-title">
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 12a10 10 0 0 1 10-10h0a10 10 0 0 1 10 10v0a10 10 0 0 1-10 10h0a10 10 0 0 1-10-10v0z"></path><path d="M12 2a10 10 0 0 0-10 10h20a10 10 0 0 0-10-10z"></path><path d="M6 12h4"></path><path d="M8 10v4"></path><path d="M15 11h.01"></path><path d="M17 13h.01"></path></svg>
                                     Juegos favoritos (Top 4)
                                 </span>
+                                <span className="onboarding-favorite-count">{favorite_games.length}/4</span>
                             </label>
                             <div className="ep-favorites-grid">
                                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEndGames}>
@@ -471,8 +567,9 @@ export default function Onboarding() {
                                 {Array.from({ length: 4 - favorite_games.length }).map((_, index) => {
                                     const slot = favorite_games.length + index
                                     return (
-                                        <button key={`game-slot-${slot}`} type="button" className={`ep-empty-slot ${activeGameSlot === slot ? 'active' : ''}`} aria-label="Añadir juego favorito" onClick={() => { setGameSearchQuery(''); setGameSearchResults([]); setActiveGameSlot(slot) }}>
-                                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                                        <button key={`game-slot-${slot}`} type="button" className={`ep-empty-slot onboarding-favorite-empty ${activeGameSlot === slot ? 'active' : ''}`} aria-label="Añadir juego favorito" onClick={() => { setGameSearchQuery(''); setGameSearchResults([]); setActiveGameSlot(slot) }}>
+                                            <span className="onboarding-favorite-add-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" /></svg></span>
+                                            <span className="onboarding-favorite-add-label">Añadir juego</span>
                                         </button>
                                     )
                                 })}
@@ -480,11 +577,12 @@ export default function Onboarding() {
                         </div>
 
                         <div className="ep-field onboarding-favorite-field">
-                            <label className="ep-label">
-                                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <label className="ep-label onboarding-favorite-heading">
+                                <span className="onboarding-favorite-title">
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg>
                                     Animes favoritos (Top 4)
                                 </span>
+                                <span className="onboarding-favorite-count">{favorite_animes.length}/4</span>
                             </label>
                             <div className="ep-favorites-grid">
                                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEndAnimes}>
@@ -502,8 +600,9 @@ export default function Onboarding() {
                                 {Array.from({ length: 4 - favorite_animes.length }).map((_, index) => {
                                     const slot = favorite_animes.length + index
                                     return (
-                                        <button key={`anime-slot-${slot}`} type="button" className={`ep-empty-slot ${activeAnimeSlot === slot ? 'active' : ''}`} aria-label="Añadir anime favorito" onClick={() => { setAnimeSearchQuery(''); setAnimeSearchResults([]); setActiveAnimeSlot(slot) }}>
-                                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                                        <button key={`anime-slot-${slot}`} type="button" className={`ep-empty-slot onboarding-favorite-empty ${activeAnimeSlot === slot ? 'active' : ''}`} aria-label="Añadir anime favorito" onClick={() => { setAnimeSearchQuery(''); setAnimeSearchResults([]); setActiveAnimeSlot(slot) }}>
+                                            <span className="onboarding-favorite-add-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" /></svg></span>
+                                            <span className="onboarding-favorite-add-label">Añadir anime</span>
                                         </button>
                                     )
                                 })}
@@ -513,22 +612,48 @@ export default function Onboarding() {
                 )}
                 </div>
 
-                <div className="onboarding-actions">
-                    {step > 1 ? (
-                        <button className="btn btn-ghost" onClick={() => setStep(step - 1)} disabled={loading}>
-                            Atrás
-                        </button>
-                    ) : (
-                        <button className="btn btn-ghost onboarding-exit" onClick={signOut} disabled={loading}>
-                            Salir
-                        </button>
-                    )}
-                    
-                    <button className="btn btn-primary onboarding-next" onClick={handleNextStep} disabled={loading}>
-                        {loading ? <LoadingSpinner size="sm" /> : (step === 3 ? 'Finalizar y entrar' : 'Continuar')}
-                    </button>
-                </div>
-            </main>
+                    <div className="onboarding-actions">
+                        <div className="onboarding-action-main">
+                            <button className="btn btn-primary onboarding-next" onClick={handleNextStep} disabled={loading}>
+                                {loading ? <LoadingSpinner size="sm" /> : (step === 2 ? 'Finalizar y entrar' : 'Siguiente')}
+                            </button>
+                        </div>
+                        {step === 1 ? (
+                            <button type="button" className="onboarding-signout" onClick={signOut} disabled={loading}>Cerrar sesión</button>
+                        ) : (
+                            <button type="button" className="onboarding-signout" onClick={() => setStep(step - 1)} disabled={loading}>Atrás</button>
+                        )}
+                    </div>
+                </section>
+            </div>
+
+            {showBirthDateConfirm && createPortal(
+                <div className="onboarding-age-overlay">
+                    <section className="onboarding-age-dialog" role="dialog" aria-modal="true" aria-labelledby="onboarding-age-title" aria-describedby="onboarding-age-description">
+                        <div className="onboarding-age-dialog-heading">
+                            <h2 id="onboarding-age-title">¿Estás seguro?</h2>
+                            <button type="button" className="onboarding-age-close" aria-label="Corregir fecha de nacimiento" onClick={() => {
+                                setShowBirthDateConfirm(false)
+                                birthDateInputRef.current?.focus()
+                            }}>
+                                <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="m18 6-12 12M6 6l12 12" /></svg>
+                            </button>
+                        </div>
+                        <p id="onboarding-age-description">Según tu fecha de nacimiento, tienes {getAgeFromBirthDate(birthDate)} años.</p>
+                        <div className="onboarding-age-dialog-actions">
+                            <button type="button" className="onboarding-age-pill onboarding-age-pill-secondary" onClick={() => {
+                                setShowBirthDateConfirm(false)
+                                birthDateInputRef.current?.focus()
+                            }}>Corregir</button>
+                            <button type="button" className="onboarding-age-pill onboarding-age-pill-primary" onClick={() => {
+                                setShowBirthDateConfirm(false)
+                                setStep(2)
+                            }}>Es correcto</button>
+                        </div>
+                    </section>
+                </div>,
+                document.body
+            )}
             
             {cropModal.isOpen && (
                 <ImageCropperModal 
@@ -540,27 +665,31 @@ export default function Onboarding() {
             )}
 
             {/* Top 4 Modals */}
-            {activeGameSlot !== null && (
+            {activeGameSlot !== null && createPortal((
                 <div className="ep-overlay" style={{ zIndex: 9999 }} onClick={() => setActiveGameSlot(null)}>
-                    <div className="ep-modal" style={{ width: 'min(400px, calc(100vw - 32px))', height: 'auto', maxHeight: '80vh' }} onClick={e => e.stopPropagation()}>
+                    <div className="ep-modal onboarding-picker-modal" onClick={e => e.stopPropagation()}>
                         <div className="ep-modal-header">
-                            <h3 className="ep-modal-title">Elige un Juego</h3>
+                            <h3 className="ep-modal-title">Elige un juego</h3>
                             <button className="ep-close-btn" onClick={() => setActiveGameSlot(null)} type="button">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                             </button>
                         </div>
-                        <div className="ep-modal-body" style={{ padding: '16px' }}>
-                            <input
-                                type="text"
-                                className="ep-input"
-                                placeholder="Escribe el nombre del juego..."
-                                value={gameSearchQuery}
-                                onChange={e => setGameSearchQuery(e.target.value)}
-                                autoFocus
-                            />
+                        <div className="ep-modal-body onboarding-picker-body">
+                            <div className="onboarding-picker-search">
+                                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><circle cx="10.8" cy="10.8" r="7.3"/><path d="m16.2 16.2 4.3 4.3"/></svg>
+                                <input
+                                    type="text"
+                                    className="ep-input onboarding-picker-input"
+                                    placeholder="Buscar juego..."
+                                    value={gameSearchQuery}
+                                    onChange={e => setGameSearchQuery(e.target.value)}
+                                    autoFocus
+                                />
+                            </div>
                             {isSearchingGames && <p className="ep-searching" style={{ marginTop: '12px' }}>Buscando...</p>}
+                            {gameSearchQuery.length < 3 && <p className="onboarding-picker-hint">Escribe al menos 3 caracteres para buscar.</p>}
                             {gameSearchResults.length > 0 && (
-                                <div className="ep-search-results" style={{ marginTop: '12px', border: '1px solid var(--border-subtle)', borderRadius: '8px', overflow: 'hidden' }}>
+                                <div className="ep-search-results onboarding-picker-results">
                                     {gameSearchResults.slice(0, 5).map(game => (
                                         <button key={game.id} type="button" className="ep-search-result" onClick={() => selectGame(game)}>
                                             {(game.cover_url || game.image_url) && <img src={game.cover_url || game.image_url} alt="" className="square-cover" />}
@@ -569,31 +698,36 @@ export default function Onboarding() {
                                     ))}
                                 </div>
                             )}
+                            {gameSearchQuery.length >= 3 && !isSearchingGames && gameSearchResults.length === 0 && <p className="onboarding-picker-hint">No encontramos juegos con ese nombre.</p>}
                         </div>
                     </div>
                 </div>
-            )}
-            {activeAnimeSlot !== null && (
+            ), document.body)}
+            {activeAnimeSlot !== null && createPortal((
                 <div className="ep-overlay" style={{ zIndex: 9999 }} onClick={() => setActiveAnimeSlot(null)}>
-                    <div className="ep-modal" style={{ width: 'min(400px, calc(100vw - 32px))', height: 'auto', maxHeight: '80vh' }} onClick={e => e.stopPropagation()}>
+                    <div className="ep-modal onboarding-picker-modal" onClick={e => e.stopPropagation()}>
                         <div className="ep-modal-header">
-                            <h3 className="ep-modal-title">Elige un Anime</h3>
+                            <h3 className="ep-modal-title">Elige un anime</h3>
                             <button className="ep-close-btn" onClick={() => setActiveAnimeSlot(null)} type="button">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                             </button>
                         </div>
-                        <div className="ep-modal-body" style={{ padding: '16px' }}>
-                            <input
-                                type="text"
-                                className="ep-input"
-                                placeholder="Escribe el nombre del anime..."
-                                value={animeSearchQuery}
-                                onChange={e => setAnimeSearchQuery(e.target.value)}
-                                autoFocus
-                            />
+                        <div className="ep-modal-body onboarding-picker-body">
+                            <div className="onboarding-picker-search">
+                                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><circle cx="10.8" cy="10.8" r="7.3"/><path d="m16.2 16.2 4.3 4.3"/></svg>
+                                <input
+                                    type="text"
+                                    className="ep-input onboarding-picker-input"
+                                    placeholder="Buscar anime..."
+                                    value={animeSearchQuery}
+                                    onChange={e => setAnimeSearchQuery(e.target.value)}
+                                    autoFocus
+                                />
+                            </div>
                             {isSearchingAnime && <p className="ep-searching" style={{ marginTop: '12px' }}>Buscando...</p>}
+                            {animeSearchQuery.length < 3 && <p className="onboarding-picker-hint">Escribe al menos 3 caracteres para buscar.</p>}
                             {animeSearchResults.length > 0 && (
-                                <div className="ep-search-results" style={{ marginTop: '12px', border: '1px solid var(--border-subtle)', borderRadius: '8px', overflow: 'hidden' }}>
+                                <div className="ep-search-results onboarding-picker-results">
                                     {animeSearchResults.slice(0, 5).map(anime => (
                                         <button key={anime.id} type="button" className="ep-search-result" onClick={() => selectAnime(anime)}>
                                             {(anime.cover_url || anime.image_url) && <img src={anime.cover_url || anime.image_url} alt="" className="square-cover" />}
@@ -602,10 +736,11 @@ export default function Onboarding() {
                                     ))}
                                 </div>
                             )}
+                            {animeSearchQuery.length >= 3 && !isSearchingAnime && animeSearchResults.length === 0 && <p className="onboarding-picker-hint">No encontramos animes con ese nombre.</p>}
                         </div>
                     </div>
                 </div>
-            )}
+            ), document.body)}
         </div>
     )
 }

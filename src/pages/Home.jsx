@@ -1,303 +1,100 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import LoadingSpinner from '../components/LoadingSpinner'
-import DailyPrompt from '../components/DailyPrompt'
 import './Home.css'
 
+function getPreviewImage(tierlist) {
+    if (tierlist.content && typeof tierlist.content === 'object') {
+        const priorities = ['S', '#1', 'Top', 'God Tier', 'A', '#2', 'B', '#3', 'C', '#4', 'D', '#5', 'E', 'F']
+        for (const key of priorities) {
+            const image = tierlist.content[key]?.find?.(item => item.image_url)?.image_url
+            if (image) return image
+        }
+        for (const row of Object.values(tierlist.content)) {
+            const image = Array.isArray(row) ? row.find(item => item?.image_url)?.image_url : row?.image_url
+            if (image) return image
+        }
+    }
+    return tierlist.tierlist_items?.find(item => item.image_url)?.image_url || null
+}
 
 export default function Home() {
-    const { user, profile } = useAuth()
-    const [tierlists, setTierlists] = useState([])
+    const { user, profile, loading: authLoading } = useAuth()
     const [trendingTierlists, setTrendingTierlists] = useState([])
-    const [stats, setStats] = useState({ tierlists: 0, following: 0, followers: 0 })
     const [loading, setLoading] = useState(true)
-    const [feedTierlists, setFeedTierlists] = useState([])
 
     useEffect(() => {
-        if (user) {
-            loadData()
-        } else {
-            const timer = setTimeout(() => setLoading(false), 1000)
-            return () => clearTimeout(timer)
-        }
-    }, [user])
-
-    const loadData = async () => {
-        try {
-            // Parallelize requests
-            const results = await Promise.allSettled([
-                // 1. My Tierlists
-                supabase.from('tierlists').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(4),
-                // 2. Following Count
-                supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', user.id),
-                // 3. Followers Count
-                supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', user.id),
-                // 4. Total Tierlists Count
-                supabase.from('tierlists').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
-                // 5. Trending Tierlists (Public Recent)
-                supabase.from('tierlists').select('*').eq('visibility', 'public').order('created_at', { ascending: false }).limit(6),
-            ])
-
-            // Helper
-            const getVal = (res, def) => res.status === 'fulfilled' ? res.value : def
-
-            const myLists = getVal(results[0], { data: [] }).data
-            const followingCount = getVal(results[1], { count: 0 }).count
-            const followersCount = getVal(results[2], { count: 0 }).count
-            const tierlistCount = getVal(results[3], { count: 0 }).count
-            let trends = getVal(results[4], { data: [] }).data
-
-            // Enrich Trends with Profiles
-            if (trends && trends.length > 0) {
-                const userIds = [...new Set(trends.map(t => t.user_id))]
-                const { data: trendProfiles } = await supabase
-                    .from('profiles')
-                    .select('user_id, username, display_name, avatar_url')
-                    .in('user_id', userIds)
-
-                const pMap = {}
-                trendProfiles?.forEach(p => pMap[p.user_id] = p)
-                trends = trends.map(t => ({ ...t, profiles: pMap[t.user_id] }))
-            }
-
-            setTierlists(myLists || [])
-            setTrendingTierlists(trends || [])
-
-            setStats({
-                tierlists: tierlistCount || 0,
-                following: followingCount || 0,
-                followers: followersCount || 0
-            })
-
-            // Get feed
-            const { data: followingData } = await supabase
-                .from('follows')
-                .select('following_id')
-                .eq('follower_id', user.id)
-
-            if (followingData && followingData.length > 0) {
-                const followingIds = followingData.map(f => f.following_id)
-
-                const { data: rawFeed, error: feedError } = await supabase
+        if (authLoading) return
+        let active = true
+        setLoading(true)
+        const loadPublicHome = async () => {
+            try {
+                const { data: trends } = await supabase
                     .from('tierlists')
                     .select('*')
-                    .in('user_id', followingIds)
                     .eq('visibility', 'public')
                     .order('created_at', { ascending: false })
-                    .limit(10)
+                    .limit(6)
 
-                if (!feedError && rawFeed) {
-                    const feedUserIds = [...new Set(rawFeed.map(t => t.user_id))]
-                    const { data: feedProfiles } = await supabase
+                if (trends?.length) {
+                    const userIds = [...new Set(trends.map(item => item.user_id).filter(Boolean))]
+                    const { data: trendProfiles } = await supabase
                         .from('profiles')
                         .select('user_id, username, display_name, avatar_url')
-                        .in('user_id', feedUserIds)
-
-                    const profileMap = {}
-                    feedProfiles?.forEach(p => profileMap[p.user_id] = p)
-
-                    const enriched = rawFeed.map(t => ({
-                        ...t,
-                        profiles: profileMap[t.user_id]
-                    }))
-                    setFeedTierlists(enriched)
-                }
-            }
-        } catch (error) {
-            console.error('Error loading home data:', error)
-        } finally {
-            setLoading(false)
-        }
-    }
-
-    // STRICTLY COPIED FROM DISCOVER.JSX
-    const getPreviewImage = (tierlist) => {
-        // 1. Try to find a priority image (S tier or #1)
-        if (tierlist.content) {
-            // Check specific high-priority keys first (Scanning down the ranks)
-            const priorities = ['S', '#1', 'Top', 'God Tier', 'A', '#2', 'B', '#3', 'C', '#4', 'D', '#5', 'E', 'F']
-            for (const key of priorities) {
-                if (tierlist.content[key]?.[0]?.image_url) {
-                    return tierlist.content[key][0].image_url
-                }
-            }
-            // Fallback: Scan all keys to find ANY image
-            for (const key in tierlist.content) {
-                const row = tierlist.content[key]
-                if (Array.isArray(row) && row.length > 0) {
-                    // Find first item with an image
-                    const itemWithImage = row.find(i => i.image_url)
-                    if (itemWithImage) return itemWithImage.image_url
-                }
+                        .in('user_id', userIds)
+                    const profileMap = Object.fromEntries((trendProfiles || []).map(item => [item.user_id, item]))
+                    if (active) setTrendingTierlists(trends.map(item => ({ ...item, profiles: profileMap[item.user_id] })))
+                } else if (active) setTrendingTierlists([])
+            } catch (error) {
+                console.error('Error loading public home:', error)
+            } finally {
+                if (active) setLoading(false)
             }
         }
+        loadPublicHome()
+        return () => { active = false }
+    }, [user?.id, authLoading])
 
-        // 2. Fallback to tierlist_items (legacy/alternative)
-        if (tierlist.tierlist_items && tierlist.tierlist_items.length > 0) {
-            const item = tierlist.tierlist_items.find(i => i.image_url)
-            if (item) return item.image_url
-        }
-        return null
-    }
+    if (loading) return <div className="home-loading"><LoadingSpinner /></div>
 
-    if (loading) {
-        return (
-            <div className="home-loading">
-                <LoadingSpinner />
-            </div>
-        )
-    }
+    const displayName = profile?.display_name || profile?.username || 'Friki'
 
     return (
-        <div className="home">
-            {/* Hero Section */}
-            <section className="home-hero">
-                <div className="container">
-                    <div className="hero-content">
-                        <div className="hero-welcome">
-                            <h1 className="hero-title">
-                                Hola, <span className="hero-name">{profile?.display_name || 'Friki'}</span>
-                            </h1>
-                            <p className="hero-subtitle">¿Qué vamos a debatir hoy?</p>
-                        </div>
-
-                        <div className="hero-stats">
-                            <div className="hero-stat">
-                                <span className="value">{stats.tierlists}</span>
-                                <span className="label">Tierlists</span>
-                            </div>
-                            <div className="hero-stat">
-                                <span className="value">{stats.followers}</span>
-                                <span className="label">Seguidores</span>
-                            </div>
-                        </div>
-
-                        <div className="hero-actions">
-                            <Link to="/create-tierlist" className="btn btn-primary hero-btn">
-                                <img src="/icons/cobb.png" alt="✨" style={{ width: '24px', height: '24px', marginRight: '8px' }} /> Nueva Tierlist
-                            </Link>
-                            <Link to="/discover" className="btn btn-secondary hero-btn">
-                                <img src="/icons/compass.gif" alt="Descubrir" style={{ width: '20px', height: '20px', marginRight: '6px' }} /> Descubrir
-                            </Link>
-                        </div>
-                    </div>
+        <div className="home guest-home">
+            <section className="guest-home-hero">
+                <span className="guest-home-eyebrow">TU UNIVERSO FRIKI, EN UN SOLO LUGAR</span>
+                <h1>{user ? <>Hola, {displayName}.<br /><span>¿Qué te apetece explorar?</span></> : <>Todo lo que te gusta.<br /><span>En tu esfera.</span></>}</h1>
+                <p>Descubre anime y videojuegos, comparte tus opiniones y encuentra gente con tus mismas aficiones.</p>
+                <div className="guest-home-actions">
+                    <Link className="guest-home-primary" to="/search">Explorar GeekSphere</Link>
+                    {user
+                        ? <Link className="guest-home-secondary" to={profile?.username ? `/profile/${profile.username}` : '/profile'}>Mi perfil</Link>
+                        : <Link className="guest-home-secondary" to="/register">Únete gratis</Link>}
                 </div>
-                <div className="hero-background"></div>
+                <div className="guest-home-orbit guest-home-orbit-one" aria-hidden="true" />
+                <div className="guest-home-orbit guest-home-orbit-two" aria-hidden="true" />
             </section>
 
-            <div className="container home-grid">
+            <section className="guest-home-features" aria-label="Qué puedes hacer en GeekSphere">
+                <article><span>✦</span><h2>Organiza lo que ves y juegas</h2><p>Guarda tus obras favoritas y lleva un diario a tu ritmo.</p></article>
+                <article><span>✧</span><h2>Comparte tu opinión</h2><p>Puntúa, escribe reseñas y crea listas para recomendar.</p></article>
+                <article><span>◎</span><h2>Encuentra a tu gente</h2><p>Conecta con fans que disfrutan de las mismas historias.</p></article>
+            </section>
 
-                {/* Daily Prompt - Micro-interacción diaria */}
-                <DailyPrompt />
-
-                {/* Trending Tierlists (Grid) */}
-                <section className="section-trending">
-                    <div className="section-header">
-                        <h2><img src="/icons/star.gif" alt="!" style={{ width: '24px', height: '24px', verticalAlign: 'middle', marginRight: '8px' }} /> Tendencias</h2>
-                    </div>
-                    <div className="trending-grid">
-                        {trendingTierlists.map(t => {
-                            const bg = getPreviewImage(t)
-                            return (
-                                <Link key={t.id} to={`/tierlist/${t.id}`} className="trending-card">
-                                    <div className="trending-card-bg">
-                                        {bg ? (
-                                            <img src={bg} alt="" className="card-bg-img" />
-                                        ) : (
-                                            <div className="card-bg-placeholder" />
-                                        )}
-                                        <div className="card-bg-overlay" />
-                                    </div>
-                                    <div className="trending-content">
-                                        <div className="trending-badges">
-                                            <span className="type-badge">
-                                                {t.media_type === 'game' ? <><img src="/icons/videogame.png" alt="🎮" style={{ width: '14px', height: '14px', verticalAlign: 'text-bottom', marginRight: '4px' }} /> Juego</> : <><img src="/icons/anime.png" alt="📺" style={{ width: '14px', height: '14px', verticalAlign: 'text-bottom', marginRight: '4px' }} /> Anime</>}
-                                            </span>
-                                        </div>
-                                        <h3>{t.title}</h3>
-                                        <div className="trending-meta">
-                                            <div className="trending-user">
-                                                {t.profiles?.avatar_url ? (
-                                                    <img src={t.profiles.avatar_url} alt="" className="trending-avatar" />
-                                                ) : (
-                                                    <div className="trending-avatar-placeholder">
-                                                        {t.profiles?.username?.[0] || '?'}
-                                                    </div>
-                                                )}
-                                                <span>@{t.profiles?.username || 'usuario'}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </Link>
-                            )
-                        })}
-                    </div>
-                </section>
-
-                {/* My Tierlists */}
-                <section className="section-feed">
-                    <div className="section-header">
-                        <h2>Tus últimas listas</h2>
-                        <Link to="/profile" className="section-link">Ir al perfil →</Link>
-                    </div>
-                    {tierlists.length === 0 ? (
-                        <div className="empty-card">
-                            <p>Aún no tienes tierlists</p>
-                            <Link to="/create-tierlist" className="btn btn-primary btn-sm">Crear ahora</Link>
-                        </div>
-                    ) : (
-                        <div className="tierlist-list-compact">
-                            {tierlists.map(t => (
-                                <Link key={t.id} to={`/tierlist/${t.id}`} className="tierlist-compact-item">
-                                    <span className="icon">{t.media_type === 'game' ? <img src="/icons/videogame.png" alt="🎮" style={{ width: '16px', height: '16px', verticalAlign: 'middle' }} /> : <img src="/icons/anime.png" alt="📺" style={{ width: '16px', height: '16px', verticalAlign: 'middle' }} />}</span>
-                                    <span className="title">{t.title}</span>
-                                    <span className="date">{new Date(t.created_at).toLocaleDateString()}</span>
-                                </Link>
-                            ))}
-                        </div>
-                    )}
-                </section>
-
-                {/* Feed */}
-                <section className="section-feed">
-                    <div className="section-header">
-                        <h2>De gente que sigues</h2>
-                    </div>
-                    {feedTierlists.length === 0 ? (
-                        <div className="empty-card">
-                            <p>Sigue a usuarios para ver su actividad</p>
-                            <Link to="/discover" className="btn btn-secondary btn-sm">Descubrir</Link>
-                        </div>
-                    ) : (
-                        <div className="feed-grid">
-                            {feedTierlists.map(t => {
-                                const bg = getPreviewImage(t)
-                                return (
-                                    <Link key={t.id} to={`/tierlist/${t.id}`} className="feed-card" >
-                                        <div className="feed-card-header">
-                                            <img src={t.profiles?.avatar_url || 'https://via.placeholder.com/32'} alt="" className="feed-avatar" />
-                                            <span className="feed-user">{t.profiles?.display_name}</span>
-                                        </div>
-                                        <div className="feed-card-preview">
-                                            {bg ? (
-                                                <img src={bg} alt="" className="feed-preview-img" />
-                                            ) : (
-                                                <div className="no-preview">📄</div>
-                                            )}
-                                        </div>
-                                        <div className="feed-card-body">
-                                            <h4>{t.title}</h4>
-                                            <p>{t.description?.substring(0, 60)}...</p>
-                                        </div>
-                                    </Link>
-                                )
-                            })}
-                        </div>
-                    )}
-                </section>
-            </div>
+            {trendingTierlists.length > 0 && <section className="guest-home-trending">
+                <div className="guest-home-section-heading"><div><span>DE LA COMUNIDAD</span><h2>Listas recientes</h2></div><Link to="/discover/lists">Ver todas <span aria-hidden="true">→</span></Link></div>
+                <div className="guest-home-list-grid">
+                    {trendingTierlists.slice(0, 3).map(item => {
+                        const image = getPreviewImage(item)
+                        return <Link className="guest-home-list-card" to={`/tierlist/${item.id}`} key={item.id}>
+                            {image ? <img src={image} alt="" loading="lazy" /> : <div className="guest-home-list-placeholder">✦</div>}
+                            <div><span>{item.media_type === 'game' ? 'VIDEOJUEGOS' : 'ANIME'}</span><h3>{item.title}</h3><small>por @{item.profiles?.username || 'miembro'}</small></div>
+                        </Link>
+                    })}
+                </div>
+            </section>}
         </div>
     )
 }

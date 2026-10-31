@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, memo } from 'react'
 import { createPortal } from 'react-dom'
+import { useNavigate } from 'react-router-dom'
 import { searchGames } from '../lib/gameService'
 import { searchAnime } from '../lib/animeService'
 import { getWorkLog } from '../lib/libraryService'
@@ -41,7 +42,8 @@ const ResultGrid = memo(({ results, type, pendingSelection, onSelect, onResultCl
 })
 
 export default function GlobalSearchModal({ isOpen, onClose, onSelect }) {
-    const { user } = useAuth()
+    const { user, profile } = useAuth()
+    const navigate = useNavigate()
     const [query, setQuery] = useState('')
     const [debouncedQuery, setDebouncedQuery] = useState('')
     const [type, setType] = useState('game') // 'game' | 'anime'
@@ -121,6 +123,18 @@ export default function GlobalSearchModal({ isOpen, onClose, onSelect }) {
             });
             return;
         }
+
+        if (!user) {
+            onClose()
+            navigate('/register')
+            return
+        }
+
+        if (!profile) {
+            onClose()
+            navigate('/onboarding')
+            return
+        }
         
         setSelectedWork(work)
         
@@ -130,7 +144,7 @@ export default function GlobalSearchModal({ isOpen, onClose, onSelect }) {
         }
         
         setLogModalOpen(true)
-    }, [type, onSelect, user]);
+    }, [type, onSelect, user, profile, onClose, navigate]);
 
     const handleClose = () => {
         setIsClosing(true)

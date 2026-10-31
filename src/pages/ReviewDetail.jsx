@@ -571,7 +571,15 @@ export default function ReviewDetail() {
   }
 
   const toggleWishlist = async () => {
-    if (!user || !currentProfile || !review.work) return
+    if (!user) {
+      navigate('/register')
+      return
+    }
+    if (!currentProfile) {
+      navigate('/onboarding')
+      return
+    }
+    if (!review.work) return
     const updatedWishlist = [...wishlist]
     if (isInWishlist) updatedWishlist.splice(wishlistIndex, 1)
     else updatedWishlist.push({
@@ -586,6 +594,18 @@ export default function ReviewDetail() {
     } catch (err) {
       console.error('Error updating wishlist:', err)
     }
+  }
+
+  const openLogModal = () => {
+    if (!user) {
+      navigate('/register')
+      return
+    }
+    if (!currentProfile) {
+      navigate('/onboarding')
+      return
+    }
+    setShowLogModal(true)
   }
 
   const handleLogSaved = savedLog => {
@@ -621,7 +641,7 @@ export default function ReviewDetail() {
             <div className="review-post-rating-row">
               <ReviewStars rating={review.rating} />
               <div className="review-post-work-actions">
-                <button type="button" className="review-work-action primary" onClick={() => setShowLogModal(true)}>
+                <button type="button" className="review-work-action primary" onClick={openLogModal}>
                   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
                   {existingLog ? 'Editar registro' : 'Registrar obra'}
                 </button>
@@ -692,7 +712,7 @@ export default function ReviewDetail() {
             })}
           </div>
         )}
-        {user ? (
+        {user && currentProfile ? (
           <>
           {replyTo && <div className="review-comment-reply-context">Respondiendo a {replyTo.profile?.display_name || replyTo.profile?.username || 'Usuario'}<button type="button" onClick={() => setReplyTo(null)}>Cancelar</button></div>}
           <form className="review-comment-form" onSubmit={handleSubmit}>
@@ -703,7 +723,7 @@ export default function ReviewDetail() {
             <button type="submit" disabled={!commentText.trim() || submitting}>{submitting ? 'Enviando…' : 'Comentar'}</button>
           </form>
           </>
-        ) : <p className="review-comments-signin"><Link to="/login">Inicia sesión</Link> para comentar.</p>}
+        ) : <p className="review-comments-signin"><Link to={user ? '/onboarding' : '/register'}>Inicia sesión para comentar</Link></p>}
       </section>
       {pendingDelete && <div className="review-comment-undo-toast" role="status"><span>Comentario borrado</span><button type="button" onClick={handleUndoDelete}>Deshacer</button></div>}
       </article>

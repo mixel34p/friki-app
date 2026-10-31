@@ -4,12 +4,12 @@ import { ToastProvider } from './components/Toast'
 import Layout from './components/Layout'
 import LoadingSpinner from './components/LoadingSpinner'
 import SEO from './components/SEO'
-import Landing from './pages/Landing'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import ForgotPassword from './pages/ForgotPassword'
 import ConfirmEmail from './pages/ConfirmEmail'
 import UpdatePassword from './pages/UpdatePassword'
+import Home from './pages/Home'
 
 import Profile from './pages/Profile'
 import EditProfile from './pages/EditProfile'
@@ -26,7 +26,6 @@ import ReviewDetail from './pages/ReviewDetail'
 import Search from './pages/Search'
 import DiscoverWorks from './pages/DiscoverWorks'
 import DiscoverLists from './pages/DiscoverLists'
-import DiscoverUsers from './pages/DiscoverUsers'
 import WishlistPage from './pages/WishlistPage'
 import ActivityPage from './pages/ActivityPage'
 import ViewTierlist from './pages/ViewTierlist'
@@ -43,7 +42,7 @@ function getPageTitle(pathname) {
     '/': 'GeekSphere', '/home': 'Inicio', '/activity': 'Actividad', '/spaces': 'Espacios',
     '/search': 'Busca tus aficiones', '/search/results': 'Busca tus aficiones',
     '/connections': 'Conexiones', '/templates': 'Plantillas', '/old-library': 'Biblioteca',
-    '/onboarding': 'Configura tu perfil', '/lists/new': 'Crear lista',
+    '/onboarding': 'Configura tu perfil', '/lists/new': 'Crear lista', '/settings': 'Ajustes',
   }
   if (exact[pathname]) return exact[pathname]
   if (section === 'profile') {
@@ -148,10 +147,16 @@ function DiscoverCategoryPlaceholder() {
 function DiscoverCategoryRoute() {
   const { category } = useParams()
   if (category === 'anime' || category === 'games') return <DiscoverWorks />
-  if (category === 'users') return <DiscoverUsers />
+  if (category === 'users') return <Navigate to="/search?filter=users" replace />
   if (category === 'spaces') return <SpacesExplore />
   if (category === 'lists') return <DiscoverLists />
   return <DiscoverCategoryPlaceholder />
+}
+
+function SpacesRootRoute() {
+  const { user, profile } = useAuth()
+  if (user && !profile) return <Navigate to="/onboarding" replace />
+  return user ? <MySpaces /> : <SpacesExplore />
 }
 
 function App() {
@@ -161,16 +166,11 @@ function App() {
         <BrowserRouter>
         <RouteTitle />
         <Routes>
+          <Route path="/" element={<Navigate to="/home" replace />} />
           {/* Public routes */}
-          <Route path="/" element={<PublicOnlyRoute><Landing /></PublicOnlyRoute>} />
-          <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
-          <Route path="/register" element={<PublicOnlyRoute><Register /></PublicOnlyRoute>} />
           <Route path="/forgot-password" element={<PublicOnlyRoute><ForgotPassword /></PublicOnlyRoute>} />
           <Route path="/confirm-email" element={<PublicOnlyRoute><ConfirmEmail /></PublicOnlyRoute>} />
           <Route path="/update-password" element={<UpdatePassword />} />
-
-          {/* Onboarding Route */}
-          <Route path="/onboarding" element={<ProtectedRoute requireProfile={false}><Onboarding /></ProtectedRoute>} />
 
           {/* Chat Routes */}
           <Route path="/chat" element={<ProtectedRoute><Placeholder title="Chat" /></ProtectedRoute>} />
@@ -183,40 +183,44 @@ function App() {
 
           {/* Protected routes with Layout */}
           <Route element={<Layout />}>
+            <Route path="/onboarding" element={<ProtectedRoute requireProfile={false}><Onboarding /></ProtectedRoute>} />
+            <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
+            <Route path="/register" element={<PublicOnlyRoute><Register /></PublicOnlyRoute>} />
+            <Route path="/home" element={<Home />} />
             <Route path="/activity" element={<ProtectedRoute><ActivityPage /></ProtectedRoute>} />
-            <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
-            <Route path="/search/results" element={<ProtectedRoute><Search /></ProtectedRoute>} />
-            <Route path="/home" element={<ProtectedRoute><Placeholder title="Inicio (Home)" /></ProtectedRoute>} />
-            <Route path="/profile/:username?" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-            <Route path="/profile/:username/reviews" element={<ProtectedRoute><UserReviews /></ProtectedRoute>} />
-            <Route path="/profile/:username/diary" element={<ProtectedRoute><UserDiary /></ProtectedRoute>} />
-            <Route path="/profile/:username/tierlists" element={<ProtectedRoute><UserTierlists /></ProtectedRoute>} />
-            <Route path="/profile/:username/templates" element={<ProtectedRoute><UserTemplates /></ProtectedRoute>} />
-            <Route path="/reviews/:reviewId" element={<ProtectedRoute><ReviewDetail /></ProtectedRoute>} />
+            <Route path="/search" element={<Search />} />
+            <Route path="/search/results" element={<Search />} />
+            <Route path="/profile/:username?" element={<Profile />} />
+            <Route path="/profile/:username/reviews" element={<UserReviews />} />
+            <Route path="/profile/:username/diary" element={<UserDiary />} />
+            <Route path="/profile/:username/tierlists" element={<UserTierlists />} />
+            <Route path="/profile/:username/templates" element={<UserTemplates />} />
+            <Route path="/settings/*" element={<ProtectedRoute><EditProfile standalone /></ProtectedRoute>} />
+            <Route path="/reviews/:reviewId" element={<ReviewDetail />} />
             <Route path="/edit-profile" element={<Navigate to="/profile?edit=true" replace />} />
             
             {/* OLD TIERLIST REDIRECTS */}
-            <Route path="/create-tierlist" element={<Navigate to="/home?createlist=true" replace />} />
-            <Route path="/tierlist/:id" element={<ProtectedRoute><ViewTierlist /></ProtectedRoute>} />
+            <Route path="/create-tierlist" element={<ProtectedRoute><Navigate to="/home?createlist=true" replace /></ProtectedRoute>} />
+            <Route path="/tierlist/:id" element={<ViewTierlist />} />
             <Route path="/edit-tierlist/:id" element={<Navigate to="/lists/:id/edit" replace />} />
             
             {/* NEW LISTS SYSTEM RUTAS */}
             <Route path="/templates" element={<TemplateGallery />} />
-            <Route path="/templates/new" element={<Navigate to="/templates?new=1" replace />} />
+            <Route path="/templates/new" element={<ProtectedRoute><Navigate to="/templates?new=1" replace /></ProtectedRoute>} />
             <Route path="/templates/:id" element={<ViewTemplate />} />
             <Route path="/lists/:id" element={<ViewList />} />
             
-            <Route path="/discover" element={<ProtectedRoute><Navigate to="/search" replace /></ProtectedRoute>} />
-            <Route path="/discover/users/all" element={<ProtectedRoute><Placeholder title="Todos los usuarios" /></ProtectedRoute>} />
-            <Route path="/discover/:category" element={<ProtectedRoute><DiscoverCategoryRoute /></ProtectedRoute>} />
-            <Route path="/library/:username?" element={<Navigate to="/profile" replace />} />
+            <Route path="/discover" element={<Navigate to="/search" replace />} />
+            <Route path="/discover/users/all" element={<Navigate to="/search?filter=users" replace />} />
+            <Route path="/discover/:category" element={<DiscoverCategoryRoute />} />
+            <Route path="/library/:username?" element={<ProtectedRoute><Navigate to="/profile" replace /></ProtectedRoute>} />
             <Route path="/old-library" element={<ProtectedRoute><Placeholder title="Biblioteca" /></ProtectedRoute>} />
             
             {/* Spaces System */}
-            <Route path="/spaces" element={<ProtectedRoute><MySpaces /></ProtectedRoute>} />
-            <Route path="/spaces/explore" element={<ProtectedRoute><Navigate to="/discover/spaces" replace /></ProtectedRoute>} />
-            <Route path="/spaces/:id" element={<ProtectedRoute><SpaceLayout /></ProtectedRoute>}>
-              <Route path="chat/:channelId" element={<LiveChat />} />
+            <Route path="/spaces" element={<SpacesRootRoute />} />
+            <Route path="/spaces/explore" element={<Navigate to="/discover/spaces" replace />} />
+            <Route path="/spaces/:id" element={<SpaceLayout />}>
+              <Route path="chat/:channelId" element={<ProtectedRoute><LiveChat /></ProtectedRoute>} />
             </Route>
 
             {/* Social Discovery Routes */}
@@ -224,11 +228,11 @@ function App() {
             <Route path="/compare/:userId" element={<ProtectedRoute><Placeholder title="Comparar Perfiles" /></ProtectedRoute>} />
 
             {/* Work Page Routes */}
-            <Route path="/game/:id" element={<ProtectedRoute><WorkPage mediaType="game" /></ProtectedRoute>} />
-            <Route path="/anime/:id" element={<ProtectedRoute><WorkPage mediaType="anime" /></ProtectedRoute>} />
-            <Route path="/game/:id/reviews" element={<ProtectedRoute><WorkReviews mediaType="game" /></ProtectedRoute>} />
-            <Route path="/anime/:id/reviews" element={<ProtectedRoute><WorkReviews mediaType="anime" /></ProtectedRoute>} />
-            <Route path="/profile/:username/wishlist" element={<ProtectedRoute><WishlistPage /></ProtectedRoute>} />
+            <Route path="/game/:id" element={<WorkPage mediaType="game" />} />
+            <Route path="/anime/:id" element={<WorkPage mediaType="anime" />} />
+            <Route path="/game/:id/reviews" element={<WorkReviews mediaType="game" />} />
+            <Route path="/anime/:id/reviews" element={<WorkReviews mediaType="anime" />} />
+            <Route path="/profile/:username/wishlist" element={<WishlistPage />} />
           </Route>
 
           {/* Fallback */}

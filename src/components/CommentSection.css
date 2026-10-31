@@ -233,6 +233,16 @@
     gap: var(--space-md);
 }
 
+.comment-auth-link {
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.comment-auth-link:hover {
+    color: var(--brand-primary);
+}
+
 .no-comments {
     text-align: center;
     color: var(--text-muted);

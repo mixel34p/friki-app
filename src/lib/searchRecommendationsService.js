@@ -3,36 +3,33 @@ import { searchGamesLocal } from './gameService'
 import { searchAnimeLocal } from './animeService'
 
 /**
- * Gets personalised work recommendations for a user based on their library entries.
- * If there are fewer than `limit` personalised works, it fills the remainder with popular works.
+ * Gets personalized works for signed-in users, with popular works as a fallback.
  * Returns an array of up to `limit` items shaped { id, title, image, type, year }.
  */
-export async function getSearchRecommendations(userId, limit = 6) {
+export async function getSearchRecommendations(limit = 6, userId = null) {
   let results = []
   const seen = new Set()
+  let owned = new Set()
 
+  // When signed in, use the user's registered works to build a genre profile.
   if (userId) {
     try {
-      const recs = await getPersonalisedRecommendations(userId, limit)
-      for (const item of recs) {
-        const key = `${item.type}:${item.id}`
-        if (!seen.has(key)) {
-          seen.add(key)
-          results.push(item)
-        }
-      }
+      const personalized = await getPersonalizedWorks(userId, limit)
+      results = personalized.items
+      owned = personalized.ownedKeys
+      results.forEach(item => seen.add(`${item.type}:${item.id}`))
     } catch (e) {
-      console.warn('Error loading personalised recommendations:', e)
+      console.warn('Error loading personalized works:', e)
     }
   }
 
-  // If we don't have enough recommendations, fill the rest with popular works
+  // Fill any remaining slots with generally popular works.
   if (results.length < limit) {
     try {
       const popular = await getPopularWorks(limit * 3)
       for (const item of popular) {
         const key = `${item.type}:${item.id}`
-        if (!seen.has(key)) {
+        if (!seen.has(key) && !owned.has(key)) {
           seen.add(key)
           results.push(item)
           if (results.length >= limit) break
@@ -49,7 +46,7 @@ export async function getSearchRecommendations(userId, limit = 6) {
       const seeds = await getFallbackSeeds(limit)
       for (const item of seeds) {
         const key = `${item.type}:${item.id}`
-        if (!seen.has(key)) {
+        if (!seen.has(key) && !owned.has(key)) {
           seen.add(key)
           results.push(item)
           if (results.length >= limit) break
@@ -61,61 +58,102 @@ export async function getSearchRecommendations(userId, limit = 6) {
   return results.slice(0, limit)
 }
 
-async function getPersonalisedRecommendations(userId, limit) {
-  // Fetch user's top-rated library entries (rating >= 3)
+async function getPersonalizedWorks(userId, limit) {
   const { data: entries, error } = await supabase
     .from('library_entries')
     .select('work_id, work_type, rating')
     .eq('user_id', userId)
-    .gte('rating', 3)
-    .order('rating', { ascending: false })
-    .limit(40)
+    .in('work_type', ['game', 'anime'])
+    .limit(500)
 
-  if (error || !entries?.length) return []
+  if (error) throw error
+  if (!entries?.length) return { items: [], ownedKeys: new Set() }
+  const ownedKeys = new Set(entries.map(entry => `${entry.work_type}:${entry.work_id}`))
 
-  const userWorkIds = new Set(entries.map(e => `${e.work_type}:${e.work_id}`))
-  const topEntries = entries.slice(0, 10)
-  const seededIds = topEntries.map(e => e.work_id)
-
-  const [gameRows, animeRows] = await Promise.all([
-    supabase
-      .from('games')
-      .select('id, name, cover_url, genres, first_release_date')
-      .in('id', seededIds.filter(Boolean))
-      .limit(20),
-    supabase
-      .from('anime')
-      .select('id, title, image_url, genres, start_date')
-      .in('id', seededIds.filter(Boolean))
-      .limit(20),
+  const registeredIds = {
+    game: [...new Set(entries.filter(e => e.work_type === 'game').map(e => String(e.work_id)))],
+    anime: [...new Set(entries.filter(e => e.work_type === 'anime').map(e => String(e.work_id)))],
+  }
+  const [gameSeeds, animeSeeds] = await Promise.all([
+    registeredIds.game.length
+      ? supabase.from('games').select('id, genres').in('id', registeredIds.game)
+      : Promise.resolve({ data: [] }),
+    registeredIds.anime.length
+      ? supabase.from('anime').select('id, genres').in('id', registeredIds.anime)
+      : Promise.resolve({ data: [] }),
   ])
 
-  const genreFreq = {}
-  const addGenres = (genres, weight = 1) => {
-    if (!Array.isArray(genres)) return
-    for (const g of genres) {
-      const name = typeof g === 'string' ? g : g?.name || ''
-      if (name) genreFreq[name] = (genreFreq[name] || 0) + weight
+  const genreWeights = new Map()
+  const seedByType = [
+    ...(gameSeeds.data || []).map(work => ({ ...work, type: 'game' })),
+    ...(animeSeeds.data || []).map(work => ({ ...work, type: 'anime' })),
+  ]
+  for (const seed of seedByType) {
+    const entry = entries.find(item => item.work_type === seed.type && String(item.work_id) === String(seed.id))
+    const ratingWeight = entry?.rating ? Math.max(0.75, Math.min(Number(entry.rating) / 3, 1.5)) : 1
+    for (const genre of normalizeGenres(seed.genres)) {
+      genreWeights.set(genre, (genreWeights.get(genre) || 0) + ratingWeight)
     }
   }
-  for (const row of gameRows.data || []) addGenres(row.genres, 2)
-  for (const row of animeRows.data || []) addGenres(row.genres, 2)
+  if (genreWeights.size === 0) return { items: [], ownedKeys }
 
-  const popular = await getPopularWorks(limit * 4)
+  // Start from frequently registered works, then rank them by how well their
+  // genres match this user's own library.
+  const { data: stats, error: statsError } = await supabase
+    .from('library_entries')
+    .select('work_id, work_type')
+    .in('work_type', ['game', 'anime'])
+    .limit(3000)
+  if (statsError) throw statsError
 
-  const scored = popular.map(work => {
-    if (userWorkIds.has(`${work.type}:${String(work.id)}`)) return { work, score: -1 }
-    const genres = Array.isArray(work.genres) ? work.genres : []
-    const genreScore = genres.reduce((sum, g) => {
-      const name = typeof g === 'string' ? g : g?.name || ''
-      return sum + (genreFreq[name] || 0)
-    }, 0)
-    return { work, score: genreScore }
-  })
-  .filter(item => item.score > 0)
-  .sort((a, b) => b.score - a.score)
+  const popularity = new Map()
+  for (const row of stats || []) {
+    const key = `${row.work_type}:${row.work_id}`
+    popularity.set(key, (popularity.get(key) || 0) + 1)
+  }
+  const owned = new Set(entries.map(entry => `${entry.work_type}:${entry.work_id}`))
+  const candidateIds = { game: [], anime: [] }
+  for (const [key] of [...popularity.entries()].sort((a, b) => b[1] - a[1])) {
+    const [type, id] = key.split(':')
+    if (!owned.has(key) && candidateIds[type].length < limit * 8) candidateIds[type].push(id)
+  }
 
-  return scored.map(item => item.work).slice(0, limit)
+  const [gameRows, animeRows] = await Promise.all([
+    candidateIds.game.length
+      ? supabase.from('games').select('id, name, cover_url, genres, first_release_date').in('id', candidateIds.game)
+      : Promise.resolve({ data: [] }),
+    candidateIds.anime.length
+      ? supabase.from('anime').select('id, title, image_url, genres, start_date').in('id', candidateIds.anime)
+      : Promise.resolve({ data: [] }),
+  ])
+
+  const candidates = [
+    ...(gameRows.data || []).map(work => ({ ...work, type: 'game', title: work.name, image: work.cover_url, year: work.first_release_date ? new Date(work.first_release_date * 1000).getFullYear() : null })),
+    ...(animeRows.data || []).map(work => ({ ...work, type: 'anime', title: work.title, image: work.image_url, year: work.start_date ? String(work.start_date).slice(0, 4) : null })),
+  ]
+  const maxGenreWeight = Math.max(...genreWeights.values())
+  const items = candidates
+    .map(work => {
+      const genres = normalizeGenres(work.genres)
+      const genreScore = genres.length
+        ? genres.reduce((sum, genre) => sum + (genreWeights.get(genre) || 0), 0) / genres.length / maxGenreWeight
+        : 0
+      const popularityScore = Math.log1p(popularity.get(`${work.type}:${work.id}`) || 0) / Math.log(3001)
+      return { ...work, genres, popularity: popularity.get(`${work.type}:${work.id}`) || 0, _score: genreScore * 0.85 + popularityScore * 0.15 }
+    })
+    .filter(work => work._score > 0)
+    .sort((a, b) => b._score - a._score)
+    .slice(0, limit)
+    .map(({ _score, ...work }) => work)
+  return { items, ownedKeys }
+}
+
+function normalizeGenres(value) {
+  if (!Array.isArray(value)) return []
+  return value
+    .map(genre => typeof genre === 'string' ? genre : genre?.name || genre?.name_en || genre?.name_es)
+    .filter(Boolean)
+    .map(genre => genre.trim().toLocaleLowerCase())
 }
 
 async function getPopularWorks(limit) {

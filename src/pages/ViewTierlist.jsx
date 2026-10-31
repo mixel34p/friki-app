@@ -34,7 +34,7 @@ const TEMPLATES = {
 
 export default function ViewTierlist() {
     const { id } = useParams()
-    const { user } = useAuth()
+    const { user, profile } = useAuth()
     const navigate = useNavigate()
     const [tierlist, setTierlist] = useState(null)
     const [owner, setOwner] = useState(null)
@@ -76,7 +76,11 @@ export default function ViewTierlist() {
 
     const handleLike = async () => {
         if (!user) {
-            alert('Inicia sesión para dar like')
+            navigate('/register')
+            return
+        }
+        if (!profile) {
+            navigate('/onboarding')
             return
         }
         if (likeLoading) return

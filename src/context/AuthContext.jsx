@@ -61,6 +61,7 @@ export function AuthProvider({ children }) {
 
             if (error) {
                 console.error('❌ Profile error:', error)
+                return null
             }
 
             if (data) {
@@ -70,8 +71,10 @@ export function AuthProvider({ children }) {
                 console.log('👻 No profile found, user needs onboarding')
                 setProfile(null)
             }
+            return data
         } catch (err) {
             console.error('💥 loadProfile error:', err)
+            return null
         } finally {
             setLoading(false)
         }
@@ -125,6 +128,20 @@ export function AuthProvider({ children }) {
         return data
     }
 
+    const signInWithProvider = async (provider) => {
+        const { data, error } = await supabase.auth.signInWithOAuth({
+            provider,
+            options: {
+                redirectTo: `${window.location.origin}/onboarding`,
+                scopes: provider === 'google' ? 'openid email profile' : undefined
+            }
+        })
+        if (error) {
+            throw error
+        }
+        return data
+    }
+
     const resetPassword = async (email) => {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
             redirectTo: window.location.origin + '/update-password',
@@ -159,6 +176,7 @@ export function AuthProvider({ children }) {
             loading,
             signUp,
             signIn,
+            signInWithProvider,
             signOut,
             resetPassword,
             updateProfile,

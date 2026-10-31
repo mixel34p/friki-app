@@ -1531,6 +1531,13 @@
     }
 }
 
+.guest-sidebar-top-space { height: 24px; }
+.guest-mobile-actions { display: grid; width: 100%; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 5px; pointer-events: auto; }
+.guest-mobile-actions a { display: flex; min-height: 48px; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border-radius: 12px; color: #aaa6b2; font-size: .66rem; font-weight: 650; text-decoration: none; }
+.guest-mobile-actions a:hover,.guest-mobile-actions a:focus-visible { color: #fff; background: rgba(255,255,255,.075); }
+.guest-mobile-actions a.active { color: var(--brand-primary); background: color-mix(in srgb,var(--brand-primary) 12%,transparent); }
+.guest-mobile-actions svg { width: 20px; height: 20px; }
+
 .more-popover,
 .mobile-topbar-menu {
     width: min(232px, calc(100vw - 24px));

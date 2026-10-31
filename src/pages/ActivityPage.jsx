@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import LoadingSpinner from '../components/LoadingSpinner'
@@ -180,6 +180,7 @@ function activityCopy(item, target) {
 
 export default function ActivityPage() {
   const { user, profile } = useAuth()
+  const navigate = useNavigate()
   const [notifications, setNotifications] = useState([])
   const [loading, setLoading] = useState(true)
   const [visibleDayCount, setVisibleDayCount] = useState(7)
@@ -382,7 +383,15 @@ export default function ActivityPage() {
   const showMoreButton = hasHiddenDays || hasMore
 
   const toggleFollow = async actor => {
-    if (!actor?.id || !user?.id || followingBusy.has(actor.id)) return
+    if (!user?.id) {
+      navigate('/register')
+      return
+    }
+    if (!profile) {
+      navigate('/onboarding')
+      return
+    }
+    if (!actor?.id || followingBusy.has(actor.id)) return
     const wasFollowing = followingIds.has(actor.id)
     setFollowingBusy(current => new Set(current).add(actor.id))
     try {

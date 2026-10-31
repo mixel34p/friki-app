@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import './RecommendationCard.css'
 
 export default function RecommendationCard({ recommendation, onAddToLibrary }) {
-    const { user } = useAuth()
+    const { user, profile } = useAuth()
+    const navigate = useNavigate()
     const [isAdding, setIsAdding] = useState(false)
 
     const { work_id, media_type, score, reasons, title, image_url } = recommendation
@@ -16,7 +17,15 @@ export default function RecommendationCard({ recommendation, onAddToLibrary }) {
         : `/anime/${work_id}`
 
     const handleAddToLibrary = async (status = 'wishlist') => {
-        if (!user || isAdding) return
+        if (isAdding) return
+        if (!user) {
+            navigate('/register')
+            return
+        }
+        if (!profile) {
+            navigate('/onboarding')
+            return
+        }
 
         setIsAdding(true)
         try {
