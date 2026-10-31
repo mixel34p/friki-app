@@ -61,6 +61,10 @@ function dayHeading(dateValue) {
 }
 
 const PAGE_SIZE = 100
+const ACTOR_NOTIFICATION_TYPES = [
+  'follow', 'like_list', 'like_tierlist', 'like_review', 'comment_review',
+  'like', 'comment', 'connection_request', 'connection_accepted',
+]
 
 function parseListContent(content) {
   if (typeof content !== 'string') return content
@@ -195,14 +199,30 @@ export default function ActivityPage() {
   const enrichRows = useCallback(async rows => {
     const actorIds = [...new Set(rows.map(row => row.actor_id).filter(Boolean))]
     let actors = {}
+    let rowsWithExistingActors = rows
     if (actorIds.length) {
-      const { data: profiles } = await supabase.from('profiles')
+      const { data: profiles, error: profileFetchError } = await supabase.from('profiles')
         .select('id, username, display_name, avatar_url, theme_color')
         .in('id', actorIds)
-      actors = Object.fromEntries((profiles || []).map(actor => [actor.id, actor]))
+      if (profileFetchError) {
+        console.error('No se pudieron comprobar las cuentas de las notificaciones:', profileFetchError)
+      } else {
+        actors = Object.fromEntries((profiles || []).map(actor => [actor.id, actor]))
+        const existingActorIds = new Set(Object.keys(actors))
+        const missingActorIds = actorIds.filter(id => !existingActorIds.has(id))
+        rowsWithExistingActors = rows.filter(row => !row.actor_id || existingActorIds.has(row.actor_id))
+
+        if (user?.id && missingActorIds.length) {
+          const { error: deleteMissingActorsError } = await supabase.from('notifications')
+            .delete()
+            .eq('user_id', user.id)
+            .in('actor_id', missingActorIds)
+          if (deleteMissingActorsError) console.error('No se pudieron borrar las notificaciones de cuentas inexistentes:', deleteMissingActorsError)
+        }
+      }
 
       if (user?.id) {
-        const followActorIds = rows.filter(row => row.type === 'follow').map(row => row.actor_id).filter(Boolean)
+        const followActorIds = rowsWithExistingActors.filter(row => row.type === 'follow').map(row => row.actor_id).filter(Boolean)
         if (followActorIds.length) {
           const [followedRowsResult, followingMeRowsResult] = await Promise.all([
             supabase.from('follows').select('following_id')
@@ -228,9 +248,21 @@ export default function ActivityPage() {
       }
     }
 
-    const listIds = [...new Set(rows.filter(row => notificationResourceType(row) === 'list').map(row => row.resource_id).filter(Boolean))]
-    const reviewIds = [...new Set(rows.filter(row => notificationResourceType(row) === 'review').map(row => row.resource_id).filter(Boolean))]
-    const tierlistIds = [...new Set(rows.filter(row => notificationResourceType(row) === 'tierlist').map(row => row.resource_id).filter(Boolean))]
+    // Deleting an auth account sets notifications.actor_id to NULL via the
+    // database foreign key. These event types always require a real actor.
+    if (user?.id) {
+      const { error: deleteOrphansError } = await supabase.from('notifications')
+        .delete()
+        .eq('user_id', user.id)
+        .is('actor_id', null)
+        .in('type', ACTOR_NOTIFICATION_TYPES)
+      if (deleteOrphansError) console.error('No se pudieron borrar las notificaciones sin cuenta asociada:', deleteOrphansError)
+      rowsWithExistingActors = rowsWithExistingActors.filter(row => row.actor_id || !ACTOR_NOTIFICATION_TYPES.includes(row.type))
+    }
+
+    const listIds = [...new Set(rowsWithExistingActors.filter(row => notificationResourceType(row) === 'list').map(row => row.resource_id).filter(Boolean))]
+    const reviewIds = [...new Set(rowsWithExistingActors.filter(row => notificationResourceType(row) === 'review').map(row => row.resource_id).filter(Boolean))]
+    const tierlistIds = [...new Set(rowsWithExistingActors.filter(row => notificationResourceType(row) === 'tierlist').map(row => row.resource_id).filter(Boolean))]
     const resources = {}
 
     if (listIds.length) {
@@ -296,7 +328,7 @@ export default function ActivityPage() {
       })
     }
 
-    return rows.map(row => ({
+    return rowsWithExistingActors.map(row => ({
       ...row,
       actor: actors[row.actor_id],
       resource: resources[`${notificationResourceType(row)}:${row.resource_id}`] || null,

@@ -261,7 +261,7 @@ export default function Layout() {
         </>}
       </nav>
 
-      <main className={`main ${location.pathname === '/onboarding' ? 'onboarding-main' : ''} ${isProfilePage ? 'profile-main' : ''} ${isWorkPage ? 'work-main' : ''} ${location.pathname.startsWith('/discover/anime') || location.pathname.startsWith('/discover/games') ? 'discover-works-main' : ''} ${location.pathname === '/discover/spaces' || location.pathname === '/spaces/explore' ? 'spaces-explore-main' : ''} ${location.pathname === '/spaces' ? 'my-spaces-main' : ''} ${/^\/reviews\/[^/]+/.test(location.pathname) ? 'review-detail-main' : ''} ${/^\/lists\/[^/]+$/.test(location.pathname) ? 'list-detail-main' : ''} ${location.pathname === '/share' ? 'share-main' : ''}`}><Outlet /></main>
+      <main className={`main ${location.pathname === '/onboarding' ? 'onboarding-main' : ''} ${isProfilePage ? 'profile-main' : ''} ${isWorkPage ? 'work-main' : ''} ${location.pathname.startsWith('/discover/anime') || location.pathname.startsWith('/discover/games') ? 'discover-works-main' : ''} ${location.pathname === '/discover/spaces' || location.pathname === '/spaces/explore' ? 'spaces-explore-main' : ''} ${location.pathname === '/spaces' ? 'my-spaces-main' : ''} ${/^\/reviews\/[^/]+/.test(location.pathname) ? 'review-detail-main' : ''} ${/^\/posts\/[^/]+$/.test(location.pathname) ? 'post-detail-main' : ''} ${/^\/lists\/[^/]+$/.test(location.pathname) ? 'list-detail-main' : ''} ${location.pathname === '/share' ? 'share-main' : ''}`}><Outlet /></main>
 
       {listsOpen && <ListsEntryModal onClose={() => setListsOpen(false)} />}
       {moreOpen && isDesktop && createPortal(

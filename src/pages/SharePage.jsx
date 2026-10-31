@@ -511,11 +511,6 @@ export default function SharePage() {
         finished_date: reviewDate || null,
       }).then(savedEntry => {
         const hasReview = Boolean(text.trim())
-        toast({
-          title: hasReview ? 'Reseña publicada' : 'Obra registrada',
-          message: hasReview ? 'Tu reseña ya está lista para compartir.' : `${selectedReview.title} se añadió a tu perfil.`,
-          type: 'success',
-        })
         setSelectedReview(null); setText(''); setReviewRating(0); setReviewDate(''); setSpoilerEnabled(false)
         if (textareaRef.current) textareaRef.current.style.height = ''
         if (hasReview && savedEntry?.id) navigate(`/reviews/${savedEntry.id}`)
@@ -550,7 +545,6 @@ export default function SharePage() {
         spoiler_work_type: spoilerWork?.type,
         spoiler_work_title: spoilerWork?.title,
       })
-      toast({ title: 'Publicación compartida', message: 'Tu post ya está publicado.', type: 'success' })
       navigate(`/posts/${created.id}`)
     } catch (error) {
       console.error('No se pudo publicar el post:', error)
