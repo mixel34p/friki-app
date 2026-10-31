@@ -90,17 +90,22 @@ export async function searchGamesIGDB(query, limit = 20, signal) {
             }
         }
 
-        // Collapse duplicate catalogue entries that differ only by punctuation,
-        // casing or edition suffixes in their display name.
-        const seenNames = new Set()
+        // Remove only duplicate records for the same IGDB game. Distinct games
+        // can legitimately share an identical display name.
+        const seenIds = new Set()
         games = games.filter(game => {
-            const key = gameCatalogDedupKey({ name: game.name, category: game.category, release_date: game.first_release_date })
-            if (!key || seenNames.has(key)) return false
-            seenNames.add(key)
+            const key = String(game.id)
+            if (!game.id || seenIds.has(key)) return false
+            seenIds.add(key)
             return true
         })
 
         games = rankSearchResults(games, query, game => [game.name, ...(game.alternative_names || []).map(name => name.name)], game => game.total_rating_count)
+
+        // Exact-title remakes/remasters are easy to bury below popular original
+        // releases when the visible result list is capped. Keep those variants
+        // in the page so they can be selected as favorites too.
+        games = prioritizeExactTitleRemakesAndRemasters(games, query)
 
         return games.map(game => {
             let banner = null
@@ -150,14 +155,33 @@ export function gameCatalogDedupKey(game) {
     const name = normalizeGameName(game?.name)
     if (!name) return ''
     const category = Number(game?.igdb_category ?? game?.category)
+    if ([8, 9].includes(category)) {
+        const id = game?.id
+        return id !== null && id !== undefined
+            ? `${name}|${category}|${id}`
+            : `${name}|${category}|${getGameReleaseYear(game)}`
+    }
     if ([4, 8, 9, 10].includes(category)) {
-        const rawDate = game?.release_date ?? game?.first_release_date
-        const year = typeof rawDate === 'number'
-            ? new Date(rawDate * 1000).getFullYear()
-            : String(rawDate || '').match(/^\d{4}/)?.[0] || ''
-        return `${name}|${category}|${year}`
+        return `${name}|${category}|${getGameReleaseYear(game)}`
     }
     return name
+}
+
+export function prioritizeExactTitleRemakesAndRemasters(games, query) {
+    const normalizedQuery = normalizeGameName(query)
+    const variants = (games || []).filter(game =>
+        [8, 9].includes(Number(game?.igdb_category ?? game?.category))
+        && normalizeGameName(game?.name) === normalizedQuery
+    )
+    const variantIds = new Set(variants.map(game => String(game.id)))
+    return [...variants, ...(games || []).filter(game => !variantIds.has(String(game.id)))]
+}
+
+function getGameReleaseYear(game) {
+    const rawDate = game?.release_date ?? game?.first_release_date
+    return typeof rawDate === 'number'
+        ? new Date(rawDate * 1000).getFullYear()
+        : String(rawDate || '').match(/^\d{4}/)?.[0] || ''
 }
 
 export function isPrimaryIGDBGame(game, metadata = null) {

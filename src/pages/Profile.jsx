@@ -510,7 +510,7 @@ export default function Profile() {
                                 </button>
                             )}
                             {profile.pronouns && (
-                                <span className="profile-pronouns">{profile.pronouns}</span>
+                                <span className={`profile-pronouns ${profile.featured_badge && BADGES_MAP[profile.featured_badge] ? '' : 'profile-pronouns-no-badge'}`}>{profile.pronouns}</span>
                             )}
                             <div className="profile-actions">
                                 {isOwnProfile ? (

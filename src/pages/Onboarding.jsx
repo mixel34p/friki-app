@@ -50,7 +50,7 @@ export default function Onboarding() {
     const navigate = useNavigate()
     const onboardingStepStorageKey = user?.id ? `geeksphere-onboarding-step:${user.id}` : null
     const onboardingDraftStorageKey = user?.id ? `geeksphere-onboarding-draft:${user.id}` : null
-    const [savedDraft] = useState(() => {
+    const [savedDraft, setSavedDraft] = useState(() => {
         if (!onboardingDraftStorageKey || typeof window === 'undefined') return {}
         try {
             return JSON.parse(window.sessionStorage.getItem(onboardingDraftStorageKey) || '{}')
@@ -58,6 +58,7 @@ export default function Onboarding() {
             return {}
         }
     })
+    const [hydratedDraftKey, setHydratedDraftKey] = useState(onboardingDraftStorageKey)
     
     const [step, setStep] = useState(() => {
         if (!onboardingStepStorageKey || typeof window === 'undefined') return 1
@@ -104,14 +105,36 @@ export default function Onboarding() {
     )
 
     useEffect(() => {
-        if (!onboardingStepStorageKey) return
+        if (!onboardingDraftStorageKey || hydratedDraftKey === onboardingDraftStorageKey) return
+
+        let draft = {}
+        try {
+            draft = JSON.parse(window.sessionStorage.getItem(onboardingDraftStorageKey) || '{}')
+        } catch {}
+
+        setSavedDraft(draft)
+        setUsername(draft.username || '')
+        setDisplayName(draft.displayName || '')
+        setBirthDate(draft.birthDate || '')
+        setFavoriteGames(Array.isArray(draft.favorite_games) ? draft.favorite_games : [])
+        setFavoriteAnimes(Array.isArray(draft.favorite_animes) ? draft.favorite_animes : [])
+        try {
+            setStep(window.sessionStorage.getItem(onboardingStepStorageKey) === '2' ? 2 : 1)
+        } catch {
+            setStep(1)
+        }
+        setHydratedDraftKey(onboardingDraftStorageKey)
+    }, [onboardingDraftStorageKey, onboardingStepStorageKey, hydratedDraftKey])
+
+    useEffect(() => {
+        if (!onboardingStepStorageKey || hydratedDraftKey !== onboardingDraftStorageKey) return
         try {
             window.sessionStorage.setItem(onboardingStepStorageKey, String(step))
         } catch {}
-    }, [onboardingStepStorageKey, step])
+    }, [onboardingDraftStorageKey, onboardingStepStorageKey, hydratedDraftKey, step])
 
     useEffect(() => {
-        if (!onboardingDraftStorageKey) return
+        if (!onboardingDraftStorageKey || hydratedDraftKey !== onboardingDraftStorageKey) return
         try {
             window.sessionStorage.setItem(onboardingDraftStorageKey, JSON.stringify({
                 username,
@@ -121,10 +144,10 @@ export default function Onboarding() {
                 favorite_animes
             }))
         } catch {}
-    }, [onboardingDraftStorageKey, username, displayName, birthDate, favorite_games, favorite_animes])
+    }, [onboardingDraftStorageKey, hydratedDraftKey, username, displayName, birthDate, favorite_games, favorite_animes])
 
     useEffect(() => {
-        if (!user) return
+        if (!user || hydratedDraftKey !== onboardingDraftStorageKey) return
         const metadata = user.user_metadata || {}
         const emailName = user.email?.split('@')[0] || ''
         const discordIdentity = user.identities?.find(identity => identity.provider === 'discord')
@@ -184,9 +207,7 @@ export default function Onboarding() {
                 ? twitchUsername
                 : metadata.full_name || metadata.name || metadata.display_name || metadata.username || emailName || '')
         else if (savedDisplayNameIsOldDiscordUsername && discordDisplayName) setDisplayName(discordDisplayName)
-        setAvatarPreview(DEFAULT_AVATAR)
-        setAvatarFile(null)
-    }, [user, savedDraft.username, savedDraft.displayName])
+    }, [user, onboardingDraftStorageKey, hydratedDraftKey, savedDraft.username, savedDraft.displayName])
 
     useEffect(() => {
         const normalizedUsername = username.trim().toLowerCase()

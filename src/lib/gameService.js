@@ -3,13 +3,13 @@
  * 
  * Flow:
  * 1. Search and rank the local DB
- * 2. Fetch from IGDB only to fill missing results
+ * 2. Fetch from IGDB so current IGDB classifications and variants are searchable
  * 3. Import only newly discovered game IDs
  * 4. Return the ranked combined results
  */
 
 import { supabase } from './supabase'
-import { searchGamesIGDB, getGameByIdIGDB, getSimilarGamesIGDB, filterPrimaryIGDBGames, gameCatalogDedupKey } from './igdb'
+import { searchGamesIGDB, getGameByIdIGDB, getSimilarGamesIGDB, filterPrimaryIGDBGames, prioritizeExactTitleRemakesAndRemasters } from './igdb'
 import { rankSearchResults } from './searchRanking'
 // ...
 
@@ -57,12 +57,9 @@ export async function searchGames(query, limit = 20, { signal } = {}) {
 
         localResults = await refreshLegacyGameRows((localGames || []).map(formatGame), signal)
         localResults = filterPrimaryIGDBGames(localResults)
-        const rankedLocal = rankSearchResults(dedupeGames(localResults), query, game => [game.name], game => game.rating)
 
-        // The local database is the first source. Only call IGDB to fill slots
-        // the local catalog could not satisfy.
-        if (rankedLocal.length >= limit) return rankedLocal.slice(0, limit)
-
+        // Always query IGDB: the local catalog may have enough name matches to
+        // fill the page while still missing same-title remakes or remasters.
         const igdbResults = await searchGamesIGDB(query, limit, signal)
         const localIds = new Set(localResults.map(game => String(game.id)))
         let existingIds = localIds
@@ -77,12 +74,13 @@ export async function searchGames(query, limit = 20, { signal } = {}) {
         const newGames = igdbResults.filter(game => !existingIds.has(String(game.id)))
         if (newGames.length) importGamesToDb(newGames)
 
-        return rankSearchResults(
+        const rankedResults = rankSearchResults(
             dedupeGames([...igdbResults, ...localResults]),
             query,
             game => [game.name, ...(game.search_terms || [])],
             game => game.rating,
-        ).slice(0, limit)
+        )
+        return prioritizeExactTitleRemakesAndRemasters(rankedResults, query).slice(0, limit)
     } catch (error) {
         if (signal?.aborted || error?.name === 'AbortError') return []
         console.error('searchGames error:', error)
@@ -93,12 +91,12 @@ export async function searchGames(query, limit = 20, { signal } = {}) {
 
 function dedupeGames(games) {
     const seenIds = new Set()
-    const seenNames = new Set()
     return games.filter(game => {
-        const name = gameCatalogDedupKey(game)
-        if (seenIds.has(game.id) || !name || seenNames.has(name)) return false
-        seenIds.add(game.id)
-        seenNames.add(name)
+        const id = game?.id
+        if (id === null || id === undefined) return true
+        const key = String(id)
+        if (seenIds.has(key)) return false
+        seenIds.add(key)
         return true
     })
 }

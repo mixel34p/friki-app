@@ -351,6 +351,10 @@
     content: none;
 }
 
+.profile-pronouns-no-badge {
+    margin-left: 4px;
+}
+
 .profile-username {
     font-size: var(--text-sm);
     color: var(--text-muted);
