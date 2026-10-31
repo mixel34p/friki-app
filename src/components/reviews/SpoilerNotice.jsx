@@ -1,9 +1,8 @@
 import './SpoilerNotice.css'
 
-export default function SpoilerNotice({ onReveal, text = '' }) {
+export default function SpoilerNotice({ onReveal }) {
   return (
     <button className="spoiler-notice" type="button" onClick={onReveal} aria-label="Mostrar reseña con spoilers">
-      <span className="spoiler-notice-spacer" aria-hidden="true">{text}</span>
       <span className="spoiler-notice-heading">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M3 3 21 21" />

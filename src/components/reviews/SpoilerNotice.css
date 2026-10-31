@@ -1,14 +1,16 @@
 .spoiler-notice {
-    position: relative;
-    display: block;
+    display: flex;
     width: 100%;
-    min-height: 1.5em;
+    min-height: 0;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
     box-sizing: border-box;
     margin: 8px 0;
-    padding: .35em .75em;
+    padding: .5rem .75rem;
     font: inherit;
-    line-height: inherit;
-    text-align: left;
+    line-height: 1.2;
+    text-align: center;
     color: var(--text-primary, #f5f5f5);
     background: var(--bg-tertiary, #1b1b20);
     background: color-mix(in srgb, var(--brand-primary, #14b8a6) 5%, var(--bg-card, #121216));
@@ -20,8 +22,7 @@
 
 .spoiler-notice:hover { background: var(--bg-tertiary, #1b1b20); background: color-mix(in srgb, var(--brand-primary, #14b8a6) 9%, var(--bg-card, #121216)); border-color: color-mix(in srgb, var(--brand-primary, #14b8a6) 38%, var(--border-default, #303038)); transform: translateY(-1px); }
 .spoiler-notice:focus-visible { outline: 2px solid var(--brand-primary); outline-offset: 3px; }
-.spoiler-notice-spacer { display: block; visibility: hidden; white-space: pre-wrap; overflow-wrap: anywhere; }
-.spoiler-notice-heading { position: absolute; inset: 0; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; padding: 0 8px; font-size: .86rem; line-height: 1.2; text-align: center; pointer-events: none; }
+.spoiler-notice-heading { display: inline-flex; flex-wrap: nowrap; align-items: center; justify-content: center; gap: 8px; font-size: .86rem; line-height: 1.2; text-align: center; pointer-events: none; }
 .spoiler-notice-heading svg { width: 16px; height: 16px; flex: 0 0 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .spoiler-notice-heading strong { font-weight: 700; }
 
