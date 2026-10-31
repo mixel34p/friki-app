@@ -145,6 +145,11 @@
     margin-left: auto;
 }
 
+.profile-follow-button {
+    border-radius: 999px !important;
+    padding-inline: 1.15rem;
+}
+
 .profile-friends-button {
     border-radius: 999px !important;
     padding-inline: 1.4rem;

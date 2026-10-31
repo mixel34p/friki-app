@@ -450,7 +450,7 @@ export default function Profile() {
                     </div>
                     {!isOwnProfile && (
                         <button
-                            className={`btn btn-primary${isFollowing && isFollowedBy ? ' profile-friends-button' : ''}`}
+                            className={`btn btn-primary profile-follow-button${isFollowing && isFollowedBy ? ' profile-friends-button' : ''}`}
                             style={{ padding: '4px 12px', fontSize: '0.8rem', minHeight: '28px', flexShrink: 0 }}
                             onClick={handleFollow}
                         >
@@ -519,7 +519,7 @@ export default function Profile() {
                                     </button>
                                 ) : (
                                     <button
-                                        className={`btn ${isFollowing ? 'btn-secondary' : 'btn-primary'}${isFollowing && isFollowedBy ? ' profile-friends-button' : ''}`}
+                                        className={`btn profile-follow-button ${isFollowing ? 'btn-secondary' : 'btn-primary'}${isFollowing && isFollowedBy ? ' profile-friends-button' : ''}`}
                                         onClick={handleFollow}
                                     >
                                         {isFollowing
