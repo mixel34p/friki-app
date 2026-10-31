@@ -1,7 +1,12 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 
 const AuthContext = createContext({})
+const ACCOUNTS_KEY = 'geeksphere.saved-accounts'
+
+function readSavedAccounts() {
+    try { return JSON.parse(localStorage.getItem(ACCOUNTS_KEY) || '[]') } catch { return [] }
+}
 
 export const useAuth = () => useContext(AuthContext)
 
@@ -9,6 +14,69 @@ export function AuthProvider({ children }) {
     const [user, setUser] = useState(null)
     const [profile, setProfile] = useState(null)
     const [loading, setLoading] = useState(true)
+    const [accounts, setAccounts] = useState(readSavedAccounts)
+
+    const saveAccount = useCallback((session, accountProfile) => {
+        if (!session?.user) return
+        const entry = {
+            id: session.user.id,
+            email: session.user.email || '',
+            session,
+            profile: accountProfile || null,
+        }
+        setAccounts(previous => {
+            const next = [entry, ...previous.filter(account => account.id !== entry.id)]
+            localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(next))
+            return next
+        })
+    }, [])
+
+    const forgetSavedAccount = useCallback(accountId => {
+        if (!accountId) return
+        setAccounts(previous => {
+            const next = previous.filter(account => account.id !== accountId)
+            localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(next))
+            return next
+        })
+    }, [])
+
+    const rememberCurrentAccount = useCallback(async () => {
+        const { data } = await supabase.auth.getSession()
+        if (!data.session) return
+        const { data: accountProfile, error } = await supabase.from('profiles').select('*').eq('id', data.session.user.id).maybeSingle()
+        if (error) {
+            console.warn('No se pudo comprobar si la cuenta terminó el onboarding:', error)
+            return
+        }
+        if (accountProfile) saveAccount(data.session, accountProfile)
+        else forgetSavedAccount(data.session.user.id)
+    }, [saveAccount, forgetSavedAccount])
+
+    const switchAccount = useCallback(async accountId => {
+        const chosen = readSavedAccounts().find(account => account.id === accountId)
+        if (!chosen?.session) throw new Error('No se encontró una sesión guardada para esa cuenta')
+        await rememberCurrentAccount()
+        const { error } = await supabase.auth.setSession({
+            access_token: chosen.session.access_token,
+            refresh_token: chosen.session.refresh_token,
+        })
+        if (error) throw error
+        return chosen.profile || null
+    }, [rememberCurrentAccount])
+
+    const removeAccount = useCallback(async accountId => {
+        const { data } = await supabase.auth.getSession()
+        if (data.session?.user?.id === accountId) await supabase.auth.signOut()
+        forgetSavedAccount(accountId)
+    }, [forgetSavedAccount])
+
+    useEffect(() => {
+        const syncAccounts = event => {
+            if (event.key === ACCOUNTS_KEY) setAccounts(readSavedAccounts())
+        }
+        window.addEventListener('storage', syncAccounts)
+        return () => window.removeEventListener('storage', syncAccounts)
+    }, [])
 
     useEffect(() => {
         // ONLY use onAuthStateChange - it handles INITIAL_SESSION automatically
@@ -21,6 +89,13 @@ export function AuthProvider({ children }) {
                     if (session?.user) {
                         console.log('📦 Restored session for:', session.user.id)
                         setUser(session.user)
+                        if (sessionStorage.getItem('geeksphere.add-account-pending') === '1') {
+                            sessionStorage.removeItem('geeksphere.add-account-pending')
+                            setTimeout(async () => {
+                                const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).maybeSingle()
+                                saveAccount(session, data)
+                            }, 0)
+                        }
                         // Use setTimeout to avoid Supabase deadlock
                         setTimeout(() => loadProfile(session.user.id), 0)
                     } else {
@@ -30,6 +105,13 @@ export function AuthProvider({ children }) {
                 } else if (event === 'SIGNED_IN') {
                     console.log('✅ Signed in:', session.user.id)
                     setUser(session.user)
+                    if (sessionStorage.getItem('geeksphere.add-account-pending') === '1') {
+                        sessionStorage.removeItem('geeksphere.add-account-pending')
+                        setTimeout(async () => {
+                            const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).maybeSingle()
+                            saveAccount(session, data)
+                        }, 0)
+                    }
                     setTimeout(() => loadProfile(session.user.id), 0)
                 } else if (event === 'SIGNED_OUT') {
                     console.log('🚪 Signed out')
@@ -41,13 +123,20 @@ export function AuthProvider({ children }) {
                     // Just update user, don't reload profile
                     if (session?.user) {
                         setUser(session.user)
+                        setAccounts(previous => {
+                            const existing = previous.find(account => account.id === session.user.id)
+                            if (!existing) return previous
+                            const next = [{ ...existing, session }, ...previous.filter(account => account.id !== session.user.id)]
+                            localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(next))
+                            return next
+                        })
                     }
                 }
             }
         )
 
         return () => subscription.unsubscribe()
-    }, [])
+    }, [saveAccount])
 
     const loadProfile = async (userId) => {
         if (!userId) return null
@@ -98,7 +187,8 @@ export function AuthProvider({ children }) {
             email: normalizedEmail,
             password,
             options: {
-                data: { username } // Store in metadata
+                data: { username }, // Store in metadata
+                emailRedirectTo: `${window.location.origin}/confirm-email`
             }
         })
 
@@ -128,7 +218,8 @@ export function AuthProvider({ children }) {
         return data
     }
 
-    const signInWithProvider = async (provider) => {
+    const signInWithProvider = async (provider, { addAccount = false } = {}) => {
+        if (addAccount) sessionStorage.setItem('geeksphere.add-account-pending', '1')
         const { data, error } = await supabase.auth.signInWithOAuth({
             provider,
             options: {
@@ -150,6 +241,17 @@ export function AuthProvider({ children }) {
     }
 
     const signOut = async () => {
+        const { data } = await supabase.auth.getSession()
+        const currentUserId = data.session?.user?.id
+        if (currentUserId) {
+            const { data: accountProfile, error } = await supabase
+                .from('profiles')
+                .select('id')
+                .eq('id', currentUserId)
+                .maybeSingle()
+            if (!error && !accountProfile) forgetSavedAccount(currentUserId)
+            else if (error) console.warn('No se pudo comprobar el perfil antes de cerrar sesión:', error)
+        }
         await supabase.auth.signOut()
     }
 
@@ -180,7 +282,12 @@ export function AuthProvider({ children }) {
             signOut,
             resetPassword,
             updateProfile,
-            refreshProfile: () => loadProfile(user?.id)
+            refreshProfile: () => loadProfile(user?.id),
+            accounts,
+            rememberCurrentAccount,
+            switchAccount,
+            removeAccount,
+            saveAccount
         }}>
             {children}
         </AuthContext.Provider>

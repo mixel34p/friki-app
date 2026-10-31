@@ -37,6 +37,7 @@
 .auth-provider-icon svg { width: 20px; height: 20px; }
 .auth-provider-button.discord .auth-provider-icon { color: #5865f2; }
 .auth-provider-button.twitch .auth-provider-icon { color: #9146ff; }
+.auth-provider-button.x .auth-provider-icon { color: var(--text-primary); }
 .auth-divider { display: flex; align-items: center; gap: 12px; margin: 18px 0 12px; color: var(--text-muted); font-size: .76rem; }
 .auth-divider::before,.auth-divider::after { height: 1px; flex: 1; background: var(--border-subtle); content: ''; }
 .auth-email-toggle { display: block; width: 100%; padding: 7px 0; border: 0; color: var(--text-secondary); background: transparent; font: 650 .84rem var(--font-sans); text-align: center; cursor: pointer; }
@@ -71,6 +72,17 @@
 .register-form-section .register-heading { margin-bottom: 20px; }
 .register-form-section .register-heading h2 { margin: 0; color: var(--text-primary); font: 750 1.35rem/1.2 var(--font-display); letter-spacing: -.025em; }
 .register-form-section .auth-card-footer,.login-form-section .auth-card-footer { margin-top: 20px; }
+.auth-flow-section { padding-bottom: 12px; }
+.auth-flow-success { display: grid; justify-items: center; gap: 10px; padding: 12px 0 4px; text-align: center; }
+.auth-flow-success-icon { display: grid; width: 46px; height: 46px; place-items: center; border: 1px solid color-mix(in srgb,var(--brand-primary) 38%,transparent); border-radius: 50%; color: var(--brand-primary); background: color-mix(in srgb,var(--brand-primary) 9%,transparent); }
+.auth-flow-success-icon svg { width: 21px; height: 21px; }
+.auth-flow-success > strong { color: var(--text-primary); font: 700 1.05rem var(--font-display); }
+.auth-flow-success > p { max-width: 440px; margin: 0; color: var(--text-secondary); font-size: .86rem; line-height: 1.55; overflow-wrap: anywhere; }
+.auth-flow-success > p b { color: var(--text-primary); font-weight: 650; }
+.auth-flow-mail-icon { margin: 0 0 16px; }
+.auth-flow-note { margin: 22px 0; color: var(--text-muted); font-size: .8rem; line-height: 1.55; }
+.auth-flow-note strong { color: var(--text-secondary); }
+.auth-submit-link { display: flex; align-items: center; justify-content: center; color: #071412; text-decoration: none; }
 
 @media (max-width: 767px) {
     .auth-page { min-height: 0; padding: 20px 0 30px; }

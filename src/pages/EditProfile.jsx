@@ -13,6 +13,8 @@ import ImageCropperModal from '../components/ImageCropperModal'
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { arrayMove, SortableContext, rectSortingStrategy } from '@dnd-kit/sortable'
 import { SortableFavoriteItem } from '../components/profile/SortableFavoriteItem'
+import { FaDiscord, FaTwitch, FaXTwitter } from 'react-icons/fa6'
+import { FcGoogle } from 'react-icons/fc'
 
 const getOwnedAvatarStoragePath = (avatarUrl, userId) => {
     if (!avatarUrl || !userId) return null
@@ -170,6 +172,13 @@ const SOCIAL_PLATFORMS = [
     { id: 'website',   label: 'Sitio Web',    placeholder: 'https://tusitio.com',icon: <SocialIcons.Website /> }
 ]
 
+const OAUTH_PROVIDERS = [
+    { id: 'google', label: 'Google', icon: <FcGoogle aria-hidden="true" /> },
+    { id: 'discord', label: 'Discord', icon: <FaDiscord aria-hidden="true" /> },
+    { id: 'twitch', label: 'Twitch', icon: <FaTwitch aria-hidden="true" /> },
+    { id: 'x', label: 'X', icon: <FaXTwitter aria-hidden="true" /> }
+]
+
 const getEditSocialHref = (platform, handle) => {
     const value = handle?.trim()
     if (!value || platform === 'discord') return null
@@ -201,7 +210,7 @@ const SECTION_TABS = [
    Component
    ────────────────────────────────────── */
 export default function EditProfile({ onClose, standalone = false }) {
-    const { user, profile, updateProfile } = useAuth()
+    const { user, profile, updateProfile, signOut, removeAccount } = useAuth()
     const navigate = useNavigate()
     const fileInputRef = useRef(null)
     const bannerInputRef = useRef(null)
@@ -237,6 +246,12 @@ export default function EditProfile({ onClose, standalone = false }) {
     const [saving, setSaving] = useState(false)
     const [error, setError] = useState('')
     const [usernameError, setUsernameError] = useState('')
+    const [linkingProvider, setLinkingProvider] = useState('')
+    const [connectionError, setConnectionError] = useState('')
+    const [deleteAccountOpen, setDeleteAccountOpen] = useState(false)
+    const [deleteAccountUsername, setDeleteAccountUsername] = useState('')
+    const [deletingAccount, setDeletingAccount] = useState(false)
+    const [accountError, setAccountError] = useState('')
     const hasUnsavedChanges = JSON.stringify(formData) !== savedFormDataRef.current
         || !!avatarFile || !!bannerFile
         || avatarPreview !== savedAvatarPreviewRef.current
@@ -577,6 +592,44 @@ export default function EditProfile({ onClose, standalone = false }) {
         }
     }
 
+    const handleLinkProvider = async (provider) => {
+        setLinkingProvider(provider)
+        setConnectionError('')
+        try {
+            const { error: linkError } = await supabase.auth.linkIdentity({
+                provider,
+                options: { redirectTo: `${window.location.origin}/settings` }
+            })
+            if (linkError) throw linkError
+        } catch (linkError) {
+            setConnectionError(linkError.message || 'No se pudo iniciar la vinculación. Inténtalo de nuevo.')
+            setLinkingProvider('')
+        }
+    }
+
+    const handleSignOut = async () => {
+        await signOut()
+        navigate('/login', { replace: true })
+    }
+
+    const handleDeleteAccount = async (event) => {
+        event.preventDefault()
+        if (!user?.id || !profile?.username) return
+        setDeletingAccount(true)
+        setAccountError('')
+        try {
+            const { error: deleteError } = await supabase.functions.invoke('delete-account', {
+                body: { username: deleteAccountUsername.trim().replace(/^@/, '') }
+            })
+            if (deleteError) throw deleteError
+            await removeAccount(user.id)
+            navigate('/register', { replace: true })
+        } catch (deleteError) {
+            setAccountError(deleteError.message || 'No se pudo eliminar la cuenta. Inténtalo de nuevo.')
+            setDeletingAccount(false)
+        }
+    }
+
     const handleClose = () => { if (onClose) onClose(); else navigate('/profile') }
 
     const renderWorkSearchResults = (kind) => {
@@ -604,24 +657,24 @@ export default function EditProfile({ onClose, standalone = false }) {
             '--profile-accent-text': getAccentTextColor(formData.theme_color || '#14b8a6')
         }}>
             <div className="ep-overlay ep-settings-overlay">
-                <div className="ep-modal ep-settings-shell">
+                <div className={`ep-modal ep-settings-shell${activeSection === 'photos' ? '' : ' ep-settings-shell-no-preview'}`}>
                     <h1 className="ep-settings-page-title">Ajustes</h1>
                     <aside className="ep-settings-nav">
                         <span className="ep-settings-nav-label">PERFIL</span>
-                        <button type="button" className={`ep-settings-nav-item ${activeSection !== 'blocked' ? 'active' : ''}`} onClick={() => setActiveSection('photos')}>Perfil</button>
-                        <span className="ep-settings-nav-label ep-settings-nav-secondary">CUENTA</span>
+                        <button type="button" className={`ep-settings-nav-item ${activeSection === 'photos' ? 'active' : ''}`} onClick={() => setActiveSection('photos')}>Personalización</button>
                         <button type="button" className={`ep-settings-nav-item ${activeSection === 'blocked' ? 'active' : ''}`} onClick={() => setActiveSection('blocked')}>Bloqueados y silenciados</button>
+                        <button type="button" className={`ep-settings-nav-item ep-settings-nav-account ${activeSection === 'account' ? 'active' : ''}`} onClick={() => setActiveSection('account')}>Cuenta</button>
                     </aside>
 
                     <div className="ep-settings-editor">
                         <div className="ep-modal-header">
-                            <h1 className="ep-modal-title">{activeSection === 'blocked' ? 'Bloqueados y silenciados' : 'Perfil'}</h1>
-                            {activeSection !== 'blocked' && <button type="submit" form="profile-settings-form" className="btn btn-primary ep-settings-save-button" disabled={saving || !!usernameError}>{saving ? 'Guardando…' : 'Guardar'}</button>}
+                            <h1 className="ep-modal-title">{activeSection === 'blocked' ? 'Bloqueados y silenciados' : activeSection === 'account' ? 'Cuenta' : 'Personalización'}</h1>
+                            {activeSection === 'photos' && <button type="submit" form="profile-settings-form" className="btn btn-primary ep-settings-save-button" disabled={saving || !!usernameError}>{saving ? 'Guardando…' : 'Guardar'}</button>}
                         </div>
                         <input ref={fileInputRef} type="file" accept="image/*" onChange={e => handleFileChange(e, 'avatar')} hidden />
                         <input ref={bannerInputRef} type="file" accept="image/*" onChange={e => handleFileChange(e, 'banner')} hidden />
 
-                        {activeSection !== 'blocked' ? <form id="profile-settings-form" onSubmit={handleSubmit} className="ep-settings-form">
+                        {activeSection === 'photos' ? <form id="profile-settings-form" onSubmit={handleSubmit} className="ep-settings-form">
                             <section className="ep-settings-card ep-settings-personal-card">
                                 <div className="ep-settings-photo-row">
                                     <button type="button" className="ep-settings-photo-button" onClick={() => fileInputRef.current?.click()} aria-label="Cambiar foto de perfil">
@@ -751,7 +804,52 @@ export default function EditProfile({ onClose, standalone = false }) {
                                 })}
                             </section>
                             {error && <div className="ep-alert ep-alert--error">{error}</div>}
-                        </form> : <div className="ep-settings-card ep-settings-blocked-card">
+                        </form> : activeSection === 'account' ? <div className="ep-settings-account">
+                            <section className="ep-settings-card ep-settings-account-connections">
+                                {OAUTH_PROVIDERS.map(provider => {
+                                    const identity = user?.identities?.find(item => item.provider === provider.id)
+                                    const identityData = identity?.identity_data || {}
+                                    const accountName = provider.id === 'google'
+                                        ? identityData.full_name || identityData.name || user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email
+                                        : identityData.username || identityData.user_name || identityData.login || identityData.preferred_username || identityData.name
+                                    const normalizedAccountName = accountName ? String(accountName) : ''
+                                    const cleanAccountName = provider.id === 'discord'
+                                        ? normalizedAccountName.replace(/#\d{1,4}$/, '')
+                                        : normalizedAccountName
+                                    const accountLabel = cleanAccountName
+                                        ? provider.id === 'google' || cleanAccountName.startsWith('@') ? cleanAccountName : `@${cleanAccountName}`
+                                        : 'Cuenta vinculada'
+                                    const rawAvatar = identityData.picture || identityData.profile_image_url || identityData.avatar_url || identityData.photo_url || identityData.avatar
+                                    const discordId = identityData.provider_id || identityData.user_id || identityData.sub || identityData.id
+                                    const serviceAvatar = typeof rawAvatar === 'string' && /^https?:\/\//i.test(rawAvatar)
+                                        ? rawAvatar
+                                        : provider.id === 'discord' && rawAvatar && discordId
+                                            ? `https://cdn.discordapp.com/avatars/${discordId}/${rawAvatar}.png`
+                                            : '/default-avatar.svg'
+                                    return <div className="ep-settings-account-provider" key={provider.id}>
+                                        <div className="ep-settings-connection-heading">
+                                            <span className={`ep-settings-oauth-icon ${provider.id}`}>{provider.icon}</span>
+                                            <strong>{provider.label}</strong>
+                                            {identity ? <span className="ep-settings-connection-status connected">Conectado</span> : <button type="button" className="ep-settings-connect-button" onClick={() => handleLinkProvider(provider.id)} disabled={!!linkingProvider}>
+                                                {linkingProvider === provider.id ? 'Conectando…' : 'Vincular'}
+                                            </button>}
+                                        </div>
+                                        {identity && <div className="ep-settings-connected-account">
+                                            <span className="ep-settings-connected-label">Conectado con:</span>
+                                            <img src={serviceAvatar} alt={`Foto de ${provider.label}`} />
+                                            <strong>{accountLabel}</strong>
+                                        </div>}
+                                    </div>
+                                })}
+                            </section>
+                            {connectionError && <div className="ep-alert ep-alert--error">{connectionError}</div>}
+                            <p className="ep-settings-account-email">{user?.email}</p>
+                            <section className="ep-settings-card ep-settings-account-actions">
+                                <button type="button" className="ep-settings-signout-button" onClick={handleSignOut}>Cerrar sesión</button>
+                                <button type="button" className="ep-settings-delete-button" onClick={() => { setDeleteAccountUsername(''); setAccountError(''); setDeleteAccountOpen(true) }}>Eliminar cuenta</button>
+                            </section>
+                            {accountError && !deleteAccountOpen && <div className="ep-alert ep-alert--error">{accountError}</div>}
+                        </div> : <div className="ep-settings-card ep-settings-blocked-card">
                             {loadingBlocked ? <p>Cargando usuarios bloqueados…</p> : blockedUsers.length === 0 ? <p>No tienes usuarios bloqueados.</p> : blockedUsers.map(block => <div key={block.blocked_id} className="ep-blocked-item">
                                 <div className="ep-blocked-user">{block.blocked?.avatar_url ? <img src={block.blocked.avatar_url} alt="" className="ep-blocked-avatar" /> : <div className="ep-blocked-avatar">{block.blocked?.display_name?.charAt(0) || '?'}</div>}<div className="ep-blocked-names"><span className="ep-blocked-display-name">{block.blocked?.display_name || 'Usuario'}</span><span className="ep-blocked-username">@{block.blocked?.username}</span></div></div>
                                 <button type="button" className="ep-unblock-btn" onClick={() => handleUnblock(block.blocked_id)}>Desbloquear</button>
@@ -759,7 +857,7 @@ export default function EditProfile({ onClose, standalone = false }) {
                         </div>}
                     </div>
 
-                    <aside className="ep-settings-preview-column">
+                    {activeSection === 'photos' && <aside className="ep-settings-preview-column">
                         <div className="ep-settings-preview-heading">
                             <span className="ep-settings-nav-label">PERFIL</span>
                         </div>
@@ -774,9 +872,22 @@ export default function EditProfile({ onClose, standalone = false }) {
                             </div>
                         </article>
                         <p className={`ep-settings-preview-hint${hasUnsavedChanges ? ' ep-settings-preview-hint--dirty' : ''}`}>{hasUnsavedChanges ? 'Tienes cambios sin guardar.' : 'No te olvides de guardar los cambios.'}</p>
-                    </aside>
+                    </aside>}
                 </div>
             </div>
+            {deleteAccountOpen && createPortal(<div className="ep-settings-confirm-overlay" onMouseDown={event => { if (event.target === event.currentTarget && !deletingAccount) setDeleteAccountOpen(false) }}>
+                <form className="ep-settings-confirm-dialog" onSubmit={handleDeleteAccount}>
+                    <h2>Eliminar cuenta</h2>
+                    <p>Esta acción es permanente. Para confirmar, escribe tu @ de GeekSphere.</p>
+                    <label htmlFor="delete-account-username">Nombre de usuario</label>
+                    <input id="delete-account-username" className="ep-settings-control" value={deleteAccountUsername} onChange={event => setDeleteAccountUsername(event.target.value)} placeholder={`@${profile?.username || 'usuario'}`} autoComplete="off" />
+                    {accountError && <div className="ep-alert ep-alert--error">{accountError}</div>}
+                    <div className="ep-settings-confirm-actions">
+                        <button type="button" className="ep-settings-signout-button" onClick={() => setDeleteAccountOpen(false)} disabled={deletingAccount}>Cancelar</button>
+                        <button type="submit" className="ep-settings-delete-button" disabled={deletingAccount || deleteAccountUsername.trim().replace(/^@/, '').toLowerCase() !== String(profile?.username || '').toLowerCase()}>{deletingAccount ? 'Eliminando…' : 'Eliminar cuenta'}</button>
+                    </div>
+                </form>
+            </div>, document.body)}
             {cropModal.isOpen && <ImageCropperModal imageSrc={cropModal.src} aspect={cropModal.aspect} onCropComplete={handleCropComplete} onCancel={() => setCropModal({ isOpen: false, type: null, src: null, aspect: 1 })} />}
         </div>
     )

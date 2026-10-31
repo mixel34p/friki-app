@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback } from 'react'
+import { createContext, useContext, useState, useCallback, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import './Toast.css'
 
@@ -55,12 +55,12 @@ const DEFAULT_ICONS = {
 }
 
 /* ── Single toast card ── */
-function ToastItem({ id, title, message, type = 'info', icon, duration, exiting, onDismiss }) {
+function ToastItem({ id, title, message, type = 'info', icon, duration, exiting, onDismiss, variant }) {
     const resolvedIcon = icon ?? DEFAULT_ICONS[type] ?? DEFAULT_ICONS.info
 
     return (
         <div
-            className={`toast-card${exiting ? ' exiting' : ''}`}
+            className={`toast-card${variant ? ` toast-card-${variant}` : ''}${exiting ? ' exiting' : ''}`}
             data-type={type}
             role="alert"
             aria-live="polite"
@@ -99,26 +99,41 @@ export function ToastProvider({ children }) {
         setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 320)
     }, [])
 
-    const toast = useCallback(({ title, message, type = 'info', icon, duration = 4000 } = {}) => {
+    const toast = useCallback(({ title, message, type = 'info', icon, duration = 4000, position = 'bottom', variant } = {}) => {
         const id = ++_id
-        setToasts(prev => [...prev, { id, title, message, type, icon, duration, exiting: false }])
+        setToasts(prev => [...prev, { id, title, message, type, icon, duration, position, variant, exiting: false }])
         if (duration > 0) {
             setTimeout(() => dismiss(id), duration)
         }
         return id
     }, [dismiss])
 
+    useEffect(() => {
+        const accountLabel = sessionStorage.getItem('geeksphere.account-switched-toast')
+        if (accountLabel === null) return
+        sessionStorage.removeItem('geeksphere.account-switched-toast')
+        toast({ title: `Ahora estás en ${accountLabel || 'tu cuenta'}`, type: 'success', position: 'top', variant: 'account-switch', duration: 2000 })
+    }, [toast])
+
     return (
         <ToastContext.Provider value={{ toast, dismiss }}>
             {children}
             {createPortal(
-                <div className="toast-container" aria-label="Notificaciones">
-                    {toasts.map(t => (
+                <div className="toast-container toast-container-top" aria-label="Notificaciones">
+                    {toasts.filter(t => t.position === 'top').map(t => (
                         <ToastItem
                             key={t.id}
                             {...t}
                             onDismiss={() => dismiss(t.id)}
                         />
+                    ))}
+                </div>,
+                document.body
+            )}
+            {createPortal(
+                <div className="toast-container" aria-label="Notificaciones">
+                    {toasts.filter(t => t.position !== 'top').map(t => (
+                        <ToastItem key={t.id} {...t} onDismiss={() => dismiss(t.id)} />
                     ))}
                 </div>,
                 document.body

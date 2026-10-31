@@ -27,9 +27,11 @@ const Icon = ({ name }) => {
   return <svg {...common}>{paths[name]}</svg>
 }
 
-function MoreMenu({ profile, image, username, accentColor, onSignOut }) {
+function MoreMenu({ profile, image, username, accentColor, onSignOut, accounts = [], userId, onSwitchAccount, onAddAccount, switchingAccountId }) {
   const [accountsOpen, setAccountsOpen] = useState(false)
   const displayName = profile?.display_name || username || 'Mi cuenta'
+  const accountCount = new Set([...accounts.map(account => account.id), userId].filter(Boolean)).size
+  const canAddAccount = accountCount < 3
   if (accountsOpen) return <>
     <div className="more-submenu-heading">
       <button className="more-submenu-back" type="button" aria-label="Volver al menú" onClick={() => setAccountsOpen(false)}>
@@ -38,13 +40,28 @@ function MoreMenu({ profile, image, username, accentColor, onSignOut }) {
       <strong>Cuentas</strong>
     </div>
     <div className="more-submenu-divider" />
-    <button className="more-current-account" type="button" aria-current="true" aria-label={`${displayName}, cuenta actual`}>
+    <button className={`more-current-account ${switchingAccountId === userId ? 'is-switching' : ''}`} type="button" aria-current="true" aria-busy={switchingAccountId === userId} aria-label={`${displayName}, cuenta actual`}>
       {image ? <img src={image} alt="" /> : <span className="more-account-avatar-placeholder">{displayName[0]?.toUpperCase() || 'U'}</span>}
       <span className="more-account-copy"><strong>{displayName}</strong><small>@{username || 'usuario'}</small></span>
-      <svg className="more-account-check" style={{ color: accentColor }} viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg>
+      {switchingAccountId === userId
+        ? <span className="more-account-loading-spinner" role="status" aria-label="Cambiando de cuenta" />
+        : <svg className="more-account-check" style={{ color: accentColor }} viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg>}
     </button>
+    {accounts.filter(account => account.id !== userId).map(account => {
+      const savedProfile = account.profile
+      const savedName = savedProfile?.display_name || savedProfile?.username || account.email || 'Cuenta'
+      const savedUsername = savedProfile?.username
+      const savedImage = savedProfile?.avatar_url || savedProfile?.profile_picture
+      const isSwitching = account.id === switchingAccountId
+      return <button key={account.id} className={`more-current-account ${isSwitching ? 'is-switching' : ''}`} type="button" onClick={() => onSwitchAccount(account.id)} aria-label={`Cambiar a ${savedName}`} aria-busy={isSwitching}>
+        {savedImage ? <img src={savedImage} alt="" /> : <span className="more-account-avatar-placeholder">{savedName[0]?.toUpperCase() || 'U'}</span>}
+        <span className="more-account-copy"><strong>{savedName}</strong><small>{savedUsername ? `@${savedUsername}` : account.email}</small></span>
+        {isSwitching && <span className="more-account-loading-spinner" role="status" aria-label="Cambiando de cuenta" />}
+      </button>
+    })}
     <nav className="more-menu-links more-account-actions" aria-label="Acciones de cuenta">
-      <button className="more-menu-link" type="button" aria-disabled="true">Añadir cuenta</button>
+      <button className="more-menu-link" type="button" onClick={onAddAccount} disabled={!canAddAccount}>{canAddAccount ? 'Añadir cuenta' : 'Límite de cuentas alcanzado'}</button>
+      {!canAddAccount && <small className="more-account-limit">Máximo 3 cuentas por navegador.</small>}
       <button className="more-menu-link more-account-signout" type="button" onClick={onSignOut}>Cerrar sesión @{username || 'usuario'}</button>
     </nav>
   </>
@@ -72,10 +89,11 @@ function MoreMenu({ profile, image, username, accentColor, onSignOut }) {
 }
 
 export default function Layout() {
-  const { user, profile, signOut } = useAuth()
+  const { user, profile, signOut, accounts, rememberCurrentAccount, switchAccount } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
   const [moreOpen, setMoreOpen] = useState(false)
+  const [switchingAccountId, setSwitchingAccountId] = useState(null)
   const [unreadCount, setUnreadCount] = useState(0)
   const [registerSearchOpen, setRegisterSearchOpen] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
@@ -116,7 +134,24 @@ export default function Layout() {
   const spacesPath = user && !profile ? '/onboarding' : '/spaces'
   const image = profile?.avatar_url || profile?.profile_picture || '/default-avatar.svg'
   const handleSignOut = async () => { setMoreOpen(false); await signOut(); navigate('/login') }
-  const moreMenu = <MoreMenu profile={profile} image={image} username={username} accentColor={getVisibleAccentColor(profile?.theme_color || 'var(--brand-primary)')} onSignOut={handleSignOut} />
+  const addAccount = async () => {
+    await rememberCurrentAccount()
+    setMoreOpen(false)
+    navigate('/login?addAccount=1')
+  }
+  const changeAccount = async accountId => {
+    setSwitchingAccountId(accountId)
+    try {
+      const accountProfile = await switchAccount(accountId)
+      const username = accountProfile?.username
+      sessionStorage.setItem('geeksphere.account-switched-toast', username ? `@${username}` : '')
+      window.location.assign(username ? `/profile/${encodeURIComponent(username)}` : '/onboarding')
+    } catch (error) {
+      console.error('No se pudo cambiar de cuenta:', error)
+      setSwitchingAccountId(null)
+    }
+  }
+  const moreMenu = <MoreMenu profile={profile} image={image} username={username} userId={user?.id} accounts={accounts} onSwitchAccount={changeAccount} onAddAccount={addAccount} switchingAccountId={switchingAccountId} accentColor={getVisibleAccentColor(profile?.theme_color || 'var(--brand-primary)')} onSignOut={handleSignOut} />
   const toggleMoreMenu = () => {
     if (moreOpen) { setMoreOpen(false); return }
     if (isDesktop && moreButtonRef.current) {
@@ -169,7 +204,7 @@ export default function Layout() {
   }, [])
 
   const active = path => location.pathname === path || (path !== '/home' && location.pathname.startsWith(path))
-  const isAuthEntry = location.pathname === '/login' || location.pathname === '/register'
+  const isAuthEntry = ['/login', '/register', '/forgot-password', '/confirm-email', '/update-password'].includes(location.pathname)
   const isProfilePage = location.pathname === '/profile' || /^\/profile\/[^/]+$/.test(location.pathname)
   const isWorkPage = /^\/(game|anime)\/[^/]+(\/reviews)?$/.test(location.pathname)
   const mobileNavIndex = shareOpen ? 2 : active('/home') ? 0 : active('/search') ? 1 : active('/spaces') ? 3 : -1

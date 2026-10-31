@@ -111,7 +111,12 @@ function ProtectedRoute({ children, requireProfile = true }) {
 
 // Public only route (redirect if logged in)
 function PublicOnlyRoute({ children }) {
-  const { user, loading } = useAuth()
+  const { user, loading, accounts = [] } = useAuth()
+  const location = useLocation()
+  const isAddingAccount = new URLSearchParams(location.search).get('addAccount') === '1'
+  const isPasswordLoginPending = location.pathname === '/login'
+    && sessionStorage.getItem('geeksphere.password-login-pending') === '1'
+  const savedAccountCount = new Set([...accounts.map(account => account.id), user?.id].filter(Boolean)).size
 
   if (loading) {
     return (
@@ -121,7 +126,11 @@ function PublicOnlyRoute({ children }) {
     )
   }
 
-  if (user) {
+  if (user && !isAddingAccount && !isPasswordLoginPending) {
+    return <Navigate to="/home" replace />
+  }
+
+  if (user && isAddingAccount && savedAccountCount >= 3) {
     return <Navigate to="/home" replace />
   }
 
@@ -167,11 +176,6 @@ function App() {
         <RouteTitle />
         <Routes>
           <Route path="/" element={<Navigate to="/home" replace />} />
-          {/* Public routes */}
-          <Route path="/forgot-password" element={<PublicOnlyRoute><ForgotPassword /></PublicOnlyRoute>} />
-          <Route path="/confirm-email" element={<PublicOnlyRoute><ConfirmEmail /></PublicOnlyRoute>} />
-          <Route path="/update-password" element={<UpdatePassword />} />
-
           {/* Chat Routes */}
           <Route path="/chat" element={<ProtectedRoute><Placeholder title="Chat" /></ProtectedRoute>} />
           <Route path="/chat/:connectionId" element={<ProtectedRoute><Placeholder title="Chat" /></ProtectedRoute>} />
@@ -186,6 +190,9 @@ function App() {
             <Route path="/onboarding" element={<ProtectedRoute requireProfile={false}><Onboarding /></ProtectedRoute>} />
             <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
             <Route path="/register" element={<PublicOnlyRoute><Register /></PublicOnlyRoute>} />
+            <Route path="/forgot-password" element={<PublicOnlyRoute><ForgotPassword /></PublicOnlyRoute>} />
+            <Route path="/confirm-email" element={<ConfirmEmail />} />
+            <Route path="/update-password" element={<UpdatePassword />} />
             <Route path="/home" element={<Home />} />
             <Route path="/activity" element={<ProtectedRoute><ActivityPage /></ProtectedRoute>} />
             <Route path="/search" element={<Search />} />

@@ -1,9 +1,11 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import SEO from '../components/SEO'
 import AuthProviderButtons from '../components/AuthProviderButtons'
 import './Auth.css'
+
+const PASSWORD_LOGIN_PENDING_KEY = 'geeksphere.password-login-pending'
 
 export default function Login() {
     const [email, setEmail] = useState('')
@@ -12,17 +14,34 @@ export default function Login() {
     const [loading, setLoading] = useState(false)
     const [providerLoading, setProviderLoading] = useState('')
     const [showEmailForm, setShowEmailForm] = useState(false)
-    const { signIn, signInWithProvider } = useAuth()
+    const { signIn, signInWithProvider, rememberCurrentAccount, supabase } = useAuth()
     const navigate = useNavigate()
+    const location = useLocation()
+    const addAccount = new URLSearchParams(location.search).get('addAccount') === '1'
+
+    useEffect(() => {
+        sessionStorage.removeItem(PASSWORD_LOGIN_PENDING_KEY)
+    }, [])
 
     const handleSubmit = async event => {
         event.preventDefault()
         setError('')
         setLoading(true)
+        sessionStorage.setItem(PASSWORD_LOGIN_PENDING_KEY, '1')
         try {
-            await signIn(email, password)
-            navigate('/home')
+            const { user: signedInUser } = await signIn(email, password)
+            const { data: profile, error: profileError } = await supabase
+                .from('profiles')
+                .select('id')
+                .eq('id', signedInUser.id)
+                .maybeSingle()
+
+            if (profileError) throw profileError
+            if (addAccount) await rememberCurrentAccount()
+            navigate(profile ? '/home' : '/onboarding', { replace: true })
+            window.setTimeout(() => sessionStorage.removeItem(PASSWORD_LOGIN_PENDING_KEY), 0)
         } catch (err) {
+            sessionStorage.removeItem(PASSWORD_LOGIN_PENDING_KEY)
             setError(err.message || 'Error al iniciar sesión')
         } finally {
             setLoading(false)
@@ -33,7 +52,7 @@ export default function Login() {
         setError('')
         setProviderLoading(provider)
         try {
-            await signInWithProvider(provider)
+            await signInWithProvider(provider, { addAccount })
         } catch (err) {
             setError(err.message || `No se pudo continuar con ${provider}`)
             setProviderLoading('')
@@ -69,7 +88,7 @@ export default function Login() {
                             <button type="submit" className="auth-submit" disabled={loading}>{loading ? 'Entrando…' : 'Iniciar sesión'}</button>
                         </form>
                     </>}
-                    <div className="auth-card-footer"><span>¿Aún no tienes cuenta?</span><Link to="/register">Únete a GeekSphere</Link></div>
+                    <div className="auth-card-footer"><span>¿Aún no tienes cuenta?</span><Link to={`/register${addAccount ? '?addAccount=1' : ''}`}>{addAccount ? 'Crear una cuenta nueva' : 'Únete a GeekSphere'}</Link></div>
                 </section>
             </div>
         </div>

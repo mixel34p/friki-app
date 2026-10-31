@@ -1,10 +1,11 @@
-import { FaDiscord, FaTwitch } from 'react-icons/fa6'
+import { FaDiscord, FaTwitch, FaXTwitter } from 'react-icons/fa6'
 import { FcGoogle } from 'react-icons/fc'
 
 const PROVIDERS = [
     { id: 'google', label: 'Google', icon: <FcGoogle aria-hidden="true" />, style: 'google' },
     { id: 'discord', label: 'Discord', icon: <FaDiscord aria-hidden="true" />, style: 'discord' },
     { id: 'twitch', label: 'Twitch', icon: <FaTwitch aria-hidden="true" />, style: 'twitch' },
+    { id: 'x', label: 'X', icon: <FaXTwitter aria-hidden="true" />, style: 'x' },
 ]
 
 export default function AuthProviderButtons({ onProvider, loadingProvider = '' }) {

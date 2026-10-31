@@ -1608,14 +1608,24 @@
 .more-submenu-back:hover, .more-submenu-back:focus-visible { color: #fff; background: #191c23; outline: 0; }
 .more-submenu-back svg { width: 18px; height: 18px; transform: rotate(180deg); }
 .more-submenu-divider { height: 1px; margin: 3px 2px 5px; background: rgba(255,255,255,.08); }
-.more-current-account { display: flex; width: 100%; min-width: 0; min-height: 55px; align-items: center; gap: 9px; padding: 5px 3px; color: #f3f4f6; background: transparent; border: 0; border-radius: 8px; text-align: left; font: inherit; }
+.more-current-account { display: flex; width: 100%; min-width: 0; min-height: 55px; align-items: center; gap: 9px; padding: 5px 3px; color: #f3f4f6; background: transparent; border: 0; border-radius: 8px; text-align: left; font: inherit; cursor: pointer; transition: background 160ms ease; }
+.more-current-account:hover, .more-current-account:focus-visible { background: #191c23; outline: 0; }
+.more-current-account[aria-current="true"] { cursor: default; }
+.more-current-account[aria-current="true"]:hover { background: transparent; }
 .more-current-account > img { width: 36px; height: 36px; flex: 0 0 36px; border-radius: 50%; object-fit: cover; }
 .more-current-account .more-account-avatar-placeholder { width: 36px; height: 36px; flex-basis: 36px; }
 .more-account-check { width: 17px; height: 17px; flex: 0 0 17px; fill: none; stroke: currentColor; stroke-width: 2.8; stroke-linecap: round; stroke-linejoin: round; }
 .more-account-actions { padding: 4px 0 0; border-top: 1px solid rgba(255,255,255,.08); }
 .more-account-actions .more-menu-link { min-height: 36px; }
+.more-account-actions .more-menu-link:disabled { color: #777b84; cursor: not-allowed; }
+.more-account-actions .more-menu-link:disabled:hover { background: transparent; }
+.more-account-limit { display: block; padding: 1px 9px 5px; color: #858993; font-size: .68rem; }
 .more-account-signout { margin-top: 1px; }
 .more-menu-signout:hover svg { color: var(--error); }
+
+.more-current-account.is-switching .more-account-copy { opacity: .48; }
+.more-account-loading-spinner { width: 17px; height: 17px; flex: 0 0 17px; margin-left: auto; border: 2px solid rgba(255,255,255,.2); border-top-color: #aeb2bb; border-radius: 50%; animation: account-row-spin .7s linear infinite; }
+@keyframes account-row-spin { to { transform: rotate(360deg); } }
 
 @media (min-width: 961px) {
     .more-popover-desktop {

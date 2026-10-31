@@ -16,9 +16,10 @@ export default function Register() {
     const [loading, setLoading] = useState(false)
     const [providerLoading, setProviderLoading] = useState('')
     const [showEmailForm, setShowEmailForm] = useState(false)
-    const { signUp, signInWithProvider } = useAuth()
+    const { signUp, signInWithProvider, rememberCurrentAccount } = useAuth()
     const location = useLocation()
     const navigate = useNavigate()
+    const addAccount = new URLSearchParams(location.search).get('addAccount') === '1'
 
     useEffect(() => {
         setShowEmailForm(false)
@@ -45,10 +46,15 @@ export default function Register() {
         setError('')
         if (password.length < 6) return setError('La contraseña debe tener al menos 6 caracteres')
         setLoading(true)
+        sessionStorage.setItem('geeksphere.pending-signup-email', email.trim().toLowerCase())
+        if (addAccount) sessionStorage.setItem('geeksphere.add-account-pending', '1')
         try {
-            await signUp(email, password, username)
+            const result = await signUp(email, password, username)
+            if (addAccount && result?.session) await rememberCurrentAccount()
             navigate('/confirm-email')
         } catch (err) {
+            sessionStorage.removeItem('geeksphere.pending-signup-email')
+            if (addAccount) sessionStorage.removeItem('geeksphere.add-account-pending')
             setError(err.message || 'Error al registrarse')
             setLoading(false)
         }
@@ -58,7 +64,7 @@ export default function Register() {
         setError('')
         setProviderLoading(provider)
         try {
-            await signInWithProvider(provider)
+            await signInWithProvider(provider, { addAccount })
         } catch (err) {
             setError(err.message || `No se pudo continuar con ${provider}`)
             setProviderLoading('')
@@ -112,7 +118,7 @@ export default function Register() {
                             <button type="submit" className="auth-submit" disabled={loading}>{loading ? 'Creando…' : step === 3 ? 'Crear cuenta' : 'Continuar'}</button>
                         </div>
                     </form>}
-                    <div className="auth-card-footer"><span>¿Ya tienes cuenta?</span><Link to="/login">Inicia sesión</Link></div>
+                    <div className="auth-card-footer"><span>¿Ya tienes cuenta?</span><Link to={`/login${addAccount ? '?addAccount=1' : ''}`}>Inicia sesión</Link></div>
                 </section>
             </div>
         </div>
