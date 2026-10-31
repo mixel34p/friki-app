@@ -3,7 +3,6 @@ import { createPortal } from 'react-dom';
 import { FaFacebookF, FaRedditAlien, FaTelegram, FaWhatsapp, FaXTwitter } from 'react-icons/fa6';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { getVisibleAccentColor } from '../../lib/colorContrast';
 import { useAuth } from '../../context/AuthContext';
 import {
     getListById, deleteList,
@@ -519,8 +518,9 @@ export default function ViewList() {
 
     const authorUsername   = list.author?.username    || 'usuario';
     const authorName       = list.author?.display_name || list.author?.username || 'Usuario';
-    const authorThemeColor = list.author?.theme_color  || 'var(--brand-primary)';
-    const pageAccent       = getVisibleAccentColor(authorThemeColor);
+    // El color de la página pertenece al autor de esta lista, nunca al usuario conectado.
+    const authorThemeColor = list.author?.theme_color || '#14b8a6';
+    const pageAccent       = authorThemeColor;
 
     const authorProfile = {
         display_name: authorName,
@@ -548,7 +548,10 @@ export default function ViewList() {
     return (
         <main
             className="review-detail-page vl-list-page"
-            style={{ '--review-page-accent': pageAccent }}
+            style={{
+                '--review-page-accent': pageAccent,
+                '--review-backdrop-image': sharePreviewImages[0] ? `url("${sharePreviewImages[0]}")` : 'none',
+            }}
         >
             <article className="review-post">
 

@@ -316,18 +316,46 @@
 .vl-list-page::before {
     position: fixed !important;
     z-index: -2 !important;
-    top: -140px !important;
-    bottom: auto !important;
+    top: -180px !important;
+    bottom: -180px !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
-    width: min(100vw + 240px, 1400px) !important;
-    height: 750px !important;
+    width: calc(100vw + 840px) !important;
     pointer-events: none !important;
-    background-image: none !important;
-    background: radial-gradient(ellipse 65% 55% at 50% 25%, color-mix(in srgb, var(--review-page-accent) 26%, transparent) 0%, color-mix(in srgb, var(--review-page-accent) 9%, transparent) 55%, transparent 85%) !important;
-    filter: blur(64px) !important;
-    opacity: 0.95 !important;
+    background-image: var(--review-backdrop-image, none) !important;
+    background-position: center !important;
+    background-size: cover !important;
+    filter: blur(112px) saturate(.82) !important;
+    opacity: .45 !important;
     content: '' !important;
+}
+
+.vl-list-page::after {
+    background:
+        radial-gradient(ellipse 78% 56% at 50% 0%, color-mix(in srgb, var(--review-page-accent) 16%, transparent) 0%, color-mix(in srgb, var(--review-page-accent) 5%, transparent) 58%, transparent 100%),
+        linear-gradient(180deg, color-mix(in srgb, var(--bg-primary) 62%, transparent) 0%, color-mix(in srgb, var(--bg-primary) 76%, transparent) 72%, var(--bg-primary) 100%) !important;
+}
+
+/* En escritorio, el post queda alineado a la izquierda y conserva una zona
+   amplia libre a su derecha, como un feed social. En móvil ocupa el ancho útil. */
+.review-detail-page.vl-list-page {
+    width: min(100%, 860px);
+    margin: 0;
+}
+
+.vl-list-page .review-post {
+    background: color-mix(in srgb, var(--bg-card) 84%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+.main.list-detail-main { animation: none; transform: none; }
+
+@media (max-width: 768px) {
+    .review-detail-page.vl-list-page {
+        width: 100%;
+        margin: 0;
+    }
 }
 
 /* ── Share: abanico de portadas para listas ─────────────────────────────────── */

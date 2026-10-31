@@ -605,7 +605,12 @@ export default function ReviewDetail() {
       navigate('/onboarding')
       return
     }
-    setShowLogModal(true)
+    navigate('/share', { state: { reviewWork: {
+      id: Number(review.work_id),
+      type: review.work_type,
+      title: workName || 'Obra',
+      image: workCover,
+    } } })
   }
 
   const handleLogSaved = savedLog => {

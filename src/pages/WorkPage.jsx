@@ -113,7 +113,12 @@ export default function WorkPage({ mediaType }) {
             navigate('/onboarding')
             return
         }
-        setShowReviewModal(true)
+        navigate('/share', { state: { reviewWork: {
+            id: parseInt(id),
+            type: mediaType,
+            title: work?.name || work?.title || title,
+            image: coverUrl,
+        } } })
     }
 
     const loadStats = async () => {

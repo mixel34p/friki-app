@@ -23,6 +23,7 @@ import UserTierlists from './pages/UserTierlists'
 import UserTemplates from './pages/UserTemplates'
 import WorkReviews from './pages/WorkReviews'
 import ReviewDetail from './pages/ReviewDetail'
+import SharePage from './pages/SharePage'
 import Search from './pages/Search'
 import DiscoverWorks from './pages/DiscoverWorks'
 import DiscoverLists from './pages/DiscoverLists'
@@ -42,7 +43,7 @@ function getPageTitle(pathname) {
     '/': 'GeekSphere', '/home': 'Inicio', '/activity': 'Actividad', '/spaces': 'Espacios',
     '/search': 'Busca tus aficiones', '/search/results': 'Busca tus aficiones',
     '/connections': 'Conexiones', '/templates': 'Plantillas', '/old-library': 'Biblioteca',
-    '/onboarding': 'Configura tu perfil', '/lists/new': 'Crear lista', '/settings': 'Ajustes',
+    '/onboarding': 'Configura tu perfil', '/lists/new': 'Crear lista', '/settings': 'Ajustes', '/share': 'Compartir',
   }
   if (exact[pathname]) return exact[pathname]
   if (section === 'profile') {
@@ -194,6 +195,7 @@ function App() {
             <Route path="/confirm-email" element={<ConfirmEmail />} />
             <Route path="/update-password" element={<UpdatePassword />} />
             <Route path="/home" element={<Home />} />
+            <Route path="/share" element={<ProtectedRoute><SharePage /></ProtectedRoute>} />
             <Route path="/activity" element={<ProtectedRoute><ActivityPage /></ProtectedRoute>} />
             <Route path="/search" element={<Search />} />
             <Route path="/search/results" element={<Search />} />

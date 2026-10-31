@@ -5,7 +5,6 @@ import { SiKofi } from 'react-icons/si'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { getVisibleAccentColor } from '../lib/colorContrast'
-import GlobalSearchModal from './GlobalSearchModal'
 import { ListsEntryModal } from '../pages/lists/ListsEntry'
 import './Layout.css'
 
@@ -95,9 +94,6 @@ export default function Layout() {
   const [moreOpen, setMoreOpen] = useState(false)
   const [switchingAccountId, setSwitchingAccountId] = useState(null)
   const [unreadCount, setUnreadCount] = useState(0)
-  const [registerSearchOpen, setRegisterSearchOpen] = useState(false)
-  const [shareOpen, setShareOpen] = useState(false)
-  const [shareClosing, setShareClosing] = useState(false)
   const [listsOpen, setListsOpen] = useState(false)
   const menuRef = useRef(null)
   const moreButtonRef = useRef(null)
@@ -106,28 +102,6 @@ export default function Layout() {
   const mobileTopbarRef = useRef(null)
   const [moreMenuPosition, setMoreMenuPosition] = useState({ left: 256, bottom: 14 })
   const isDesktop = typeof window !== 'undefined' && window.innerWidth > 960
-
-  const openShareMenu = () => {
-    if (!user) {
-      navigate('/register')
-      return
-    }
-    if (!profile) {
-      navigate('/onboarding')
-      return
-    }
-    setShareClosing(false)
-    setShareOpen(true)
-  }
-
-  const closeShareMenu = afterClose => {
-    setShareClosing(true)
-    window.setTimeout(() => {
-      setShareOpen(false)
-      setShareClosing(false)
-      afterClose?.()
-    }, 300)
-  }
 
   const username = profile?.username
   const profilePath = username ? `/profile/${username}` : (user ? '/onboarding' : '/profile')
@@ -197,7 +171,7 @@ export default function Layout() {
       const inMoreMenu = menuRef.current?.contains(event.target) || moreMenuContentRef.current?.contains(event.target)
       if (!inMobileNav && !inMobileTopbar && !inMoreMenu) setMoreOpen(false)
     }
-    const handleEscape = event => { if (event.key === 'Escape') { setMoreOpen(false); closeShareMenu() } }
+    const handleEscape = event => { if (event.key === 'Escape') setMoreOpen(false) }
     document.addEventListener('pointerdown', handlePointer)
     document.addEventListener('keydown', handleEscape)
     return () => { document.removeEventListener('pointerdown', handlePointer); document.removeEventListener('keydown', handleEscape) }
@@ -207,7 +181,7 @@ export default function Layout() {
   const isAuthEntry = ['/login', '/register', '/forgot-password', '/confirm-email', '/update-password'].includes(location.pathname)
   const isProfilePage = location.pathname === '/profile' || /^\/profile\/[^/]+$/.test(location.pathname)
   const isWorkPage = /^\/(game|anime)\/[^/]+(\/reviews)?$/.test(location.pathname)
-  const mobileNavIndex = shareOpen ? 2 : active('/home') ? 0 : active('/search') ? 1 : active('/spaces') ? 3 : -1
+  const mobileNavIndex = active('/home') ? 0 : active('/search') ? 1 : active('/share') ? 2 : active('/spaces') ? 3 : -1
 
   return (
     <div className="layout" style={{ '--profile-theme-color': profile?.theme_color || 'var(--brand-primary)', '--profile-accent-visible': getVisibleAccentColor(profile?.theme_color || 'var(--brand-primary)') }}>
@@ -231,7 +205,7 @@ export default function Layout() {
           <Link className={`sidebar-link ${active('/home') ? 'active current-page' : ''}`} to="/home" aria-label="Inicio" aria-current={active('/home') ? 'page' : undefined}><Icon name="home"/><span className="sidebar-label" style={active('/home') ? { fontWeight: 800 } : undefined}>Inicio</span></Link>
           <Link className={`sidebar-link ${active('/spaces') ? 'active current-page' : ''}`} to={spacesPath} aria-label="Espacios" aria-current={active('/spaces') ? 'page' : undefined}><Icon name="spaces"/><span className="sidebar-label" style={active('/spaces') ? { fontWeight: 800 } : undefined}>Espacios</span></Link>
           <Link className={`sidebar-link ${active('/search') ? 'active current-page' : ''}`} to="/search" aria-label="Buscar" aria-current={active('/search') ? 'page' : undefined}><Icon name="search"/><span>Buscar</span></Link>
-          <button className="sidebar-link" type="button" aria-label="Compartir" onClick={openShareMenu}><Icon name="share"/><span>Compartir</span></button>
+          <Link className={`sidebar-link ${active('/share') ? 'active current-page' : ''}`} to="/share" aria-label="Compartir" aria-current={active('/share') ? 'page' : undefined}><Icon name="share"/><span>Compartir</span></Link>
           <Link className={`sidebar-link ${active('/activity') ? 'active current-page' : ''}`} to="/activity" aria-label="Actividad" aria-current={active('/activity') ? 'page' : undefined}>
             <Icon name="activity"/><span>Actividad</span>{unreadCount > 0 && <span className="sidebar-unread">{unreadCount > 99 ? '99+' : unreadCount}</span>}
           </Link>
@@ -278,7 +252,7 @@ export default function Layout() {
           {mobileNavIndex >= 0 && <span className="mobile-nav-indicator" style={{ '--active-index': mobileNavIndex }} aria-hidden="true" />}
           <Link className={`mobile-nav-item ${active('/home') ? 'active' : ''}`} to="/home" aria-label="Inicio" aria-current={active('/home') ? 'page' : undefined}><Icon name="home"/></Link>
           <Link className={`mobile-nav-item ${active('/search') ? 'active' : ''}`} to="/search" aria-label="Buscar" aria-current={active('/search') ? 'page' : undefined} onClick={() => setMoreOpen(false)}><Icon name="search"/></Link>
-          <button className={`mobile-nav-item mobile-share-item ${shareOpen ? 'active' : ''}`} type="button" aria-label="Compartir" aria-pressed={shareOpen} onClick={() => { openShareMenu(); setMoreOpen(false) }}><Icon name="share"/></button>
+          <Link className={`mobile-nav-item mobile-share-item ${active('/share') ? 'active' : ''}`} to="/share" aria-label="Compartir" aria-current={active('/share') ? 'page' : undefined} onClick={() => setMoreOpen(false)}><Icon name="share"/></Link>
           <Link className={`mobile-nav-item ${active('/spaces') ? 'active' : ''}`} to={spacesPath} aria-label="Espacios" aria-current={active('/spaces') ? 'page' : undefined}><Icon name="spaces"/></Link>
         </div>
         <Link className={`mobile-profile-link ${isProfilePage ? 'active' : ''}`} to={profilePath} aria-label="Mi perfil" aria-current={isProfilePage ? 'page' : undefined}>
@@ -287,29 +261,8 @@ export default function Layout() {
         </>}
       </nav>
 
-      <main className={`main ${location.pathname === '/onboarding' ? 'onboarding-main' : ''} ${isProfilePage ? 'profile-main' : ''} ${isWorkPage ? 'work-main' : ''} ${location.pathname.startsWith('/discover/anime') || location.pathname.startsWith('/discover/games') ? 'discover-works-main' : ''} ${location.pathname === '/discover/spaces' || location.pathname === '/spaces/explore' ? 'spaces-explore-main' : ''} ${location.pathname === '/spaces' ? 'my-spaces-main' : ''} ${/^\/reviews\/[^/]+/.test(location.pathname) ? 'review-detail-main' : ''}`}><Outlet /></main>
+      <main className={`main ${location.pathname === '/onboarding' ? 'onboarding-main' : ''} ${isProfilePage ? 'profile-main' : ''} ${isWorkPage ? 'work-main' : ''} ${location.pathname.startsWith('/discover/anime') || location.pathname.startsWith('/discover/games') ? 'discover-works-main' : ''} ${location.pathname === '/discover/spaces' || location.pathname === '/spaces/explore' ? 'spaces-explore-main' : ''} ${location.pathname === '/spaces' ? 'my-spaces-main' : ''} ${/^\/reviews\/[^/]+/.test(location.pathname) ? 'review-detail-main' : ''} ${/^\/lists\/[^/]+$/.test(location.pathname) ? 'list-detail-main' : ''} ${location.pathname === '/share' ? 'share-main' : ''}`}><Outlet /></main>
 
-      {shareOpen && <div className={`fullscreen-create-overlay ${shareClosing ? 'closing' : ''}`} onClick={() => closeShareMenu()}>
-        <button className="close-fullscreen" aria-label="Cerrar" onClick={event => { event.stopPropagation(); closeShareMenu() }}>&times;</button>
-        <div className="fullscreen-create-content" onClick={event => event.stopPropagation()}>
-          <h2 className="create-glow-title">Crear Nuevo...</h2>
-          <button className="create-huge-btn" type="button" onClick={() => closeShareMenu(() => setRegisterSearchOpen(true))}>
-            <div className="huge-btn-bg game-bg" />
-            <div className="huge-btn-content">
-              <h3><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" className="icon-gradient"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>Registrar Obra</h3>
-              <p>Busca y añade a tu diario</p>
-            </div>
-          </button>
-          <button className="create-huge-btn" type="button" onClick={() => closeShareMenu(() => setListsOpen(true))}>
-            <div className="huge-btn-bg tier-bg" />
-            <div className="huge-btn-content">
-              <h3><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" className="icon-gradient"><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" /></svg>Nueva Lista</h3>
-              <p>Crea tu ranking, tier o grid</p>
-            </div>
-          </button>
-        </div>
-      </div>}
-      <GlobalSearchModal isOpen={registerSearchOpen} onClose={() => setRegisterSearchOpen(false)} />
       {listsOpen && <ListsEntryModal onClose={() => setListsOpen(false)} />}
       {moreOpen && isDesktop && createPortal(
         <section ref={moreMenuContentRef} className="sidebar-popover more-popover more-popover-desktop" style={moreMenuPosition} aria-label="Más opciones">
