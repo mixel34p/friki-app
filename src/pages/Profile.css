@@ -543,6 +543,13 @@
     gap: 18px;
 }
 
+.profile-post-column {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 12px;
+}
+
 .profile-post-item {
     display: block;
     box-sizing: border-box;
@@ -574,6 +581,45 @@
 
 @media (max-width: 600px) {
     .profile-posts-grid { gap: 12px; }
+}
+
+@media (max-width: 768px) {
+    .profile-posts-section {
+        width: calc(100% - 16px);
+        margin: 0 auto;
+    }
+    .profile-posts-grid {
+        grid-template-columns: repeat(var(--profile-post-columns, 2), minmax(0, 1fr));
+        justify-content: stretch;
+        column-gap: 8px;
+        row-gap: 10px;
+    }
+    .profile-post-column {
+        gap: 6px;
+    }
+    .profile-post-item .home-post-header {
+        margin-bottom: 3px;
+    }
+    .profile-post-item .home-post-media {
+        width: min(100%, 230px);
+        max-width: 100%;
+    }
+    .profile-post-item .home-post-media.count-1 {
+        max-height: 260px;
+    }
+    .profile-post-item.is-text-only .home-post-bubble {
+        min-width: min(160px, 100%);
+        max-width: 100%;
+        padding: 6px 8px;
+        font-size: .76rem;
+    }
+    .profile-post-item .home-post-copy {
+        font-size: .8rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .profile-posts-section { width: calc(100% - 8px); }
 }
 
 @keyframes tabFadeIn {

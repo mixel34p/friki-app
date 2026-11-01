@@ -50,7 +50,7 @@ function getListCoverImages(content) {
     return images
 }
 
-export function PostCard({ post, hideAvatar = false, hideAuthor = false }) {
+export function PostCard({ post, hideAvatar = false, hideAuthor = false, useDesktopMediaSizing = false }) {
     const [revealed, setRevealed] = useState(false)
     const [mediaFrameHeight, setMediaFrameHeight] = useState(null)
     const author = post.author || {}
@@ -65,7 +65,9 @@ export function PostCard({ post, hideAvatar = false, hideAuthor = false }) {
     const handleMediaLoad = event => {
         const image = event.currentTarget
         const isMobile = window.innerWidth <= 600
-        const maxHeight = Math.min(window.innerHeight * (isMobile ? .42 : .42), isMobile ? 220 : 260)
+        const maxHeight = useDesktopMediaSizing
+            ? 260
+            : Math.min(window.innerHeight * .42, isMobile ? 220 : 260)
         const proportionalHeight = image.parentElement.clientWidth * image.naturalHeight / Math.max(1, image.naturalWidth)
         setMediaFrameHeight(Math.min(proportionalHeight, maxHeight))
     }
@@ -155,6 +157,22 @@ export default function Home() {
 
     return <main className="home-feed-layout">
       <div className="home-feed-page">
+        {snapshot?.daily?.work && <section className="home-mobile-daily" aria-label="Resumen de hoy">
+          {snapshot.daily.work.image && <span className="home-mobile-daily-backdrop" aria-hidden="true"><img src={snapshot.daily.work.image} alt="" loading="lazy" /></span>}
+          <div className="home-mobile-daily-heading"><h1>Resumen de hoy</h1><time>{today}</time></div>
+          <Link className="home-mobile-daily-card" to={workPath(snapshot.daily.work)}>
+            <span className="home-mobile-daily-cover">{snapshot.daily.work.image ? <img src={snapshot.daily.work.image} alt="" loading="lazy" /> : '✦'}</span>
+            <span className="home-mobile-daily-copy">
+              <small className="home-summary-eyebrow">{snapshot.daily.work.type === 'anime' ? 'Anime' : 'Videojuego'} más registrado hoy</small>
+              <strong>{snapshot.daily.work.title}</strong>
+              <small className={`home-summary-daily-rating${snapshot.daily.ratingAverage == null ? ' is-unrated' : ''}`}>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
+                {snapshot.daily.ratingAverage == null ? <span aria-label="Sin valoraciones">–</span> : snapshot.daily.ratingAverage.toLocaleString('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                {' · '}{snapshot.daily.count.toLocaleString('es-ES')} {snapshot.daily.count === 1 ? 'registro' : 'registros'}
+              </small>
+            </span>
+          </Link>
+        </section>}
         <nav className="home-feed-tabs" aria-label="Secciones del inicio">
             <button type="button" className={activeFeed === 'home' ? 'is-active' : ''} onClick={() => setActiveFeed('home')} aria-pressed={activeFeed === 'home'}>Inicio</button>
             <button type="button" className={activeFeed === 'following' ? 'is-active' : ''} onClick={() => setActiveFeed('following')} aria-pressed={activeFeed === 'following'}>Siguiendo</button>
@@ -192,8 +210,9 @@ export default function Home() {
                   <span>
                     <small className="home-summary-eyebrow">{snapshot.daily.work.type === 'anime' ? 'Anime' : 'Videojuego'} más registrado hoy</small>
                     <strong>{snapshot.daily.work.title}</strong>
-                    <small className="home-summary-daily-rating">
-                      {snapshot.daily.ratingAverage == null ? 'Sin valoración media' : <><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>{snapshot.daily.ratingAverage.toLocaleString('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</>}
+                    <small className={`home-summary-daily-rating${snapshot.daily.ratingAverage == null ? ' is-unrated' : ''}`}>
+                      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
+                      {snapshot.daily.ratingAverage == null ? <span aria-label="Sin valoraciones">–</span> : snapshot.daily.ratingAverage.toLocaleString('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
                       {' · '}{snapshot.daily.count.toLocaleString('es-ES')} {snapshot.daily.count === 1 ? 'registro' : 'registros'}
                     </small>
                   </span>

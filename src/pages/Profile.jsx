@@ -145,13 +145,24 @@ export default function Profile() {
         const updateColumns = entries => {
             const width = entries[0]?.contentRect.width || grid.clientWidth
             const gap = parseFloat(window.getComputedStyle(grid).columnGap) || 18
-            const postWidth = 230
-            setProfilePostColumnCount(Math.max(1, Math.floor((width + gap) / (postWidth + gap))))
+            const isMobile = window.matchMedia('(max-width: 768px)').matches
+            const postWidth = isMobile ? 180 : 230
+            const minimumColumns = isMobile ? 2 : 1
+            setProfilePostColumnCount(Math.max(minimumColumns, Math.floor((width + gap) / (postWidth + gap))))
         }
         const observer = new ResizeObserver(updateColumns)
         observer.observe(grid)
         return () => observer.disconnect()
     }, [profilePosts.length, activeProfileTab])
+
+    const profilePostColumns = Array.from({ length: profilePostColumnCount }, () => ({ height: 0, posts: [] }))
+    profilePosts.forEach(post => {
+        const target = profilePostColumns.reduce((shortest, column, index, columns) =>
+            column.height < columns[shortest].height ? index : shortest, 0)
+        const estimatedHeight = 58 + (post.body ? Math.min(130, Math.ceil(post.body.length / 34) * 20) : 0) + (post.media?.length ? 150 : 0)
+        profilePostColumns[target].posts.push(post)
+        profilePostColumns[target].height += estimatedHeight + 10
+    })
 
     const navigate = useNavigate()
     const [isScrolled, setIsScrolled] = useState(false)
@@ -736,8 +747,10 @@ export default function Profile() {
                                 ? <p className="profile-posts-state">{profilePostsError}</p>
                                 : profilePosts.length
                                     ? <div className="profile-posts-grid" ref={profilePostsGridRef} style={{ '--profile-post-columns': profilePostColumnCount }}>
-                                        {profilePosts.map(post => <div className="profile-post-item" key={post.id}>
-                                            <PostCard post={post} hideAuthor />
+                                        {profilePostColumns.map((column, columnIndex) => <div className="profile-post-column" key={columnIndex}>
+                                            {column.posts.map(post => <div className={`profile-post-item${post.media?.length ? '' : ' is-text-only'}`} key={post.id}>
+                                                <PostCard post={post} hideAuthor useDesktopMediaSizing />
+                                            </div>)}
                                         </div>)}
                                     </div>
                                     : <p className="profile-posts-state">Todavía no hay posts.</p>}
