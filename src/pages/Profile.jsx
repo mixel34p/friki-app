@@ -12,6 +12,8 @@ import FollowsModal from '../components/FollowsModal'
 import EditProfile from './EditProfile'
 import LibraryGrid from '../components/LibraryGrid'
 import ListLikeButton from '../components/ListLikeButton'
+import { getPostsByUser } from '../lib/postService'
+import { PostCard } from './Home'
 
 import LoadingSpinner from '../components/LoadingSpinner'
 import './Profile.css'
@@ -110,9 +112,46 @@ export default function Profile() {
     const [activeProfileTab, setActiveProfileTab] = useState('actividad')
     const [userLists, setUserLists] = useState([])
     const [userTemplates, setUserTemplates] = useState([])
+    const [profilePosts, setProfilePosts] = useState([])
+    const [profilePostsLoading, setProfilePostsLoading] = useState(false)
+    const [profilePostsError, setProfilePostsError] = useState('')
+    const [profilePostColumnCount, setProfilePostColumnCount] = useState(2)
+    const profilePostsGridRef = useRef(null)
 
     const { toast } = useToast()
     const isOwnProfile = !username || username === myProfile?.username
+
+    useEffect(() => {
+        let active = true
+        if (!profile?.id) {
+            setProfilePosts([])
+            return () => { active = false }
+        }
+        setProfilePostsLoading(true)
+        setProfilePostsError('')
+        getPostsByUser(profile.id)
+            .then(posts => { if (active) setProfilePosts(posts) })
+            .catch(error => {
+                console.error('No se pudieron cargar los posts del perfil:', error)
+                if (active) setProfilePostsError('No se pudieron cargar las publicaciones.')
+            })
+            .finally(() => { if (active) setProfilePostsLoading(false) })
+        return () => { active = false }
+    }, [profile?.id])
+
+    useEffect(() => {
+        const grid = profilePostsGridRef.current
+        if (!grid || typeof ResizeObserver === 'undefined') return undefined
+        const updateColumns = entries => {
+            const width = entries[0]?.contentRect.width || grid.clientWidth
+            const gap = parseFloat(window.getComputedStyle(grid).columnGap) || 18
+            const postWidth = 230
+            setProfilePostColumnCount(Math.max(1, Math.floor((width + gap) / (postWidth + gap))))
+        }
+        const observer = new ResizeObserver(updateColumns)
+        observer.observe(grid)
+        return () => observer.disconnect()
+    }, [profilePosts.length, activeProfileTab])
 
     const navigate = useNavigate()
     const [isScrolled, setIsScrolled] = useState(false)
@@ -672,6 +711,7 @@ export default function Profile() {
             <div className="profile-section-tabs">
                 {[
                     { id: 'actividad', label: 'Actividad' },
+                    { id: 'posts', label: 'Posts' },
                     { id: 'tierlists', label: 'Tierlists' },
                 ].map(tab => (
                     <button
@@ -687,6 +727,21 @@ export default function Profile() {
             <div className="profile-content">
                 {activeProfileTab === 'actividad' && (
                     profile && <LibraryGrid profile={profile} userId={profile.id} username={profile.username} wishlist={profile.wishlist} />
+                )}
+                {activeProfileTab === 'posts' && (
+                    <section className="profile-posts-section" aria-label={`Posts de ${profile?.display_name || profile?.username || 'este perfil'}`}>
+                        {profilePostsLoading
+                            ? <div className="profile-posts-state"><LoadingSpinner /></div>
+                            : profilePostsError
+                                ? <p className="profile-posts-state">{profilePostsError}</p>
+                                : profilePosts.length
+                                    ? <div className="profile-posts-grid" ref={profilePostsGridRef} style={{ '--profile-post-columns': profilePostColumnCount }}>
+                                        {profilePosts.map(post => <div className="profile-post-item" key={post.id}>
+                                            <PostCard post={post} hideAuthor />
+                                        </div>)}
+                                    </div>
+                                    : <p className="profile-posts-state">Todavía no hay posts.</p>}
+                    </section>
                 )}
                 {activeProfileTab === 'tierlists' && (
                     <div className="profile-activity-container" style={{ display: 'grid', gridTemplateColumns: 'var(--grid-cols, 5fr 3fr)', gap: 'var(--grid-gap, 3rem)', width: '100%', alignItems: 'start', marginTop: 'var(--space-lg)' }}>

@@ -50,7 +50,7 @@ function getListCoverImages(content) {
     return images
 }
 
-function PostCard({ post }) {
+export function PostCard({ post, hideAvatar = false, hideAuthor = false }) {
     const [revealed, setRevealed] = useState(false)
     const [mediaFrameHeight, setMediaFrameHeight] = useState(null)
     const author = post.author || {}
@@ -76,12 +76,12 @@ function PostCard({ post }) {
         : <Link className="home-post-text-link" to={`/posts/${post.id}`}><p className={media.length ? 'home-post-copy' : 'home-post-bubble'}>{post.body}</p></Link>)
     return <article className="home-post" style={{ '--home-post-accent': accent, '--home-post-text': accentText }}>
         <header className="home-post-header">
-            <Link className="home-post-author" to={profilePath} aria-label={`Ver perfil de ${name}`}>
-                <span className="home-post-avatar">
+            {!hideAuthor && <Link className="home-post-author" to={profilePath} aria-label={`Ver perfil de ${name}`}>
+                {!hideAvatar && <span className="home-post-avatar">
                     {author.avatar_url ? <img src={author.avatar_url} alt="" loading="lazy" /> : <span>{name.slice(0, 1).toLocaleUpperCase()}</span>}
-                </span>
+                </span>}
                 <strong>{name}</strong>
-            </Link>
+            </Link>}
             <time dateTime={post.created_at}>{formatRelativeDate(post.created_at)}</time>
         </header>
         <div className={`home-post-content${media.length ? ' has-media' : ''}`}>

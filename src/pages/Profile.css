@@ -530,6 +530,52 @@
     animation: tabFadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
+.profile-posts-section {
+    width: 100%;
+    min-width: 0;
+}
+
+.profile-posts-grid {
+    display: grid;
+    grid-template-columns: repeat(var(--profile-post-columns, 2), minmax(0, 230px));
+    align-items: start;
+    justify-content: center;
+    gap: 18px;
+}
+
+.profile-post-item {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+}
+
+.profile-post-item .home-post-media {
+    box-sizing: border-box;
+    width: min(100%, 230px);
+    max-width: 100%;
+    margin-left: 0;
+}
+
+.profile-post-item .home-post-media img {
+    box-sizing: border-box;
+    max-width: 100%;
+}
+
+.profile-posts-state {
+    display: flex;
+    min-height: 180px;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    color: var(--text-muted);
+    text-align: center;
+}
+
+@media (max-width: 600px) {
+    .profile-posts-grid { gap: 12px; }
+}
+
 @keyframes tabFadeIn {
     from {
         opacity: 0;

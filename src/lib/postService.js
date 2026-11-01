@@ -127,6 +127,23 @@ export async function getHomePosts(limit = 30, authorIds = null, excludedAuthorI
   return mixed.map(post => ({ ...post, author: profileById.get(post.user_id) || null }))
 }
 
+export async function getPostsByUser(userId, limit = 30) {
+  if (!userId) return []
+  const { data, error } = await supabase.from('posts')
+    .select('id, user_id, body, media, contains_spoiler, is_sensitive, spoiler_work_title, created_at')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(limit)
+  if (error) throw error
+
+  const { data: author, error: profileError } = await supabase.from('profiles')
+    .select('id, username, display_name, avatar_url, theme_color')
+    .eq('id', userId)
+    .maybeSingle()
+  if (profileError) throw profileError
+  return (data || []).map(post => ({ ...post, author: author || null }))
+}
+
 export async function getMorePostsByUser(userId, currentPostId, limit = 5) {
   if (!userId) return []
   let request = supabase.from('posts')
