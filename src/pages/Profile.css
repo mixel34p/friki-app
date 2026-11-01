@@ -148,6 +148,25 @@
 .profile-follow-button {
     border-radius: 999px !important;
     padding-inline: 1.15rem;
+    transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+.profile-follow-button.btn-primary:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--brand-primary) 88%, white);
+    border-color: color-mix(in srgb, var(--brand-primary) 88%, white);
+    box-shadow: none;
+}
+
+.profile-follow-button.btn-secondary:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--bg-tertiary) 88%, white);
+    box-shadow: none;
+}
+
+.profile-page .profile-follow-button:hover:not(:disabled),
+.profile-page .profile-follow-button:active:not(:disabled) {
+    transform: none !important;
+    translate: none !important;
+    animation: none !important;
 }
 
 .profile-friends-button {

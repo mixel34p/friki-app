@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { getUserLists, deleteList } from '../lib/listService'
 import { useAuth } from '../context/AuthContext'
+import { getAccentTextColor, getVisibleAccentColor } from '../lib/colorContrast'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ListLikeButton from '../components/ListLikeButton'
 import '../components/LibraryGrid.css'
@@ -101,7 +102,7 @@ export default function UserTierlists() {
                 // Get profile ID from username
                 const { data: userData, error: userError } = await supabase
                     .from('profiles')
-                    .select('id, username, avatar_url, pinned_list_id')
+                    .select('id, username, avatar_url, pinned_list_id, theme_color')
                     .eq('username', username)
                     .single()
                 
@@ -136,8 +137,15 @@ export default function UserTierlists() {
 
     if (loading) return <LoadingSpinner />
 
+    const profileAccent = profile?.theme_color || '#14b8a6'
+
     return (
-        <div className="page-container user-reviews-page">
+        <div className="page-container user-reviews-page" style={{
+            '--brand-primary': profileAccent,
+            '--brand-dark': profileAccent,
+            '--profile-accent-visible': getVisibleAccentColor(profileAccent),
+            '--profile-accent-text': getAccentTextColor(profileAccent)
+        }}>
             <div className="user-page-header">
                 <div className="user-page-header-content">
                     <div className="user-page-title-row">

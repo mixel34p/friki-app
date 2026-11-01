@@ -4,7 +4,7 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { SiKofi } from 'react-icons/si'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
-import { getVisibleAccentColor } from '../lib/colorContrast'
+import { getAccentTextColor, getVisibleAccentColor } from '../lib/colorContrast'
 import { ListsEntryModal } from '../pages/lists/ListsEntry'
 import './Layout.css'
 
@@ -184,7 +184,7 @@ export default function Layout() {
   const mobileNavIndex = active('/home') ? 0 : active('/search') ? 1 : active('/share') ? 2 : active('/spaces') ? 3 : -1
 
   return (
-    <div className="layout" style={{ '--profile-theme-color': profile?.theme_color || 'var(--brand-primary)', '--profile-accent-visible': getVisibleAccentColor(profile?.theme_color || 'var(--brand-primary)') }}>
+    <div className="layout" style={{ '--profile-theme-color': profile?.theme_color || 'var(--brand-primary)', '--profile-accent-visible': getVisibleAccentColor(profile?.theme_color || '#14b8a6'), '--profile-accent-text': getAccentTextColor(profile?.theme_color || '#14b8a6') }}>
       <aside className="app-sidebar" aria-label="Navegación principal">
         <Link className="sidebar-brand" to="/home" aria-label="GeekSphere, inicio">
           <span className="sidebar-brand-mark"><img src="/icons/logo.png" alt="" onError={event => { event.currentTarget.style.display = 'none' }} /></span>

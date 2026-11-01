@@ -233,13 +233,13 @@ export async function getUserLists(userId) {
 
 export async function getMoreListsByUser(userId, currentListId, limit = 3) {
     if (!userId) return []
-    const { data, error } = await supabase.from('user_lists')
+    let request = supabase.from('user_lists')
         .select('id, title, list_type, media_type, content, user_id, created_at')
         .eq('user_id', userId)
         .eq('visibility', 'public')
-        .neq('id', currentListId)
         .order('created_at', { ascending: false })
-        .limit(limit)
+    if (currentListId) request = request.neq('id', currentListId)
+    const { data, error } = await request.limit(limit)
     if (error) throw error
     return data || []
 }

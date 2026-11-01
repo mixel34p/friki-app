@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { getUserLibrary } from '../lib/libraryService'
 import { getWorkById } from '../lib/workPageService'
-import { getVisibleAccentColor } from '../lib/colorContrast'
+import { getAccentTextColor, getVisibleAccentColor } from '../lib/colorContrast'
 import LoadingSpinner from '../components/LoadingSpinner'
 import '../components/LibraryGrid.css'
 import './UserReviews.css' // Reusing some header styles
@@ -13,6 +13,7 @@ export default function UserDiary() {
     const [loading, setLoading] = useState(true)
     const [profile, setProfile] = useState(null)
     const [diaryMonths, setDiaryMonths] = useState([])
+    const [workFilter, setWorkFilter] = useState('all')
 
     const getWorkYear = (work, type) => {
         if (!work.release_date) return '';
@@ -130,17 +131,26 @@ export default function UserDiary() {
 
     if (loading) return <LoadingSpinner />
 
+    const diaryAccent = profile?.theme_color || '#14b8a6'
+
     // Count total entries
-    const totalEntries = diaryMonths.reduce((sum, month) => sum + month.entries.length, 0)
+    const visibleMonths = diaryMonths
+        .map(month => ({
+            ...month,
+            entries: month.entries.filter(entry => workFilter === 'all' || entry.work_type === workFilter)
+        }))
+        .filter(month => month.entries.length > 0)
+    const selectedLabel = workFilter === 'anime' ? 'anime' : 'juegos'
 
     return (
         <div
             className="page-container user-reviews-page"
-            style={profile?.theme_color ? {
-                '--brand-primary': profile.theme_color,
-                '--brand-dark': profile.theme_color,
-                '--profile-accent-visible': getVisibleAccentColor(profile.theme_color)
-            } : {}}
+            style={{
+                '--brand-primary': diaryAccent,
+                '--brand-dark': diaryAccent,
+                '--profile-accent-visible': getVisibleAccentColor(diaryAccent),
+                '--profile-accent-text': getAccentTextColor(diaryAccent)
+            }}
         >
             <div className="user-page-header">
                 <div className="user-page-header-content">
@@ -156,14 +166,31 @@ export default function UserDiary() {
                         </h2>
                     </div>
                 </div>
-                <div className="user-page-stats">{totalEntries} {totalEntries === 1 ? 'entrada' : 'entradas'}</div>
+                <div className={`user-diary-filter is-${workFilter}`} role="group" aria-label="Filtrar el diario por tipo de obra">
+                    <span className="user-diary-filter-indicator" aria-hidden="true" />
+                    {[
+                        { id: 'all', label: 'Todos' },
+                        { id: 'anime', label: 'Anime' },
+                        { id: 'game', label: 'Juegos' },
+                    ].map(option => (
+                        <button
+                            key={option.id}
+                            className={workFilter === option.id ? 'active' : ''}
+                            type="button"
+                            aria-pressed={workFilter === option.id}
+                            onClick={() => setWorkFilter(option.id)}
+                        >{option.label}</button>
+                    ))}
+                </div>
             </div>
 
             <div className="diary-list">
                 {diaryMonths.length === 0 ? (
                     <div className="activity-empty">Este usuario no ha registrado ninguna obra todavía.</div>
+                ) : visibleMonths.length === 0 ? (
+                    <div className="activity-empty">No hay obras de {selectedLabel} en este diario todavía.</div>
                 ) : (
-                    diaryMonths.map(month => (
+                    visibleMonths.map(month => (
                         <div key={month.id} className="diary-month-group">
                             <div className="diary-month-header">
                                 <div className="diary-month-calendar">

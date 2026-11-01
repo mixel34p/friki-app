@@ -1,9 +1,12 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { getMoreListsByUser } from '../lib/listService'
 import LoadingSpinner from '../components/LoadingSpinner'
+import MoreContentCards, { normalizeMoreContent } from '../components/MoreContentCards'
 import SpoilerNotice from '../components/reviews/SpoilerNotice'
+import useAutoResizeTextarea from '../hooks/useAutoResizeTextarea'
 import { addPostComment, deletePost, deletePostComment, getMorePostsByUser, getPostById, getPostComments, getPostLikeState, togglePostLike, updatePostBody, updatePostFlags, updatePostComment } from '../lib/postService'
 import { formatRelativeDate } from '../lib/formatRelativeDate'
 import './ReviewDetail.css'
@@ -47,21 +50,6 @@ function getBubbleTextColor(color) {
   return blackContrast >= whiteContrast ? '#111111' : '#ffffff'
 }
 
-function MorePostCard({ post }) {
-  const [imageFailed, setImageFailed] = useState(false)
-  const image = !post.contains_spoiler && !post.is_sensitive && Array.isArray(post.media) ? post.media[0]?.url : null
-  const preview = post.contains_spoiler
-    ? 'Publicación con spoiler'
-    : post.is_sensitive ? 'Contenido sensible' : post.body || 'Publicación'
-  return <Link className={`post-more-card${image && !imageFailed ? ' has-image' : ''}${imageFailed ? ' is-image-error' : ''}${!image && post.is_sensitive && !post.contains_spoiler ? ' is-sensitive' : ''}`} to={`/posts/${post.id}`} aria-label={imageFailed ? 'No se pudo cargar la imagen' : preview}>
-    {image && !imageFailed && <img className="post-more-image" src={image} alt="" loading="lazy" onError={() => setImageFailed(true)} />}
-    {imageFailed && <span className="post-more-image-error">No se pudo cargar la imagen</span>}
-    {!image && post.is_sensitive && !post.contains_spoiler
-      ? <svg className="post-more-sensitive-icon" viewBox="0 0 24 24" role="img" aria-label="Contenido sensible"><path d="M3 3 21 21"/><path d="M10.6 10.6a2 2 0 0 0 2.8 2.8"/><path d="M9.9 5.2A11.3 11.3 0 0 1 12 5c5.5 0 9.5 4.5 10 7-.2 1.1-1.2 2.6-2.6 3.9"/><path d="M6.6 6.6C3.9 8.2 2.2 10.6 2 12c.5 2.5 4.5 7 10 7 1.2 0 2.3-.2 3.3-.6"/></svg>
-      : !image && <span className="post-more-copy">{preview}</span>}
-  </Link>
-}
-
 export default function PostDetail() {
   const { postId } = useParams()
   const navigate = useNavigate()
@@ -70,7 +58,7 @@ export default function PostDetail() {
   const [activeMediaIndex, setActiveMediaIndex] = useState(0)
   const [failedMediaUrls, setFailedMediaUrls] = useState(() => new Set())
   const [lightboxOpen, setLightboxOpen] = useState(false)
-  const [morePosts, setMorePosts] = useState([])
+  const [moreItems, setMoreItems] = useState([])
   const [morePostsLoading, setMorePostsLoading] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -79,6 +67,7 @@ export default function PostDetail() {
   const [commentsLoading, setCommentsLoading] = useState(true)
   const [commentsError, setCommentsError] = useState('')
   const [commentText, setCommentText] = useState('')
+  const commentInputRef = useRef(null)
   const [replyTo, setReplyTo] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [editingId, setEditingId] = useState(null)
@@ -98,6 +87,7 @@ export default function PostDetail() {
   const [postFlagsError, setPostFlagsError] = useState('')
   const [deletePostOpen, setDeletePostOpen] = useState(false)
   const [deletingPost, setDeletingPost] = useState(false)
+  useAutoResizeTextarea(commentInputRef, commentText)
 
   useEffect(() => {
     let active = true
@@ -132,13 +122,20 @@ export default function PostDetail() {
   }, [lightboxOpen, post?.media])
 
   useEffect(() => {
-    if (!post?.user_id) { setMorePosts([]); return }
+    if (!post?.user_id) { setMoreItems([]); return }
     let active = true
     setMorePostsLoading(true)
-    getMorePostsByUser(post.user_id, post.id, 3)
-      .then(items => { if (active) setMorePosts(items) })
-      .catch(err => { console.error('No se pudieron cargar más posts del autor:', err); if (active) setMorePosts([]) })
-      .finally(() => { if (active) setMorePostsLoading(false) })
+    Promise.allSettled([
+      getMorePostsByUser(post.user_id, post.id, 5),
+      getMoreListsByUser(post.user_id, null, 5),
+    ]).then(([postsResult, listsResult]) => {
+      if (!active) return
+      const posts = postsResult.status === 'fulfilled' ? postsResult.value : []
+      const lists = listsResult.status === 'fulfilled' ? listsResult.value : []
+      setMoreItems(normalizeMoreContent({ posts, lists, limit: 3 }))
+      if (postsResult.status === 'rejected') console.error('No se pudieron cargar más posts del autor:', postsResult.reason)
+      if (listsResult.status === 'rejected') console.error('No se pudieron cargar listas del autor:', listsResult.reason)
+    }).finally(() => { if (active) setMorePostsLoading(false) })
     return () => { active = false }
   }, [post?.user_id, post?.id])
 
@@ -347,7 +344,7 @@ export default function PostDetail() {
         {user && currentProfile ? <>
           {replyTo && <div className="review-comment-reply-context">Respondiendo a {replyTo.profile?.display_name || replyTo.profile?.username || 'Usuario'}<button type="button" onClick={() => setReplyTo(null)}>Cancelar</button></div>}
           <form className="review-comment-form" onSubmit={handleSubmitComment}>
-            <Avatar profile={currentProfile} size="small"/><label className="review-comment-input-wrap"><textarea aria-label="Escribe un comentario" value={commentText} onChange={event => setCommentText(event.target.value)} maxLength={2000} rows={1} placeholder="Escribe un comentario…"/></label>
+            <Avatar profile={currentProfile} size="small"/><label className="review-comment-input-wrap"><textarea ref={commentInputRef} aria-label="Escribe un comentario" value={commentText} onChange={event => setCommentText(event.target.value)} maxLength={300} rows={1} placeholder="Escribe un comentario…"/></label>
             <button type="submit" disabled={!commentText.trim() || submitting}>{submitting ? 'Enviando…' : 'Comentar'}</button>
           </form>
         </> : <p className="review-comments-signin"><Link to={user ? '/onboarding' : '/register'}>Inicia sesión para comentar</Link></p>}
@@ -365,7 +362,7 @@ export default function PostDetail() {
                 <Link to={profilePath} className="review-comment-avatar-link"><Avatar profile={commentProfile} size="small" /></Link>
                 <div className="review-comment-body">
                   <div className="review-comment-topline"><Link to={profilePath}>{name}</Link><time dateTime={comment.created_at}>{formatRelativeDate(comment.created_at)}</time></div>
-                  {editing ? <form className="review-comment-edit-form" onSubmit={event => handleEdit(event, comment)}><textarea value={editingText} onChange={event => setEditingText(event.target.value)} maxLength={2000} rows={2} aria-label="Editar comentario"/><div><button type="button" onClick={() => { setEditingId(null); setEditingText('') }}>Cancelar</button><button type="submit" disabled={!editingText.trim() || savingEdit}>{savingEdit ? 'Guardando…' : 'Guardar'}</button></div></form>
+                  {editing ? <form className="review-comment-edit-form" onSubmit={event => handleEdit(event, comment)}><textarea value={editingText} onChange={event => setEditingText(event.target.value)} maxLength={300} rows={2} aria-label="Editar comentario"/><div><button type="button" onClick={() => { setEditingId(null); setEditingText('') }}>Cancelar</button><button type="submit" disabled={!editingText.trim() || savingEdit}>{savingEdit ? 'Guardando…' : 'Guardar'}</button></div></form>
                     : <><p>{comment.content}</p><div className="review-comment-actions">{user && <button type="button" onClick={() => { setReplyTo(comment); setCommentText('') }}>Responder</button>}{own && <><button type="button" onClick={() => { setEditingId(comment.id); setEditingText(comment.content) }}>Editar</button><button type="button" disabled={Boolean(deletingId)} onClick={() => handleDelete(comment)}>{deletingId === comment.id ? 'Borrando…' : 'Eliminar'}</button></>}</div></>}
                 </div>
               </article>
@@ -379,7 +376,7 @@ export default function PostDetail() {
           <span><strong>Más de {displayName}</strong><small>@{author.username || 'usuario'}</small></span>
         </Link>
         {morePostsLoading ? <p className="post-more-state">Cargando publicaciones…</p>
-          : morePosts.length ? <div className="post-more-list">{morePosts.map(item => <MorePostCard key={item.id} post={item} />)}</div>
+          : moreItems.length ? <MoreContentCards items={moreItems} accent={author.theme_color} />
             : <p className="post-more-state">Aún no hay más publicaciones.</p>}
       </div>
     </aside>

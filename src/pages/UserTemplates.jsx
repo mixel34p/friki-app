@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { getUserTemplates } from '../lib/listService'
+import { getAccentTextColor, getVisibleAccentColor } from '../lib/colorContrast'
 import LoadingSpinner from '../components/LoadingSpinner'
 import '../components/LibraryGrid.css'
 import './UserReviews.css' // Reusing header styles
@@ -20,7 +21,7 @@ export default function UserTemplates() {
                 // Get profile ID from username
                 const { data: userData, error: userError } = await supabase
                     .from('profiles')
-                    .select('id, username, avatar_url')
+                    .select('id, username, avatar_url, theme_color')
                     .eq('username', username)
                     .single()
                 
@@ -45,8 +46,15 @@ export default function UserTemplates() {
 
     if (loading) return <LoadingSpinner />
 
+    const profileAccent = profile?.theme_color || '#14b8a6'
+
     return (
-        <div className="page-container user-reviews-page">
+        <div className="page-container user-reviews-page" style={{
+            '--brand-primary': profileAccent,
+            '--brand-dark': profileAccent,
+            '--profile-accent-visible': getVisibleAccentColor(profileAccent),
+            '--profile-accent-text': getAccentTextColor(profileAccent)
+        }}>
             <div className="user-page-header">
                 <div className="user-page-header-content">
                     <div className="user-page-title-row">

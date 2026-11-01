@@ -112,9 +112,10 @@
     border-radius: 16px;
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
     overflow: hidden;
-    cursor: pointer;
+    cursor: default;
     transition: border-color .18s ease, box-shadow .18s ease;
 }
+.vl-preview-block.is-interactive { cursor: pointer; }
 .vl-preview-block:hover {
     border-color: rgba(255, 255, 255, 0.26);
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
@@ -339,7 +340,7 @@
 /* En escritorio, el post queda alineado a la izquierda y conserva una zona
    amplia libre a su derecha, como un feed social. En móvil ocupa el ancho útil. */
 .review-detail-page.vl-list-page {
-    width: min(100%, 860px);
+    width: 100%;
     margin: 0;
 }
 
@@ -355,11 +356,11 @@
 @media (min-width: 1280px) {
     .review-detail-page.vl-list-page {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(250px, 300px);
+        grid-template-columns: minmax(0, 740px) minmax(240px, 320px);
         align-items: start;
         gap: clamp(.85rem, 1.4vw, 1.15rem);
-        width: min(100%, 1200px);
-        max-width: 1200px;
+        width: 100%;
+        max-width: none;
     }
     .vl-list-page > .review-post { min-width: 0; }
     .vl-more-author { position: sticky; top: 1.5rem; display: block; min-width: 0; padding-top: .2rem; }

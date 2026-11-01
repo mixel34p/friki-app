@@ -1,5 +1,6 @@
--- Activity notifications for new follows and likes on user-owned content.
--- Run this once in the Supabase SQL editor.
+-- Activity notifications for follows, likes, and comments on user-owned content.
+-- Run this in the Supabase SQL editor after the interaction tables exist.
+-- Re-run it after adding supported tables to install their notification triggers.
 
 CREATE TABLE IF NOT EXISTS public.notifications (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -45,61 +46,81 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-    recipient_id uuid;
-    actor_id uuid;
-    related_id uuid;
-    related_type text;
-    notification_type text;
+    v_recipient_id uuid;
+    v_actor_id uuid;
+    v_related_id uuid;
+    v_related_type text;
+    v_notification_type text;
 BEGIN
     IF TG_TABLE_NAME = 'follows' THEN
-        recipient_id := NEW.following_id;
-        actor_id := NEW.follower_id;
-        notification_type := 'follow';
-        related_type := 'profile';
-        related_id := NEW.following_id;
+        v_recipient_id := NEW.following_id;
+        v_actor_id := NEW.follower_id;
+        v_notification_type := 'follow';
+        v_related_type := 'profile';
+        v_related_id := NEW.following_id;
     ELSIF TG_TABLE_NAME = 'tierlist_likes' THEN
-        SELECT user_id INTO recipient_id FROM public.tierlists WHERE id = NEW.tierlist_id;
-        actor_id := NEW.user_id;
-        notification_type := 'like_tierlist';
-        related_type := 'tierlist';
-        related_id := NEW.tierlist_id;
+        SELECT user_id INTO v_recipient_id FROM public.tierlists WHERE id = NEW.tierlist_id;
+        v_actor_id := NEW.user_id;
+        v_notification_type := 'like_tierlist';
+        v_related_type := 'tierlist';
+        v_related_id := NEW.tierlist_id;
     ELSIF TG_TABLE_NAME = 'review_likes' OR TG_TABLE_NAME = 'library_entry_likes' THEN
-        SELECT user_id INTO recipient_id FROM public.library_entries WHERE id = NEW.entry_id;
-        actor_id := NEW.user_id;
-        notification_type := 'like_review';
-        related_type := 'review';
-        related_id := NEW.entry_id;
+        SELECT user_id INTO v_recipient_id FROM public.library_entries WHERE id = NEW.entry_id;
+        v_actor_id := NEW.user_id;
+        v_notification_type := 'like_review';
+        v_related_type := 'review';
+        v_related_id := NEW.entry_id;
     ELSIF TG_TABLE_NAME = 'user_list_likes' THEN
-        SELECT user_id INTO recipient_id FROM public.user_lists WHERE id = NEW.list_id;
-        actor_id := NEW.user_id;
-        notification_type := 'like_list';
-        related_type := 'list';
-        related_id := NEW.list_id;
+        SELECT user_id INTO v_recipient_id FROM public.user_lists WHERE id = NEW.list_id;
+        v_actor_id := NEW.user_id;
+        v_notification_type := 'like_list';
+        v_related_type := 'list';
+        v_related_id := NEW.list_id;
     ELSIF TG_TABLE_NAME = 'library_review_comments' THEN
-        SELECT user_id INTO recipient_id FROM public.library_entries WHERE id = NEW.review_entry_id;
-        actor_id := NEW.user_id;
-        notification_type := 'comment_review';
-        related_type := 'review';
-        related_id := NEW.review_entry_id;
+        SELECT user_id INTO v_recipient_id FROM public.library_entries WHERE id = NEW.review_entry_id;
+        v_actor_id := NEW.user_id;
+        v_notification_type := 'comment_review';
+        v_related_type := 'review';
+        v_related_id := NEW.review_entry_id;
+    ELSIF TG_TABLE_NAME = 'post_likes' THEN
+        SELECT user_id INTO v_recipient_id FROM public.posts WHERE id = NEW.post_id;
+        v_actor_id := NEW.user_id;
+        v_notification_type := 'like_post';
+        v_related_type := 'post';
+        v_related_id := NEW.post_id;
+    ELSIF TG_TABLE_NAME = 'post_comments' THEN
+        SELECT user_id INTO v_recipient_id FROM public.posts WHERE id = NEW.post_id;
+        v_actor_id := NEW.user_id;
+        v_notification_type := 'comment_post';
+        v_related_type := 'post';
+        v_related_id := NEW.post_id;
+    ELSIF TG_TABLE_NAME = 'list_comments' THEN
+        SELECT user_id INTO v_recipient_id FROM public.user_lists WHERE id = NEW.list_id;
+        v_actor_id := NEW.user_id;
+        v_notification_type := 'comment_list';
+        v_related_type := 'list';
+        v_related_id := NEW.list_id;
     ELSE
         RETURN NEW;
     END IF;
 
-    IF recipient_id IS NOT NULL AND actor_id IS NOT NULL AND recipient_id <> actor_id THEN
+    IF v_recipient_id IS NOT NULL AND v_actor_id IS NOT NULL AND v_recipient_id <> v_actor_id THEN
         -- Avoid follow/unfollow spam: at most one follow notice per pair every seven days.
-        IF notification_type = 'follow' AND EXISTS (
-            SELECT 1
-            FROM public.notifications AS previous_follow
-            WHERE previous_follow.user_id = recipient_id
-              AND previous_follow.actor_id = actor_id
-              AND previous_follow.type = 'follow'
-              AND previous_follow.created_at >= now() - interval '7 days'
-        ) THEN
-            RETURN NEW;
+        IF v_notification_type = 'follow' THEN
+            IF EXISTS (
+                SELECT 1
+                FROM public.notifications AS previous_follow
+                WHERE previous_follow.user_id = v_recipient_id
+                  AND previous_follow.actor_id = v_actor_id
+                  AND previous_follow.type = 'follow'
+                  AND previous_follow.created_at >= now() - interval '7 days'
+            ) THEN
+                RETURN NEW;
+            END IF;
         END IF;
 
         INSERT INTO public.notifications (user_id, actor_id, type, resource_id, resource_type)
-        VALUES (recipient_id, actor_id, notification_type, related_id, related_type);
+        VALUES (v_recipient_id, v_actor_id, v_notification_type, v_related_id, v_related_type);
     END IF;
 
     RETURN NEW;
@@ -147,6 +168,27 @@ BEGIN
         DROP TRIGGER IF EXISTS notify_library_review_comment ON public.library_review_comments;
         CREATE TRIGGER notify_library_review_comment
             AFTER INSERT ON public.library_review_comments
+            FOR EACH ROW EXECUTE FUNCTION public.create_activity_notification();
+    END IF;
+
+    IF to_regclass('public.post_likes') IS NOT NULL THEN
+        DROP TRIGGER IF EXISTS notify_post_like ON public.post_likes;
+        CREATE TRIGGER notify_post_like
+            AFTER INSERT ON public.post_likes
+            FOR EACH ROW EXECUTE FUNCTION public.create_activity_notification();
+    END IF;
+
+    IF to_regclass('public.post_comments') IS NOT NULL THEN
+        DROP TRIGGER IF EXISTS notify_post_comment ON public.post_comments;
+        CREATE TRIGGER notify_post_comment
+            AFTER INSERT ON public.post_comments
+            FOR EACH ROW EXECUTE FUNCTION public.create_activity_notification();
+    END IF;
+
+    IF to_regclass('public.list_comments') IS NOT NULL THEN
+        DROP TRIGGER IF EXISTS notify_list_comment ON public.list_comments;
+        CREATE TRIGGER notify_list_comment
+            AFTER INSERT ON public.list_comments
             FOR EACH ROW EXECUTE FUNCTION public.create_activity_notification();
     END IF;
 END;

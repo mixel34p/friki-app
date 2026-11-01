@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { getUserLibrary, deleteWorkLog } from '../lib/libraryService'
 import { getWorkById } from '../lib/workPageService'
-import { getVisibleAccentColor } from '../lib/colorContrast'
+import { getAccentTextColor, getVisibleAccentColor } from '../lib/colorContrast'
 import { useAuth } from '../context/AuthContext'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ReviewLikeButton from '../components/ReviewLikeButton'
@@ -17,6 +17,7 @@ export default function UserReviews() {
     const [loading, setLoading] = useState(true)
     const [profile, setProfile] = useState(null)
     const [reviews, setReviews] = useState([])
+    const [workFilter, setWorkFilter] = useState('all')
     const [revealedSpoilers, setRevealedSpoilers] = useState({})
     const [expandedReviews, setExpandedReviews] = useState({})
     const [openMenuId, setOpenMenuId] = useState(null)
@@ -154,14 +155,19 @@ export default function UserReviews() {
 
     if (loading) return <LoadingSpinner />
 
+    const reviewAccent = profile?.theme_color || '#14b8a6'
+    const visibleReviews = reviews.filter(review => workFilter === 'all' || review.work_type === workFilter)
+    const selectedLabel = workFilter === 'anime' ? 'anime' : 'juegos'
+
     return (
         <div
             className="page-container user-reviews-page"
-            style={profile?.theme_color ? {
-                '--brand-primary': profile.theme_color,
-                '--brand-dark': profile.theme_color,
-                '--profile-accent-visible': getVisibleAccentColor(profile.theme_color)
-            } : {}}
+            style={{
+                '--brand-primary': reviewAccent,
+                '--brand-dark': reviewAccent,
+                '--profile-accent-visible': getVisibleAccentColor(reviewAccent),
+                '--profile-accent-text': getAccentTextColor(reviewAccent)
+            }}
         >
             <div className="user-page-header">
                 <div className="user-page-header-content">
@@ -177,15 +183,32 @@ export default function UserReviews() {
                         </h2>
                     </div>
                 </div>
-                <div className="user-page-stats">{reviews.length} {reviews.length === 1 ? 'reseña' : 'reseñas'}</div>
+                <div className={`user-diary-filter is-${workFilter}`} role="group" aria-label="Filtrar las reseñas por tipo de obra">
+                    <span className="user-diary-filter-indicator" aria-hidden="true" />
+                    {[
+                        { id: 'all', label: 'Todos' },
+                        { id: 'anime', label: 'Anime' },
+                        { id: 'game', label: 'Juegos' },
+                    ].map(option => (
+                        <button
+                            key={option.id}
+                            className={workFilter === option.id ? 'active' : ''}
+                            type="button"
+                            aria-pressed={workFilter === option.id}
+                            onClick={() => setWorkFilter(option.id)}
+                        >{option.label}</button>
+                    ))}
+                </div>
             </div>
 
             <div className="reviews-list-container">
                 {reviews.length === 0 ? (
                     <div className="activity-empty">Este usuario no ha escrito ninguna reseña todavía.</div>
+                ) : visibleReviews.length === 0 ? (
+                    <div className="activity-empty">No hay reseñas de {selectedLabel} todavía.</div>
                 ) : (
                     <div className="reviews-list-stack">
-                        {reviews.map(log => (
+                        {visibleReviews.map(log => (
                             <div key={log.id} className="review-card" style={{ position: 'relative' }}>
                                 {log.isPinned && !isOwnProfile && (
                                     <div className="review-pin-badge" title="Reseña destacada">

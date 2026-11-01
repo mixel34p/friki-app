@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
+import { getAccentTextColor, getVisibleAccentColor } from '../lib/colorContrast'
 import LoadingSpinner from '../components/LoadingSpinner'
 import './ActivityPage.css'
 
 function notificationTarget(item) {
   if (item.type === 'follow') return item.actor?.username ? `/profile/${item.actor.username}` : '/discover/users/all'
+  if (item.resource_type === 'post' || item.type === 'like_post' || item.type === 'comment_post') return item.resource_id ? `/posts/${item.resource_id}` : '/home'
   if (item.resource_type === 'list' || item.type === 'like_list') return item.resource_id ? `/lists/${item.resource_id}` : '/home'
   if (item.resource_type === 'tierlist' || item.type === 'like_tierlist') return item.resource_id ? `/tierlist/${item.resource_id}` : '/home'
   if (item.resource_type === 'review' || item.type === 'like_review' || item.type === 'comment_review') return item.resource_id ? `/reviews/${item.resource_id}` : '/home'
@@ -24,6 +26,9 @@ function notificationMessage(item) {
     like_tierlist: 'le ha gustado tu tierlist',
     like_review: 'le ha gustado tu reseña',
     comment_review: 'ha comentado en tu reseña',
+    comment_post: 'ha comentado en tu publicación',
+    comment_list: 'ha comentado en tu lista',
+    like_post: 'le ha gustado tu publicación',
     like: 'ha indicado que le gusta una de tus publicaciones',
     comment: 'ha comentado en una de tus listas',
     connection_request: 'quiere conectar contigo',
@@ -63,7 +68,7 @@ function dayHeading(dateValue) {
 const PAGE_SIZE = 100
 const ACTOR_NOTIFICATION_TYPES = [
   'follow', 'like_list', 'like_tierlist', 'like_review', 'comment_review',
-  'like', 'comment', 'connection_request', 'connection_accepted',
+  'like_post', 'comment_post', 'comment_list', 'like', 'comment', 'connection_request', 'connection_accepted',
 ]
 
 function parseListContent(content) {
@@ -113,7 +118,7 @@ function notificationActors(item) {
 
 function activityIcon(type) {
   if (type === 'follow') return <><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M19 8v6M16 11h6"/></>
-  if (type === 'comment_review') return <><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8A8.5 8.5 0 0 1 8.7 3.9a8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8z"/></>
+  if (type?.startsWith('comment_')) return <><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8A8.5 8.5 0 0 1 8.7 3.9a8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8z"/></>
   return <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z" />
 }
 
@@ -153,27 +158,26 @@ function collapseRepeatedFollows(items) {
 
 function notificationResourceType(item) {
   if (item.resource_type) return item.resource_type
+  if (item.type === 'like_post' || item.type === 'comment_post') return 'post'
+  if (item.type === 'comment_list') return 'list'
   if (item.type === 'like_list') return 'list'
   if (item.type === 'like_tierlist') return 'tierlist'
   if (item.type === 'like_review') return 'review'
   return null
 }
 
-function activityCopy(item, target) {
+function activityCopy(item) {
   const type = item.type
   const actors = notificationActors(item)
   const names = actors.map(actor => actor.display_name || actor.username || 'Alguien')
   const total = new Set((item.groupedItems || [item]).map(row => row.actor_id)).size
   const resourceType = notificationResourceType(item)
-  const thing = resourceType === 'review' ? 'tu reseña' : resourceType === 'tierlist' ? 'tu tierlist' : 'tu lista'
+  const thing = resourceType === 'review' ? 'tu reseña' : resourceType === 'tierlist' ? 'tu tierlist' : resourceType === 'post' ? 'tu publicación' : 'tu lista'
   const actorName = (index, fallback = 'Alguien') => {
-    const actor = actors[index]
     const name = names[index] || fallback
-    return actor?.username
-      ? <Link className="activity-actor-profile" to={`/profile/${actor.username}`}>{name}</Link>
-      : <strong>{name}</strong>
+    return <strong>{name}</strong>
   }
-  const action = text => <Link className="activity-message-link" to={target}>{text}</Link>
+  const action = text => <span className="activity-message-link">{text}</span>
   if (type?.startsWith('like_') || type === 'like') {
     if (total <= 1) return <>{actorName(0)} {action(`le ha dado me gusta a ${thing}`)}</>
     return <>{actorName(0)}{total === 2 ? <> y {actorName(1, 'otra persona')}</> : <>, {actorName(1, 'otra persona')} y {total - 2} más</>} {action(`han dado me gusta a ${thing}`)}</>
@@ -185,6 +189,8 @@ function activityCopy(item, target) {
 export default function ActivityPage() {
   const { user, profile } = useAuth()
   const navigate = useNavigate()
+  const profileAccent = profile?.theme_color || '#14b8a6'
+  const isBlackAccent = /^#(?:000|000000)$/i.test(profileAccent.trim())
   const [notifications, setNotifications] = useState([])
   const [loading, setLoading] = useState(true)
   const [visibleDayCount, setVisibleDayCount] = useState(7)
@@ -263,11 +269,22 @@ export default function ActivityPage() {
     const listIds = [...new Set(rowsWithExistingActors.filter(row => notificationResourceType(row) === 'list').map(row => row.resource_id).filter(Boolean))]
     const reviewIds = [...new Set(rowsWithExistingActors.filter(row => notificationResourceType(row) === 'review').map(row => row.resource_id).filter(Boolean))]
     const tierlistIds = [...new Set(rowsWithExistingActors.filter(row => notificationResourceType(row) === 'tierlist').map(row => row.resource_id).filter(Boolean))]
+    const postIds = [...new Set(rowsWithExistingActors.filter(row => notificationResourceType(row) === 'post').map(row => row.resource_id).filter(Boolean))]
     const resources = {}
 
     if (listIds.length) {
       const { data } = await supabase.from('user_lists').select('id, title, content').in('id', listIds)
       ;(data || []).forEach(list => { resources[`list:${list.id}`] = { title: list.title, image_urls: listPreviewImages(list.content) } })
+    }
+
+    if (postIds.length) {
+      const { data } = await supabase.from('posts').select('id, media, contains_spoiler, is_sensitive').in('id', postIds)
+      ;(data || []).forEach(post => {
+        const firstImage = !post.contains_spoiler && !post.is_sensitive && Array.isArray(post.media)
+          ? post.media.find(media => media?.url)?.url
+          : null
+        resources[`post:${post.id}`] = { title: 'Publicación', image_url: firstImage || null }
+      })
     }
 
     if (reviewIds.length) {
@@ -430,6 +447,12 @@ export default function ActivityPage() {
       const result = wasFollowing
         ? await supabase.from('follows').delete().eq('follower_id', user.id).eq('following_id', actor.id)
         : await supabase.from('follows').insert({ follower_id: user.id, following_id: actor.id })
+      if (!wasFollowing && result.error?.code === '23505') {
+        // The follow may already exist if this notification's relationship state was stale.
+        setFollowingIds(current => new Set(current).add(actor.id))
+        setError('')
+        return
+      }
       if (result.error) throw result.error
       setFollowingIds(current => {
         const next = new Set(current)
@@ -437,7 +460,9 @@ export default function ActivityPage() {
         else next.add(actor.id)
         return next
       })
-    } catch {
+      setError('')
+    } catch (followError) {
+      console.error('No se pudo actualizar el seguimiento desde Actividad:', followError)
       setError('No se pudo actualizar el seguimiento.')
     } finally {
       setFollowingBusy(current => { const next = new Set(current); next.delete(actor.id); return next })
@@ -445,7 +470,12 @@ export default function ActivityPage() {
   }
 
   return (
-    <section className="activity-page">
+    <section className="activity-page" style={{
+      '--activity-accent': profileAccent,
+      '--activity-accent-visible': isBlackAccent ? '#fff' : getVisibleAccentColor(profileAccent),
+      '--activity-accent-text': getAccentTextColor(profileAccent),
+      '--activity-accent-border': isBlackAccent ? '#fff' : `color-mix(in srgb, ${profileAccent} 72%, white)`,
+    }}>
       <header className="activity-page-header">
         <h1>Actividad</h1>
       </header>
@@ -461,15 +491,32 @@ export default function ActivityPage() {
                   const actors = notificationActors(item)
                   const primaryActor = actors[0] || item.actor
                   const isFollow = item.type === 'follow'
-                  const isReviewComment = item.type === 'comment_review'
+                  const isComment = item.type?.startsWith('comment_')
+                  const isPost = notificationResourceType(item) === 'post'
                   const isFollowing = primaryActor ? followingIds.has(primaryActor.id) : false
                   const isFollowedBy = primaryActor ? followedByIds.has(primaryActor.id) : false
                   const preview = item.resource?.image_url
                   const previewImages = item.resource?.image_urls || []
                   const target = notificationTarget({ ...item, ownerUsername: profile?.username })
                   return (
-                    <article className={`activity-feed-item ${item.is_read ? '' : 'unread'}`} key={item.id}>
-                      <div className="activity-feed-main">
+                    <article
+                      className={`activity-feed-item ${item.is_read ? '' : 'unread'}`}
+                      key={item.id}
+                      data-notification-type={item.type}
+                      tabIndex={0}
+                      aria-label={`Abrir ${item.resource?.title || notificationMessage(item)}`}
+                      aria-roledescription="enlace"
+                      onClick={event => {
+                        if (event.target.closest('a, button, [role="button"]')) return
+                        navigate(target)
+                      }}
+                      onKeyDown={event => {
+                        if (event.target !== event.currentTarget || (event.key !== 'Enter' && event.key !== ' ')) return
+                        event.preventDefault()
+                        navigate(target)
+                      }}
+                    >
+                      <div className="activity-notification-identity">
                         <span className="activity-actor-group">
                           {actors.map((actor, index) => {
                             const name = actor.display_name || actor.username || 'Usuario'
@@ -477,34 +524,34 @@ export default function ActivityPage() {
                               <span className="activity-feed-avatar" style={{ borderColor: actor.theme_color || 'var(--brand-primary)' }}>
                                 {actor.avatar_url ? <img src={actor.avatar_url} alt="" /> : <span>{name[0]?.toUpperCase() || '•'}</span>}
                               </span>
-                              {index === actors.length - 1 && <i className={`activity-type-badge ${isFollow ? 'follow' : isReviewComment ? 'comment' : 'like'}`}>
+                              {index === actors.length - 1 && <i className={`activity-type-badge ${isFollow ? 'follow' : isComment ? 'activity-comment' : 'like'}`}>
                                 <svg viewBox="0 0 24 24" aria-hidden="true">{activityIcon(item.type)}</svg>
                               </i>}
                             </span>
-                            return actor.username
-                              ? <Link className="activity-actor-avatar-link" to={`/profile/${actor.username}`} aria-label={`Ver perfil de ${name}`} key={actor.id || index}>{avatar}</Link>
-                              : avatar
+                            return avatar
                           })}
                         </span>
-                        <span className="activity-feed-copy">
-                          <span>{activityCopy(item, target)}</span>
-                          {item.resource?.title && <Link className="activity-content-title activity-content-title-link" to={target}>{item.resource.title}</Link>}
-                          <time dateTime={item.created_at}>{timeLabel(item.created_at)}</time>
-                        </span>
                       </div>
-                      <div className="activity-feed-side">
+                      <div className="activity-notification-content">
+                        <div className="activity-feed-copy">
+                          <span className="activity-notification-description">{activityCopy(item)}</span>
+                          {!isPost && item.resource?.title && <span className="activity-content-title">{item.resource.title}</span>}
+                          <time className="activity-notification-time" dateTime={item.created_at}>{timeLabel(item.created_at)}</time>
+                        </div>
+                      </div>
+                      {!isPost && <div className="activity-notification-trailing">
                         {isFollow ? <button
                           className={`btn ${isFollowing ? 'btn-secondary' : 'btn-primary'} activity-follow-action${isFollowing && isFollowedBy ? ' activity-friends-button' : ''}`}
                           type="button"
                           onClick={() => toggleFollow(primaryActor)}
                           disabled={!primaryActor || followingBusy.has(primaryActor.id)}
-                        >{followingBusy.has(primaryActor?.id) ? '…' : isFollowing ? isFollowedBy ? 'Amigos' : 'Siguiendo' : isFollowedBy ? 'Seguir también' : 'Seguir'}</button> : previewImages.length ? <Link className="activity-preview-link" to={target} aria-label={`Abrir ${item.resource?.title || 'lista'}`}><span className={`activity-list-poster${previewImages.length === 2 ? ' count-two' : ''}${previewImages.length === 3 ? ' count-three' : ''}`} aria-hidden="true">
+                        >{followingBusy.has(primaryActor?.id) ? '…' : isFollowing ? isFollowedBy ? 'Amigos' : 'Siguiendo' : isFollowedBy ? 'Seguir también' : 'Seguir'}</button> : previewImages.length ? <span className="activity-preview-link" aria-hidden="true"><span className={`activity-list-poster${previewImages.length === 2 ? ' count-two' : ''}${previewImages.length === 3 ? ' count-three' : ''}`}>
                           {previewImages.map((image, index) => <img key={`${image}-${index}`} src={image} alt="" loading="lazy" />)}
-                        </span></Link> : preview ? <Link className="activity-preview-link" to={target} aria-label={`Abrir ${item.resource?.title || 'contenido'}`}><img className="activity-content-preview" src={preview} alt="" loading="lazy" onError={event => {
+                        </span></span> : preview ? <span className="activity-preview-link" aria-hidden="true"><img className="activity-content-preview" src={preview} alt="" loading="lazy" onError={event => {
                           const fallback = item.resource?.fallback_image_url
                           if (fallback && event.currentTarget.src !== fallback) event.currentTarget.src = fallback
-                        }} /></Link> : <Link className="activity-preview-link" to={target} aria-label={`Abrir ${item.resource?.title || 'contenido'}`}><span className="activity-content-placeholder" aria-hidden="true">{notificationResourceType(item) === 'review' ? '✎' : '▤'}</span></Link>}
-                      </div>
+                        }} /></span> : <span className="activity-preview-link" aria-hidden="true"><span className="activity-content-placeholder">{notificationResourceType(item) === 'review' ? '✎' : '▤'}</span></span>}
+                      </div>}
                     </article>
                   )
                 })}

@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { getComments, addComment, deleteComment } from '../lib/supabase'
 import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
+import useAutoResizeTextarea from '../hooks/useAutoResizeTextarea'
 import './CommentSection.css'
 
 export default function CommentSection({ tierlistId, ownerId }) {
@@ -11,7 +12,9 @@ export default function CommentSection({ tierlistId, ownerId }) {
     const [comments, setComments] = useState([])
     const [loading, setLoading] = useState(true)
     const [newComment, setNewComment] = useState('')
+    const commentInputRef = useRef(null)
     const [submitting, setSubmitting] = useState(false)
+    useAutoResizeTextarea(commentInputRef, newComment)
 
     useEffect(() => {
         loadComments()
@@ -105,11 +108,12 @@ export default function CommentSection({ tierlistId, ownerId }) {
             {user && profile ? (
                 <form onSubmit={handleSubmit} className="comment-form">
                     <textarea
+                        ref={commentInputRef}
                         value={newComment}
                         onChange={(e) => setNewComment(e.target.value)}
                         placeholder="Escribe un comentario..."
-                        maxLength={500}
-                        rows={3}
+                        maxLength={300}
+                        rows={1}
                         required
                     />
                     <button type="submit" className="btn btn-primary" disabled={submitting || !newComment.trim()}>

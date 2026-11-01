@@ -274,7 +274,9 @@
     color: var(--text-primary);
     padding: var(--space-xs);
     resize: none;
-    min-height: 60px;
+    min-height: 46px;
+    overflow-y: hidden;
+    line-height: 1.5;
     font-family: inherit;
     font-size: var(--text-sm);
 }

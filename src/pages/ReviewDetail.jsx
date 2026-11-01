@@ -12,6 +12,7 @@ import LoadingSpinner from '../components/LoadingSpinner'
 import LogModal from '../components/LogModal'
 import ReviewLikeButton from '../components/ReviewLikeButton'
 import SpoilerNotice from '../components/reviews/SpoilerNotice'
+import useAutoResizeTextarea from '../hooks/useAutoResizeTextarea'
 import SEO from '../components/SEO'
 import '../components/LibraryGrid.css'
 import './ReviewDetail.css'
@@ -351,6 +352,7 @@ export default function ReviewDetail() {
   const [review, setReview] = useState(null)
   const [comments, setComments] = useState([])
   const [commentText, setCommentText] = useState('')
+  const commentInputRef = useRef(null)
   const [loading, setLoading] = useState(true)
   const [commentsLoading, setCommentsLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -370,6 +372,7 @@ export default function ReviewDetail() {
   const [savingCommentEdit, setSavingCommentEdit] = useState(false)
   const deleteTimerRef = useRef(null)
   const mountedRef = useRef(true)
+  useAutoResizeTextarea(commentInputRef, commentText)
 
   useEffect(() => {
     mountedRef.current = true
@@ -702,7 +705,7 @@ export default function ReviewDetail() {
                   <div className="review-comment-topline"><Link to={comment.profile?.username ? `/profile/${comment.profile.username}` : '/profile'}>{name}</Link><time dateTime={comment.created_at}>{formatRelativeDate(comment.created_at)}</time></div>
                   {isEditing ? (
                     <form className="review-comment-edit-form" onSubmit={event => handleUpdateComment(event, comment)}>
-                      <textarea aria-label="Editar comentario" value={editingText} onChange={event => setEditingText(event.target.value)} maxLength={2000} rows={2} />
+                      <textarea aria-label="Editar comentario" value={editingText} onChange={event => setEditingText(event.target.value)} maxLength={300} rows={2} />
                       <div><button type="button" onClick={() => { setEditingCommentId(null); setEditingText('') }}>Cancelar</button><button type="submit" disabled={!editingText.trim() || savingCommentEdit}>{savingCommentEdit ? 'Guardando…' : 'Guardar'}</button></div>
                     </form>
                   ) : <>
@@ -726,7 +729,7 @@ export default function ReviewDetail() {
           <form className="review-comment-form" onSubmit={handleSubmit}>
             <ProfileAvatar profile={currentProfile} size="small" />
             <label className="review-comment-input-wrap">
-              <textarea aria-label="Escribe un comentario" value={commentText} onChange={event => setCommentText(event.target.value)} maxLength={2000} rows={1} placeholder="Escribe un comentario…" />
+              <textarea ref={commentInputRef} aria-label="Escribe un comentario" value={commentText} onChange={event => setCommentText(event.target.value)} maxLength={300} rows={1} placeholder="Escribe un comentario…" />
             </label>
             <button type="submit" disabled={!commentText.trim() || submitting}>{submitting ? 'Enviando…' : 'Comentar'}</button>
           </form>

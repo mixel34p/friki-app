@@ -11,8 +11,11 @@ import {
 import { BADGES_MAP } from '../../lib/badges';
 import { getTierLabelFontSize } from '../../lib/tierLabel';
 import { formatRelativeDate } from '../../lib/formatRelativeDate';
+import { getMorePostsByUser } from '../../lib/postService';
+import MoreContentCards, { normalizeMoreContent } from '../../components/MoreContentCards';
 import ListLikeButton from '../../components/ListLikeButton';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import useAutoResizeTextarea from '../../hooks/useAutoResizeTextarea';
 import '../ReviewDetail.css';
 import './ViewList.css';
 import '../lists/CreateList.css';
@@ -376,8 +379,8 @@ export default function ViewList() {
     const { user, profile: currentProfile } = useAuth();
 
     const [list, setList] = useState(null);
-    const [moreLists, setMoreLists] = useState([]);
-    const [moreListsLoading, setMoreListsLoading] = useState(false);
+    const [moreItems, setMoreItems] = useState([]);
+    const [morePostsLoading, setMorePostsLoading] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
@@ -396,6 +399,7 @@ export default function ViewList() {
     const [commentsLoading, setCommentsLoading] = useState(true);
     const [commentsError, setCommentsError] = useState('');
     const [commentText, setCommentText] = useState('');
+    const commentInputRef = useRef(null);
     const [submitting, setSubmitting] = useState(false);
     const [replyTo, setReplyTo] = useState(null);
     const [editingCommentId, setEditingCommentId] = useState(null);
@@ -404,6 +408,7 @@ export default function ViewList() {
     const [pendingDelete, setPendingDelete] = useState(null);
     const deleteTimerRef = useRef(null);
     const mountedRef = useRef(true);
+    useAutoResizeTextarea(commentInputRef, commentText);
 
     useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; }; }, []);
 
@@ -421,13 +426,20 @@ export default function ViewList() {
     }, [id]);
 
     useEffect(() => {
-        if (!list?.user_id) { setMoreLists([]); return; }
+        if (!list?.user_id) { setMoreItems([]); return; }
         let active = true;
-        setMoreListsLoading(true);
-        getMoreListsByUser(list.user_id, list.id, 3)
-            .then(items => { if (active) setMoreLists(items); })
-            .catch(err => { console.error('No se pudieron cargar más listas del autor:', err); if (active) setMoreLists([]); })
-            .finally(() => { if (active) setMoreListsLoading(false); });
+        setMorePostsLoading(true);
+        Promise.allSettled([
+            getMorePostsByUser(list.user_id, null, 5),
+            getMoreListsByUser(list.user_id, list.id, 5),
+        ]).then(([postsResult, listsResult]) => {
+            if (!active) return;
+            const posts = postsResult.status === 'fulfilled' ? postsResult.value : [];
+            const lists = listsResult.status === 'fulfilled' ? listsResult.value : [];
+            setMoreItems(normalizeMoreContent({ posts, lists, limit: 3 }));
+            if (postsResult.status === 'rejected') console.error('No se pudieron cargar posts del autor:', postsResult.reason);
+            if (listsResult.status === 'rejected') console.error('No se pudieron cargar listas del autor:', listsResult.reason);
+        }).finally(() => { if (active) setMorePostsLoading(false); });
         return () => { active = false; };
     }, [list?.user_id, list?.id]);
 
@@ -709,7 +721,7 @@ export default function ViewList() {
                                                     </div>
                                                     {isEditing ? (
                                                         <form className="review-comment-edit-form" onSubmit={e => handleUpdateComment(e, comment)}>
-                                                            <textarea aria-label="Editar comentario" value={editingText} onChange={e => setEditingText(e.target.value)} maxLength={2000} rows={2} />
+                                                            <textarea aria-label="Editar comentario" value={editingText} onChange={e => setEditingText(e.target.value)} maxLength={300} rows={2} />
                                                             <div>
                                                                 <button type="button" onClick={() => { setEditingCommentId(null); setEditingText(''); }}>Cancelar</button>
                                                                 <button type="submit" disabled={!editingText.trim() || savingCommentEdit}>{savingCommentEdit ? 'Guardando…' : 'Guardar'}</button>
@@ -747,7 +759,7 @@ export default function ViewList() {
                             <form className="review-comment-form" onSubmit={handleSubmitComment}>
                                 <ProfileAvatar profile={currentProfile} size="small" />
                                 <label className="review-comment-input-wrap">
-                                    <textarea aria-label="Escribe un comentario" value={commentText} onChange={e => setCommentText(e.target.value)} maxLength={2000} rows={1} placeholder="Escribe un comentario…" />
+                                    <textarea ref={commentInputRef} aria-label="Escribe un comentario" value={commentText} onChange={e => setCommentText(e.target.value)} maxLength={300} rows={1} placeholder="Escribe un comentario…" />
                                 </label>
                                 <button type="submit" disabled={!commentText.trim() || submitting}>{submitting ? 'Enviando…' : 'Comentar'}</button>
                             </form>
@@ -765,24 +777,15 @@ export default function ViewList() {
                 )}
             </article>
 
-            <aside className="vl-more-author" aria-label={`Más listas de ${authorName}`} style={{ '--vl-more-accent': authorThemeColor }}>
+            <aside className="vl-more-author" aria-label={`Más publicaciones de ${authorName}`} style={{ '--vl-more-accent': authorThemeColor }}>
                 <div className="vl-more-panel">
                     <Link className="vl-more-profile" to={`/profile/${authorUsername}`}>
                         <ProfileAvatar profile={authorProfile} />
                         <span><strong>Más de {authorName}</strong><small>@{authorUsername}</small></span>
                     </Link>
-                    {moreListsLoading
-                        ? <p className="vl-more-state">Cargando listas…</p>
-                        : moreLists.length
-                            ? <div className="vl-more-list-grid">
-                                {moreLists.map(item => {
-                                    const cover = collectListPreviewImages(item.content, 1)[0];
-                                    return <Link key={item.id} className={`vl-more-list-card${cover ? ' has-image' : ''}`} to={`/lists/${item.id}`} aria-label={item.title || 'Lista'}>
-                                        {cover ? <img src={cover} alt="" loading="lazy" /> : <span>{item.title || 'Lista'}</span>}
-                                    </Link>;
-                                })}
-                            </div>
-                            : <p className="vl-more-state">Aún no hay más listas.</p>}
+                    {morePostsLoading ? <p className="vl-more-state">Cargando publicaciones…</p>
+                        : moreItems.length ? <MoreContentCards items={moreItems} accent={authorThemeColor} />
+                            : <p className="vl-more-state">Aún no hay más publicaciones.</p>}
                 </div>
             </aside>
 
@@ -910,7 +913,9 @@ export default function ViewList() {
 
 // ─── Vistas de lista ──────────────────────────────────────────────────────────
 export function ListPostPreview({ list, onClick, className = '', ariaLabel }) {
+    const isInteractive = typeof onClick === 'function';
     const activateWithKeyboard = event => {
+        if (!isInteractive) return;
         if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
             onClick?.();
@@ -918,11 +923,11 @@ export function ListPostPreview({ list, onClick, className = '', ariaLabel }) {
     };
     return (
         <div
-            className={`vl-preview-block is-preview-card ${className}`.trim()}
+            className={`vl-preview-block is-preview-card${isInteractive ? ' is-interactive' : ''} ${className}`.trim()}
             onClick={onClick}
-            role="button"
-            tabIndex={0}
-            aria-label={ariaLabel || `Ver lista completa: ${list.title}`}
+            role={isInteractive ? 'button' : undefined}
+            tabIndex={isInteractive ? 0 : undefined}
+            aria-label={isInteractive ? ariaLabel || `Ver lista completa: ${list.title}` : undefined}
             onKeyDown={activateWithKeyboard}
         >
             <div className="vl-locked-preview">

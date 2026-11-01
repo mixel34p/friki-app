@@ -218,7 +218,7 @@
 .review-comments-heading h2 { margin: 0; color: var(--text-secondary); font: 750 .7rem var(--font-sans); letter-spacing: .07em; text-transform: uppercase; }
 .review-comment-form { align-items: center; gap: .65rem; margin: 0; padding: .8rem 0 0; border-top: 1px solid var(--border-subtle); }
 .review-comment-input-wrap { display: block; flex: 1; min-width: 0; }
-.review-comment-input-wrap textarea { display: block; width: 100%; min-height: 46px; resize: none; padding: .65rem 1rem; border: 1px solid var(--border-default); border-radius: 999px; outline: 0; color: var(--text-primary); background: var(--bg-secondary); font: 400 .8rem/1.5 var(--font-sans); }
+.review-comment-input-wrap textarea { display: block; width: 100%; min-height: 46px; overflow-y: hidden; resize: none; padding: .65rem 1rem; border: 1px solid var(--border-default); border-radius: 18px; outline: 0; color: var(--text-primary); background: var(--bg-secondary); font: 400 .8rem/1.5 var(--font-sans); }
 .review-comment-input-wrap textarea:focus { border-color: var(--review-page-accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--review-page-accent) 18%, transparent); }
 .review-comment-form > button { min-height: 40px; padding: .4rem 1rem; border: 1px solid var(--review-page-accent); border-radius: 999px; color: #061210; background: var(--review-page-accent); font: 700 .73rem var(--font-sans); cursor: pointer; }
 .review-comment-form > button:disabled { opacity: .5; cursor: not-allowed; }

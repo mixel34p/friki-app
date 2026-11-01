@@ -3,10 +3,62 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { getTemplates } from '../../lib/listService';
 import { useAuth } from '../../context/AuthContext';
 import CreateTemplateModal from './CreateTemplateModal';
-import './TemplateGallery.css';
+import SEO from '../../components/SEO';
+import '../DiscoverWorks.css';
+import '../Search.css';
+import '../DiscoverLists.css';
 
 const TYPE_LABELS = { tierlist: 'Tierlist', grid: 'Grid' };
-const MEDIA_LABELS = { game: 'Videojuegos', anime: 'Anime' };
+const MEDIA_LABELS = { game: 'Juegos', anime: 'Anime' };
+
+function templateImages(template) {
+    const source = template.cover_items?.length ? template.cover_items : template.default_items || [];
+    return source
+        .map(item => typeof item === 'string' ? item : item?.image_url || item?.cover_url || item?.cover?.url)
+        .filter(Boolean)
+        .slice(0, 4);
+}
+
+function TemplateIcon({ type }) {
+    if (type === 'grid') return <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>;
+    return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>;
+}
+
+function TemplateCard({ template }) {
+    const artwork = templateImages(template);
+    const profile = template.profiles;
+    const username = profile?.username;
+    const typeLabel = TYPE_LABELS[template.list_type] || 'Tierlist';
+    const mediaLabel = MEDIA_LABELS[template.media_type];
+
+    return <article className="discover-list-card">
+        <Link to={`/templates/${template.id}`} className="discover-list-card-link">
+            <span className={`search-list-poster discover-list-poster${artwork.length === 3 ? ' count-three' : artwork.length === 2 ? ' count-two' : ''}`} aria-hidden="true">
+                {artwork.length ? artwork.map((image, index) => <img key={`${image}-${index}`} src={image} alt="" loading="lazy"/>) : <span className="discover-list-poster-fallback"><TemplateIcon type={template.list_type}/></span>}
+            </span>
+            <span className="discover-list-card-copy">
+                <strong>{template.title || 'Plantilla sin título'}</strong>
+                <span className="discover-list-author">
+                    <span className="discover-list-author-avatar">
+                        {profile?.avatar_url ? <img src={profile.avatar_url} alt="" loading="lazy"/> : (username?.[0] || 'A').toUpperCase()}
+                    </span>
+                    <span>{username ? `@${username}` : 'Anónimo'}</span>
+                </span>
+                <span className="search-list-tags">
+                    <span className={`search-list-tag type-${template.list_type || 'tierlist'}`}>{typeLabel}</span>
+                    {mediaLabel && <span className={`search-list-tag media-${template.media_type}`}>{mediaLabel}</span>}
+                </span>
+                <small className="discover-list-uses">{template.uses_count || 0} usos</small>
+            </span>
+        </Link>
+    </article>;
+}
+
+function TemplateSkeletons() {
+    return <div className="discover-list-grid" aria-label="Cargando plantillas">
+        {Array.from({ length: 8 }, (_, index) => <div className="discover-list-skeleton" key={index}><span/><i/><b/><em/></div>)}
+    </div>;
+}
 
 export default function TemplateGallery() {
     const { user } = useAuth();
@@ -26,150 +78,55 @@ export default function TemplateGallery() {
             setTemplates(data);
         } catch (error) {
             console.error('Error fetching templates:', error);
+            setTemplates([]);
         } finally {
             setLoading(false);
         }
     }, [filterType, filterMedia, searchQuery]);
 
     useEffect(() => {
-        const id = setTimeout(fetchTemplates, 300);
+        const id = setTimeout(fetchTemplates, 260);
         return () => clearTimeout(id);
     }, [fetchTemplates]);
 
-    const handleModalSuccess = (result) => {
+    const handleModalSuccess = result => {
         setShowModal(false);
         if (result?.id) navigate(`/templates/${result.id}`);
         else fetchTemplates();
     };
 
-    return (
-        <div className="tg-page">
-            {/* Hero Header */}
-            <div className="tg-hero">
-                <div className="tg-hero-content">
-                    <h1 className="tg-hero-title">Explora la Comunidad</h1>
-                    <p className="tg-hero-desc">Descubre, usa y comparte las mejores plantillas creadas por la comunidad de Friki.</p>
-                    {user ? (
-                        <button className="tg-hero-btn" onClick={() => setShowModal(true)}>
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-                            Crear Nueva Plantilla
-                        </button>
-                    ) : (
-                        <p className="tg-hero-login-hint">Inicia sesión para crear tus propias plantillas</p>
-                    )}
-                </div>
-                <div className="tg-hero-bg-glow"></div>
-            </div>
+    return <main className="discover-works-page discover-lists-page template-gallery-page">
+        <SEO title="Explorar plantillas" description="Descubre y usa plantillas creadas por la comunidad."/>
+        <header className="discover-works-header discover-lists-header">
+            <div className="discover-title-group"><h1>Plantillas</h1></div>
+            <button type="button" className="discover-list-create" onClick={() => user ? setShowModal(true) : navigate('/register')} aria-label="Crear plantilla" title={user ? 'Crear plantilla' : 'Inicia sesión para crear una plantilla'}>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            </button>
+        </header>
 
-            <div className="tg-container">
-                {/* Controls Bar */}
-                <div className="tg-controls-bar">
-                    <div className="tg-search-box">
-                        <svg className="tg-search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
-                        <input
-                            type="text"
-                            placeholder="Buscar por título o autor..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                        />
-                    </div>
-
-                    <div className="tg-filters">
-                        <div className="tg-filter-group">
-                            {[null, 'tierlist', 'grid'].map(t => (
-                                <button key={String(t)} className={`tg-filter-btn ${filterType === t ? 'active' : ''}`} onClick={() => setFilterType(t)}>
-                                    {t === null ? 'Todos' : TYPE_LABELS[t]}
-                                </button>
-                            ))}
-                        </div>
-                        <div className="tg-filter-divider"></div>
-                        <div className="tg-filter-group">
-                            {[null, 'game', 'anime'].map(m => (
-                                <button key={String(m)} className={`tg-filter-btn ${filterMedia === m ? 'active' : ''}`} onClick={() => setFilterMedia(m)}>
-                                    {m === null ? 'Cualquiera' : MEDIA_LABELS[m]}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
+        <div className="discover-list-controls template-gallery-controls">
+            <div className="discover-list-filter-row">
+                <div className="discover-genre-list" role="group" aria-label="Filtrar por formato">
+                    {[null, 'tierlist', 'grid'].map(type => <button key={type || 'all'} type="button" className={`discover-chip${filterType === type ? ' active' : ''}`} aria-pressed={filterType === type} onClick={() => setFilterType(type)}>{type ? TYPE_LABELS[type] : 'Todos'}</button>)}
                 </div>
-
-                {/* Grid */}
-                <div className="tg-grid">
-                    {loading ? (
-                        <div className="tg-state-box">
-                            <div className="tg-spinner"></div>
-                            <p>Cargando plantillas...</p>
-                        </div>
-                    ) : templates.length === 0 ? (
-                        <div className="tg-state-box">
-                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeDasharray="4 4"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/></svg>
-                            <p>No hay plantillas que coincidan con tu búsqueda.</p>
-                        </div>
-                    ) : (
-                        templates.map((tpl, i) => <TemplateCard key={tpl.id} tpl={tpl} index={i} />)
-                    )}
+                <div className="discover-genre-list media" role="group" aria-label="Filtrar por tipo de obra">
+                    {[null, 'anime', 'game'].map(media => <button key={media || 'all'} type="button" className={`discover-chip${filterMedia === media ? ' active' : ''}`} aria-pressed={filterMedia === media} onClick={() => setFilterMedia(media)}>{media ? MEDIA_LABELS[media] : 'Cualquiera'}</button>)}
                 </div>
-            </div>
-
-            {showModal && <CreateTemplateModal onClose={() => setShowModal(false)} onSuccess={handleModalSuccess} />}
-        </div>
-    );
-}
-
-function TemplateCard({ tpl, index }) {
-    const isAnonymous = !tpl.profiles?.username;
-    
-    const selectedCovers = tpl.cover_items?.length ? tpl.cover_items : tpl.default_items || [];
-    const previewItems = selectedCovers.slice(0, 5).map(item => typeof item === 'string' ? item : item.image_url || item.cover_url).filter(Boolean);
-    
-    return (
-        <div className="tg-card" style={{ animationDelay: `${index * 0.05}s` }}>
-            <Link to={`/templates/${tpl.id}`} className="tg-card-link-overlay" aria-label="Ver plantilla"></Link>
-            
-            <div className={`tg-card-banner type-${tpl.list_type}`}>
-                <div className="tg-card-tags">
-                    <span className="tg-tag primary">{TYPE_LABELS[tpl.list_type]}</span>
-                    {tpl.media_type && <span className="tg-tag">{MEDIA_LABELS[tpl.media_type]}</span>}
+                <div className="discover-list-filter-actions">
+                    <label className="discover-list-search">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="7.3"/><path d="m16.2 16.2 4.3 4.3"/></svg>
+                        <input type="search" value={searchQuery} placeholder="Buscar plantillas..." aria-label="Buscar plantillas" onChange={event => setSearchQuery(event.target.value)}/>
+                        {searchQuery && <button type="button" onClick={() => setSearchQuery('')} aria-label="Borrar búsqueda">×</button>}
+                    </label>
                 </div>
-                
-                <div className="tg-card-preview-items">
-                    {previewItems.length ? previewItems.map((url, idx) => (
-                        <img key={idx} src={url} alt="Cover" className="tg-preview-img" loading="lazy" />
-                    )) : <span className="tg-card-type-icon" aria-hidden="true">
-                        {tpl.list_type === 'ranking' ? <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                            : tpl.list_type === 'grid' ? <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-                                : <svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>}
-                    </span>}
-                </div>
-            </div>
-
-            <div className="tg-card-body">
-                <h3 className="tg-card-title">{tpl.title}</h3>
-                
-                <div className="tg-card-footer">
-                    <div className="tg-author-info">
-                        {tpl.profiles?.avatar_url ? (
-                            <img src={tpl.profiles.avatar_url} alt="" className="tg-author-avatar" />
-                        ) : (
-                            <div className="tg-author-avatar-fallback">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                            </div>
-                        )}
-                        <span className="tg-author-name">{isAnonymous ? 'Anónimo' : `@${tpl.profiles.username}`}</span>
-                    </div>
-                    
-                    <div className="tg-uses-badge">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20v-6M6 20V10M18 20V4"/></svg>
-                        {tpl.uses_count || 0}
-                    </div>
-                </div>
-            </div>
-            
-            <div className="tg-card-hover-actions">
-                <Link to={`/templates/${tpl.id}`} className="tg-btn-quick-use">
-                    Ver Detalles
-                </Link>
             </div>
         </div>
-    );
+
+        <section className="discover-list-results" aria-live="polite">
+            <div className="discover-grid-toolbar"><p>Plantillas de la comunidad</p></div>
+            {loading ? <TemplateSkeletons/> : templates.length ? <div className="discover-list-grid">{templates.map(template => <TemplateCard key={template.id} template={template}/>)}</div> : <div className="discover-empty discover-list-no-results"><p>No hay plantillas que coincidan con tu búsqueda.</p></div>}
+        </section>
+
+        {showModal && <CreateTemplateModal onClose={() => setShowModal(false)} onSuccess={handleModalSuccess}/>}
+    </main>;
 }

@@ -90,15 +90,18 @@ export async function getRecentPosts(limit = 6) {
   return posts.map(post => ({ ...post, author: profileById.get(post.user_id) || null }))
 }
 
-export async function getHomePosts(limit = 30) {
+export async function getHomePosts(limit = 30, authorIds = null, excludedAuthorId = null) {
+  if (Array.isArray(authorIds) && !authorIds.length) return []
   const now = Date.now()
   const recentCutoff = new Date(now - 7 * 24 * 60 * 60 * 1000).toISOString()
   const olderCutoff = new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString()
-  const { data, error } = await supabase.from('posts')
+  let request = supabase.from('posts')
     .select('id, user_id, body, media, contains_spoiler, is_sensitive, spoiler_work_title, created_at')
     .gte('created_at', olderCutoff)
     .order('created_at', { ascending: false })
-    .limit(Math.max(limit * 3, 60))
+  if (authorIds) request = request.in('user_id', authorIds)
+  if (excludedAuthorId) request = request.neq('user_id', excludedAuthorId)
+  const { data, error } = await request.limit(Math.max(limit * 3, 60))
   if (error) throw error
 
   const posts = data || []
@@ -126,12 +129,12 @@ export async function getHomePosts(limit = 30) {
 
 export async function getMorePostsByUser(userId, currentPostId, limit = 5) {
   if (!userId) return []
-  const { data, error } = await supabase.from('posts')
-    .select('id, user_id, body, media, contains_spoiler, is_sensitive, created_at')
+  let request = supabase.from('posts')
+    .select('id, user_id, body, media, contains_spoiler, is_sensitive, spoiler_work_title, created_at')
     .eq('user_id', userId)
-    .neq('id', currentPostId)
     .order('created_at', { ascending: false })
-    .limit(limit)
+  if (currentPostId) request = request.neq('id', currentPostId)
+  const { data, error } = await request.limit(limit)
   if (error) throw error
   return data || []
 }
