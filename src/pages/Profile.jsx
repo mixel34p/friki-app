@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext'
 import DefaultAvatar from '../components/DefaultAvatar'
 import { hasCustomAvatar } from '../lib/avatar'
 import { supabase } from '../lib/supabase'
-import { getAccentTextColor, getVisibleAccentColor } from '../lib/colorContrast'
+import { getAccentTextColor, getProfilePalette, getVisibleAccentColor } from '../lib/colorContrast'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useToast } from '../components/Toast'
@@ -95,6 +95,50 @@ const getSocialLink = (platform, handle) => {
     }
 }
 
+function extractBannerPalette(imageUrl) {
+    if (!imageUrl || typeof Image === 'undefined' || typeof document === 'undefined') return Promise.resolve(null)
+    return new Promise(resolve => {
+        const image = new Image()
+        image.crossOrigin = 'anonymous'
+        image.onload = () => {
+            try {
+                const canvas = document.createElement('canvas')
+                const context = canvas.getContext('2d', { willReadFrequently: true })
+                if (!context) return resolve(null)
+                canvas.width = 36
+                canvas.height = 36
+                context.drawImage(image, 0, 0, canvas.width, canvas.height)
+                const { data } = context.getImageData(0, 0, canvas.width, canvas.height)
+                const buckets = new Map()
+                for (let i = 0; i < data.length; i += 4) {
+                    if (data[i + 3] < 180) continue
+                    const channels = [data[i], data[i + 1], data[i + 2]]
+                    const key = channels.map(value => Math.round(value / 32)).join(',')
+                    const bucket = buckets.get(key) || { count: 0, totals: [0, 0, 0] }
+                    bucket.count += 1
+                    channels.forEach((value, index) => { bucket.totals[index] += value })
+                    buckets.set(key, bucket)
+                }
+                const dominant = [...buckets.values()]
+                    .sort((a, b) => b.count - a.count)
+                    .slice(0, 8)
+                    .map(bucket => bucket.totals.map(value => Math.round(value / bucket.count)))
+                const primary = dominant[0]
+                const secondary = dominant.slice(1).find(color =>
+                    Math.sqrt(color.reduce((distance, value, index) => distance + (value - primary[index]) ** 2, 0)) >= 42
+                ) || dominant[1]
+                const colors = [primary, secondary].filter(Boolean).map(channels => `#${channels.map(value => value.toString(16).padStart(2, '0')).join('')}`)
+                resolve(colors.length ? colors : null)
+            } catch {
+                // Cross origin or unsupported image decoding: the configured accent is the fallback.
+                resolve(null)
+            }
+        }
+        image.onerror = () => resolve(null)
+        image.src = imageUrl
+    })
+}
+
 
 
 export default function Profile() {
@@ -103,6 +147,7 @@ export default function Profile() {
     const [searchParams, setSearchParams] = useSearchParams()
 
     const [profile, setProfile] = useState(null)
+    const [bannerColors, setBannerColors] = useState(null)
     const [isFollowing, setIsFollowing] = useState(false)
     const [isFollowedBy, setIsFollowedBy] = useState(false)
     const [loading, setLoading] = useState(true)
@@ -123,6 +168,29 @@ export default function Profile() {
 
     const { toast } = useToast()
     const isOwnProfile = !username || username === myProfile?.username
+
+    useEffect(() => {
+        let active = true
+        setBannerColors(null)
+        if (profile?.banner_url) {
+            extractBannerPalette(profile.banner_url).then(colors => {
+                if (active) setBannerColors(colors)
+            })
+        }
+        return () => { active = false }
+    }, [profile?.id, profile?.banner_url])
+
+    useEffect(() => {
+        const layout = document.querySelector('.layout')
+        if (!layout) return undefined
+        const hasProfileColors = profile?.theme_color || profile?.banner_color || bannerColors
+        const palette = hasProfileColors
+            ? getProfilePalette(bannerColors || profile.banner_color || profile.theme_color, profile.theme_color || '#14b8a6')
+            : null
+        const background = palette?.['--profile-page-bg'] || '#080808'
+        layout.style.setProperty('--profile-tail-bg', background)
+        return () => layout.style.removeProperty('--profile-tail-bg')
+    }, [profile?.id, profile?.theme_color, profile?.banner_color, bannerColors])
 
     useEffect(() => {
         let active = true
@@ -486,17 +554,15 @@ export default function Profile() {
     const profileAccent = profile.theme_color || '#14b8a6'
     const accentTextColor = getAccentTextColor(profileAccent)
     const visibleAccent = getVisibleAccentColor(profileAccent)
+    const profileColors = profile.theme_color || profile.banner_color || bannerColors
+        ? getProfilePalette(bannerColors || profile.banner_color || profile.theme_color, profileAccent)
+        : {
+            '--profile-accent-text': accentTextColor,
+            '--profile-accent-visible': visibleAccent
+        }
 
     return (
-        <div className="profile-page" style={profile.theme_color ? { 
-            '--brand-primary': profile.theme_color,
-            '--brand-dark': profile.theme_color,
-            '--profile-accent-text': accentTextColor,
-            '--profile-accent-visible': visibleAccent
-        } : {
-            '--profile-accent-text': accentTextColor,
-            '--profile-accent-visible': visibleAccent
-        }}>
+        <div className={`profile-page${profile.theme_color || profile.banner_color || bannerColors ? ' profile-themed' : ''}`} style={profileColors}>
             <SEO title={`${profile.display_name || profile.username} (@${profile.username})`} description={`Perfil de ${profile.display_name || profile.username} en GeekSphere.`} />
 
             {/* Mobile Topbar */}

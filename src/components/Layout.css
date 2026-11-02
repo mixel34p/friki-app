@@ -9,6 +9,10 @@
     padding-top: var(--space-xl);
 }
 
+.main.profile-main {
+    background-color: var(--profile-tail-bg, var(--bg-primary));
+}
+
 
 /* -- HEADER PREMIUM -- */
 .header {
@@ -1233,7 +1237,7 @@
     display: block;
     min-height: 100vh;
     overflow-x: clip;
-    background: var(--bg-primary, #080808);
+    background: var(--profile-tail-bg, var(--bg-primary, #080808));
 }
 .app-sidebar {
     display: flex;

@@ -22,8 +22,16 @@
 }
 
 /* ── Page — cancela el padding-top del Layout ── */
+@property --profile-page-bg { syntax: '<color>'; inherits: true; initial-value: #080808; }
+@property --profile-banner-tint { syntax: '<color>'; inherits: true; initial-value: #101313; }
+@property --profile-surface { syntax: '<color>'; inherits: true; initial-value: #101313; }
+@property --profile-surface-raised { syntax: '<color>'; inherits: true; initial-value: #1a1a1a; }
+@property --profile-accent-surface { syntax: '<color>'; inherits: true; initial-value: #202020; }
+@property --profile-accent-color { syntax: '<color>'; inherits: true; initial-value: #14b8a6; }
+@property --profile-accent-hover { syntax: '<color>'; inherits: true; initial-value: #2dc0b0; }
 .profile-page {
     margin-top: calc(-1 * var(--space-xl));
+    min-height: 100vh;
     padding-bottom: var(--space-3xl);
     --profile-surface: #101313;
     --profile-surface: color-mix(in srgb, var(--bg-primary) 94%, var(--brand-primary));
@@ -32,6 +40,96 @@
     background:
         radial-gradient(ellipse 86% 520px at 50% 0%, color-mix(in srgb, var(--brand-primary) 18%, transparent), transparent 76%),
         var(--bg-primary);
+}
+
+/* Profile identity colors stay inside this page subtree. */
+.profile-page.profile-themed {
+    --brand-primary: var(--profile-accent-color);
+    --brand-dark: var(--profile-accent-dark);
+    --bg-primary: var(--profile-page-bg);
+    --bg-secondary: var(--profile-surface);
+    --bg-tertiary: var(--profile-surface-raised);
+    --bg-card: var(--profile-surface);
+    --bg-hover: var(--profile-accent-surface);
+    --bg-elevated: var(--profile-surface-raised);
+    --text-primary: var(--profile-page-text);
+    --text-secondary: var(--profile-secondary-text);
+    --text-muted: var(--profile-secondary-text);
+    --border-subtle: color-mix(in srgb, var(--profile-page-border) 48%, transparent);
+    --border-default: color-mix(in srgb, var(--profile-page-border) 72%, transparent);
+    --border-strong: color-mix(in srgb, var(--profile-page-border) 92%, transparent);
+    --border-brand: color-mix(in srgb, var(--brand-primary) 58%, transparent);
+    --shadow-sm: 0 1px 3px color-mix(in srgb, var(--profile-shadow-tint) 40%, transparent);
+    --shadow-md: 0 4px 16px color-mix(in srgb, var(--profile-shadow-tint) 56%, transparent);
+    --shadow-lg: 0 8px 32px color-mix(in srgb, var(--profile-shadow-tint) 64%, transparent);
+    background:
+        radial-gradient(ellipse 72% 680px at 100% 14%, color-mix(in srgb, var(--profile-banner-tint) 58%, transparent), transparent 76%),
+        radial-gradient(ellipse 86% 520px at 50% 0%, color-mix(in srgb, var(--profile-page-bg) 30%, var(--profile-accent-surface)), transparent 76%),
+        var(--profile-page-bg);
+    color: var(--profile-page-text);
+    transition: --profile-page-bg 320ms ease, --profile-banner-tint 320ms ease, --profile-surface 320ms ease, --profile-surface-raised 320ms ease, --profile-accent-surface 320ms ease, --profile-accent-color 320ms ease, color 240ms ease;
+}
+
+.profile-page.profile-themed .profile-header-card {
+    background: linear-gradient(180deg, var(--profile-surface) 0%, var(--profile-page-bg) 300px);
+    color: var(--profile-surface-text);
+}
+
+.profile-page.profile-themed .profile-banner {
+    background: linear-gradient(125deg, var(--profile-surface), var(--profile-accent-surface) 54%, var(--profile-page-bg));
+}
+
+.profile-page.profile-themed .profile-follow-button.btn-primary {
+    color: var(--profile-accent-text, #000);
+    background: var(--brand-primary);
+    border-color: var(--brand-primary);
+}
+
+.profile-page.profile-themed .profile-follow-button.btn-primary:hover:not(:disabled) {
+    color: var(--profile-accent-hover-text);
+    background: var(--profile-accent-hover);
+    border-color: var(--profile-accent-hover);
+}
+
+.profile-page.profile-themed .profile-follow-button.btn-secondary,
+.profile-page.profile-themed .profile-edit-button {
+    color: var(--profile-accent-visible);
+    border-color: var(--border-default);
+    background: var(--profile-surface-raised);
+}
+
+.profile-page.profile-themed .profile-follow-button.btn-secondary:hover:not(:disabled),
+.profile-page.profile-themed .profile-edit-button:hover {
+    background: var(--profile-accent-surface);
+    border-color: var(--profile-accent-visible);
+}
+
+.profile-page.profile-themed .profile-section-tab.active,
+.profile-page.profile-themed .profile-section-tab:hover,
+.profile-page.profile-themed .profile-bio a {
+    color: var(--profile-accent-visible);
+}
+
+.profile-page.profile-themed .profile-section-tab.active::after {
+    background-color: var(--profile-accent-visible);
+}
+
+.profile-page.profile-themed .profile-badge-item {
+    color: var(--profile-raised-text);
+}
+
+.profile-page.profile-themed .profile-badge-item:hover {
+    color: var(--profile-accent-visible);
+    border-color: var(--profile-accent-visible);
+}
+
+.profile-page.profile-themed .btn-primary {
+    color: var(--profile-accent-text, #000);
+}
+
+.profile-page.profile-themed :where(button, a, [tabindex]):focus-visible {
+    outline: 2px solid var(--profile-accent-visible);
+    outline-offset: 3px;
 }
 
 /* ════════════════════════════
