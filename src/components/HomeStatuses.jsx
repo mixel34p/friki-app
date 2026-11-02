@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
+import DefaultAvatar from './DefaultAvatar'
 import { getAccentTextColor } from '../lib/colorContrast'
 import { deleteUserStatus, getActiveStatuses, saveUserStatus } from '../lib/statusService'
 import './HomeStatuses.css'
@@ -38,7 +39,7 @@ async function findSongs(query) {
 function Avatar({ person }) {
   const name = person.display_name || person.username || 'Usuario'
   return <span className="home-status-avatar" style={{ '--status-accent': person.theme_color || 'var(--brand-primary)' }}>
-    {person.avatar_url ? <img src={person.avatar_url} alt="" loading="lazy" /> : name.slice(0, 1).toLocaleUpperCase()}
+    {person.avatar_url ? <img src={person.avatar_url} alt="" loading="lazy" /> : <DefaultAvatar accent={person.theme_color} />}
   </span>
 }
 

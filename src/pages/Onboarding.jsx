@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase'
 import { createList, incrementTemplateUses } from '../lib/listService'
 import { clearGuestListDraft, readGuestListDraft } from '../lib/guestListDraft'
 import LoadingSpinner from '../components/LoadingSpinner'
+import DefaultAvatar from '../components/DefaultAvatar'
 import ImageCropperModal from '../components/ImageCropperModal'
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, rectSortingStrategy } from '@dnd-kit/sortable';
@@ -14,7 +15,6 @@ import { SortableFavoriteItem } from '../components/profile/SortableFavoriteItem
 import './Auth.css'
 import './Onboarding.css'
 
-const DEFAULT_AVATAR = '/default-avatar.svg'
 const DEFAULT_THEME_COLOR = '#14b8a6'
 
 const getAgeFromBirthDate = (value) => {
@@ -84,7 +84,7 @@ export default function Onboarding() {
     const birthDateInputRef = useRef(null)
     // Files
     const [avatarFile, setAvatarFile] = useState(null)
-    const [avatarPreview, setAvatarPreview] = useState(DEFAULT_AVATAR)
+    const [avatarPreview, setAvatarPreview] = useState(null)
 
     // Cropper State
     const [cropModal, setCropModal] = useState({ isOpen: false, type: null, src: null, aspect: 1 })
@@ -410,10 +410,10 @@ export default function Onboarding() {
         
         try {
             let publishedGuestListId = null
-            let finalAvatarUrl = DEFAULT_AVATAR
+            let finalAvatarUrl = null
             if (avatarFile) {
                 let url = await uploadImage(avatarFile, 'avatars')
-                finalAvatarUrl = url ? `${url}?t=${Date.now()}` : DEFAULT_AVATAR
+                finalAvatarUrl = url ? `${url}?t=${Date.now()}` : null
             }
 
             const { error: profileError } = await supabase
@@ -444,7 +444,7 @@ export default function Onboarding() {
 
             const guestListDraft = readGuestListDraft(null, { requireRegistration: true })
             if (guestListDraft?.payload) {
-                const baseTitle = guestListDraft.templateTitle || guestListDraft.baseTitle || guestListDraft.payload.title || 'Mi lista'
+                const baseTitle = guestListDraft.baseTitle || guestListDraft.payload.title || guestListDraft.templateTitle || 'Mi lista'
                 const publishedList = await createList({
                     ...guestListDraft.payload,
                     title: `${baseTitle} (${displayName.trim()})`,
@@ -500,7 +500,7 @@ export default function Onboarding() {
                             <div className="onboarding-avatar-control">
                                 <input id="onboarding-avatar" type="file" accept="image/*" onChange={event => handleFileChange(event, 'avatar')} hidden />
                                 <label className="onboarding-avatar-photo" htmlFor="onboarding-avatar" title="Cambiar foto de perfil">
-                                    <img src={avatarPreview || DEFAULT_AVATAR} alt="Cambiar foto de perfil" />
+                                    {avatarPreview ? <img src={avatarPreview} alt="Cambiar foto de perfil" /> : <DefaultAvatar accent={DEFAULT_THEME_COLOR} />}
                                 </label>
                                 <label className="onboarding-avatar-add" htmlFor="onboarding-avatar" title="Cambiar foto de perfil" aria-label="Cambiar foto de perfil">
                                     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>

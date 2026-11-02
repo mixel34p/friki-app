@@ -4,6 +4,7 @@ import { getTemplates } from '../../lib/listService';
 import { useAuth } from '../../context/AuthContext';
 import CreateTemplateModal from './CreateTemplateModal';
 import SEO from '../../components/SEO';
+import DefaultAvatar from '../../components/DefaultAvatar';
 import '../DiscoverWorks.css';
 import '../Search.css';
 import '../DiscoverLists.css';
@@ -40,7 +41,7 @@ function TemplateCard({ template }) {
                 <strong>{template.title || 'Plantilla sin título'}</strong>
                 <span className="discover-list-author">
                     <span className="discover-list-author-avatar">
-                        {profile?.avatar_url ? <img src={profile.avatar_url} alt="" loading="lazy"/> : (username?.[0] || 'A').toUpperCase()}
+                        {profile?.avatar_url ? <img src={profile.avatar_url} alt="" loading="lazy"/> : <DefaultAvatar accent={profile?.theme_color} />}
                     </span>
                     <span>{username ? `@${username}` : 'Anónimo'}</span>
                 </span>

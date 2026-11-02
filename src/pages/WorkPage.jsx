@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import DefaultAvatar, { getDefaultAvatarDataUrl } from '../components/DefaultAvatar'
 import {
     getWorkById,
     getTierlistsWithWork,
@@ -355,9 +356,7 @@ export default function WorkPage({ mediaType }) {
                                             >
                                                 {member.avatar ? (
                                                     <img src={member.avatar} alt={member.username} />
-                                                ) : (
-                                                    <div className="avatar-placeholder">{member.username.charAt(0).toUpperCase()}</div>
-                                                )}
+                                                ) : <DefaultAvatar accent={member.theme_color} />}
                                             </div>
                                         ))}
                                     </div>
@@ -399,7 +398,7 @@ export default function WorkPage({ mediaType }) {
                                                 <Link to={`/profile/${log.profiles?.username}`} className="review-poster-link">
                                                     <div
                                                         className="review-poster"
-                                                        style={{ backgroundImage: `url(${log.profiles?.avatar_url || 'https://via.placeholder.com/48'})`, borderRadius: '50%', width: '48px', height: '48px', border: `2px solid ${log.profiles?.theme_color || 'var(--brand-primary)'}`, boxSizing: 'border-box' }}
+                                                        style={{ backgroundImage: `url("${log.profiles?.avatar_url || getDefaultAvatarDataUrl(log.profiles?.theme_color)}")`, borderRadius: '50%', width: '48px', height: '48px', border: `2px solid ${log.profiles?.theme_color || 'var(--brand-primary)'}`, boxSizing: 'border-box' }}
                                                     ></div>
                                                 </Link>
                                                 <div className="review-author-name-group">

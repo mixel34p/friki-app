@@ -5,6 +5,7 @@ import { getRecentReviews } from '../lib/reviewService'
 import { getTrendingWorks } from '../lib/workPageService'
 import { STATIC_COVERS } from '../lib/constants'
 import SEO from '../components/SEO'
+import DefaultAvatar from '../components/DefaultAvatar'
 import './Landing.css'
 
 // SVGs
@@ -231,7 +232,7 @@ export default function Landing() {
                                                 <div className="lbx-review-header">
                                                     <h4 className="lbx-work-title">{review.work?.title || 'Obra desconocida'}</h4>
                                                     <div className="lbx-user-row">
-                                                        <img src={review.profiles?.avatar_url || 'https://via.placeholder.com/24'} alt="" className="lbx-avatar" />
+                                                        {review.profiles?.avatar_url ? <img src={review.profiles.avatar_url} alt="" className="lbx-avatar" /> : <DefaultAvatar accent={review.profiles?.theme_color} className="lbx-avatar" />}
                                                         <span className="lbx-username">{review.profiles?.display_name || review.profiles?.username}</span>
                                                     </div>
                                                 </div>

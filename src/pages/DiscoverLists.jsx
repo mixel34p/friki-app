@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import DefaultAvatar from '../components/DefaultAvatar'
 import { getDiscoverLists, getDiscoverTemplates } from '../lib/listService'
 import ListLikeButton from '../components/ListLikeButton'
 import CreateTemplateModal from './lists/CreateTemplateModal'
@@ -115,7 +116,7 @@ function TypePicker({ value, onChange, options = TYPES }) {
 function Author({ profile, fallback = 'Anónimo' }) {
   const username = profile?.username
   return <span className="discover-list-author">
-    <span className="discover-list-author-avatar">{profile?.avatar_url ? <img src={profile.avatar_url} alt="" loading="lazy"/> : (username?.[0] || fallback[0] || 'A').toUpperCase()}</span>
+    <span className="discover-list-author-avatar">{profile?.avatar_url ? <img src={profile.avatar_url} alt="" loading="lazy"/> : <DefaultAvatar accent={profile?.theme_color} />}</span>
     <span>{username ? `@${username}` : fallback}</span>
   </span>
 }

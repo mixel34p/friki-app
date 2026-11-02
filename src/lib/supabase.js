@@ -292,7 +292,8 @@ export const getComments = async (tierlistId) => {
             profiles:user_id (
                 username,
                 avatar_url,
-                display_name
+                display_name,
+                theme_color
             )
         `)
         .eq('tierlist_id', tierlistId)

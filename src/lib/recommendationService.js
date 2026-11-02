@@ -325,7 +325,7 @@ async function collectFollowedUsersWorks(userId, userProfile, mediaType, exclude
     // 2. Get profiles of followed users to have their info (avatar, name)
     const { data: followedProfiles } = await supabase
         .from('profiles')
-        .select('user_id, username, display_name, avatar_url, library, anime_library')
+        .select('user_id, username, display_name, avatar_url, theme_color, library, anime_library')
         .in('user_id', followingIds)
 
     if (!followedProfiles) return []
@@ -359,6 +359,7 @@ async function collectFollowedUsersWorks(userId, userProfile, mediaType, exclude
                         userId: followedUser.user_id,
                         username: followedUser.username,
                         avatar_url: followedUser.avatar_url,
+                        theme_color: followedUser.theme_color,
                         rating: item.rating,
                         status: item.status
                     })
@@ -392,6 +393,7 @@ async function collectFollowedUsersWorks(userId, userProfile, mediaType, exclude
                         userId: followedUser.user_id,
                         username: followedUser.username,
                         avatar_url: followedUser.avatar_url,
+                        theme_color: followedUser.theme_color,
                         rating: item.rating,
                         status: item.status
                     })
@@ -919,7 +921,8 @@ function generateReasons(work, userProfile, userTagPreferences) {
             text: `De la biblioteca de ${followingSource.username}`,
             user: {
                 username: followingSource.username,
-                avatar_url: followingSource.avatar_url
+                avatar_url: followingSource.avatar_url,
+                theme_color: followingSource.theme_color
             }
         })
         return reasons // Show mainly this

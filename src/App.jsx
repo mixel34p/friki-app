@@ -30,6 +30,8 @@ import Search from './pages/Search'
 import DiscoverWorks from './pages/DiscoverWorks'
 import DiscoverLists from './pages/DiscoverLists'
 import WishlistPage from './pages/WishlistPage'
+import CustomItemGroupEditor from './pages/CustomItemGroupEditor'
+import CustomItemGroupDetail from './pages/CustomItemGroupDetail'
 import ActivityPage from './pages/ActivityPage'
 import ViewTierlist from './pages/ViewTierlist'
 import Chat from './pages/Chat'
@@ -45,7 +47,7 @@ function getPageTitle(pathname) {
     '/': 'GeekSphere', '/home': 'Inicio', '/activity': 'Actividad', '/spaces': 'Espacios',
     '/search': 'Busca tus aficiones', '/search/results': 'Busca tus aficiones',
     '/connections': 'Conexiones', '/templates': 'Plantillas', '/old-library': 'Biblioteca',
-    '/onboarding': 'Configura tu perfil', '/lists/new': 'Crear lista', '/custom-groups': 'Grupos de elementos', '/settings': 'Ajustes', '/share': 'Compartir',
+    '/onboarding': 'Configura tu perfil', '/lists/new': 'Crear lista', '/groups': 'Grupos', '/groups/new': 'Crear grupo', '/custom-groups': 'Grupos', '/settings': 'Ajustes', '/share': 'Compartir',
     '/terms': 'Términos de uso', '/privacy': 'Política de privacidad', '/community-guidelines': 'Normas de la comunidad',
   }
   if (exact[pathname]) return exact[pathname]
@@ -53,6 +55,8 @@ function getPageTitle(pathname) {
     const names = { reviews: 'Reseñas', diary: 'Diario', tierlists: 'Tierlists', templates: 'Plantillas', wishlist: 'Lista de deseos' }
     return subpage ? `${names[subpage] || 'Perfil'} de ${identifier || 'usuario'}` : `Perfil de ${identifier || 'usuario'}`
   }
+  if (section === 'groups' && subpage === 'edit') return 'Editar grupo'
+  if (section === 'groups' && identifier) return 'Grupo de elementos'
   if (section === 'game' || section === 'anime') return identifier && parts[2] === 'reviews' ? `Reseñas de ${section === 'game' ? 'videojuegos' : 'anime'}` : section === 'game' ? 'Videojuego' : 'Anime'
   if (section === 'spaces' && identifier) return 'Espacio'
   if (section === 'posts' && identifier) return 'Publicación'
@@ -213,7 +217,11 @@ function App() {
             <Route path="/confirm-email" element={<ConfirmEmail />} />
             <Route path="/update-password" element={<UpdatePassword />} />
             <Route path="/home" element={<Home />} />
-            <Route path="/custom-groups" element={<ProtectedRoute><CustomItemGroups /></ProtectedRoute>} />
+            <Route path="/groups/new" element={<ProtectedRoute><CustomItemGroupEditor /></ProtectedRoute>} />
+            <Route path="/groups/:groupId/edit" element={<ProtectedRoute><CustomItemGroupEditor /></ProtectedRoute>} />
+            <Route path="/groups/:groupId" element={<CustomItemGroupDetail />} />
+            <Route path="/groups" element={<ProtectedRoute><CustomItemGroups /></ProtectedRoute>} />
+            <Route path="/custom-groups" element={<Navigate to="/groups" replace />} />
             <Route path="/share" element={<ProtectedRoute><SharePage /></ProtectedRoute>} />
             <Route path="/posts/:postId" element={<PostDetail />} />
             <Route path="/activity" element={<ProtectedRoute><ActivityPage /></ProtectedRoute>} />

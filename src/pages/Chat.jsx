@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import Groq from "groq-sdk"
 import { useAuth } from '../context/AuthContext'
+import DefaultAvatar from '../components/DefaultAvatar'
 import {
     getConversations,
     getMessages,
@@ -804,11 +805,7 @@ No añadas explicaciones, ni texto extra.`
                             <div className="conv-avatar">
                                 {conv.otherUser?.avatar_url ? (
                                     <img src={conv.otherUser.avatar_url} alt="" />
-                                ) : (
-                                    <div className="avatar-placeholder">
-                                        {conv.otherUser?.display_name?.charAt(0)}
-                                    </div>
-                                )}
+                                ) : <DefaultAvatar accent={conv.otherUser?.theme_color} />}
                                 <span className="online-indicator"></span>
                             </div>
                             <div className="conv-info">
@@ -840,11 +837,7 @@ No añadas explicaciones, ni texto extra.`
                                 <Link to={`/profile/${activeConversation.otherUser?.username}`} className="header-avatar-link">
                                     {activeConversation.otherUser?.avatar_url ? (
                                         <img src={activeConversation.otherUser.avatar_url} alt="" className="header-avatar" />
-                                    ) : (
-                                        <div className="header-avatar placeholder">
-                                            {activeConversation.otherUser?.display_name?.charAt(0)}
-                                        </div>
-                                    )}
+                                    ) : <DefaultAvatar className="header-avatar placeholder" accent={activeConversation.otherUser?.theme_color} />}
                                 </Link>
                                 <div className="header-info">
                                     <h3>{activeConversation.otherUser?.display_name}</h3>

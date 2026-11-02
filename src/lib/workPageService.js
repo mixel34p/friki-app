@@ -410,7 +410,7 @@ export async function getWorkStats(mediaType, mediaId) {
             if (recentUserIds.length > 0) {
                 const { data: profiles } = await supabase
                     .from('profiles')
-                    .select('id, username, avatar_url')
+                    .select('id, username, avatar_url, theme_color')
                     .in('id', recentUserIds)
                     
                 if (profiles) {
@@ -420,7 +420,8 @@ export async function getWorkStats(mediaType, mediaId) {
                         if (profile) {
                             recentMembers.push({
                                 username: profile.username || 'Usuario',
-                                avatar: profile.avatar_url
+                                avatar: profile.avatar_url,
+                                theme_color: profile.theme_color
                             })
                         }
                     }

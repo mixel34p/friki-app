@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import DefaultAvatar from '../components/DefaultAvatar'
 import { supabase } from '../lib/supabase'
 import { getAccentTextColor, getVisibleAccentColor } from '../lib/colorContrast'
 import LoadingSpinner from '../components/LoadingSpinner'
@@ -522,7 +523,7 @@ export default function ActivityPage() {
                             const name = actor.display_name || actor.username || 'Usuario'
                             const avatar = <span className="activity-avatar-wrap" key={actor.id || index} style={{ zIndex: index + 1 }}>
                               <span className="activity-feed-avatar" style={{ borderColor: actor.theme_color || 'var(--brand-primary)' }}>
-                                {actor.avatar_url ? <img src={actor.avatar_url} alt="" /> : <span>{name[0]?.toUpperCase() || '•'}</span>}
+                                {actor.avatar_url ? <img src={actor.avatar_url} alt="" /> : <DefaultAvatar accent={actor.theme_color} />}
                               </span>
                               {index === actors.length - 1 && <i className={`activity-type-badge ${isFollow ? 'follow' : isComment ? 'activity-comment' : 'like'}`}>
                                 <svg viewBox="0 0 24 24" aria-hidden="true">{activityIcon(item.type)}</svg>

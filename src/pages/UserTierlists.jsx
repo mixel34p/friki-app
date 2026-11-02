@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { getUserLists, deleteList } from '../lib/listService'
 import { useAuth } from '../context/AuthContext'
 import { getAccentTextColor, getVisibleAccentColor } from '../lib/colorContrast'
+import { getDefaultAvatarDataUrl } from '../components/DefaultAvatar'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ListLikeButton from '../components/ListLikeButton'
 import '../components/LibraryGrid.css'
@@ -152,7 +153,7 @@ export default function UserTierlists() {
                         <Link to={`/profile/${username}`}>
                             <div 
                                 className="user-page-avatar" 
-                                style={{ backgroundImage: `url(${profile?.avatar_url || '/default-avatar.png'})` }}
+                                style={{ backgroundImage: `url("${profile?.avatar_url || getDefaultAvatarDataUrl(profile?.theme_color)}")` }}
                             ></div>
                         </Link>
                         <h2>

@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext'
 import { toggleReaction, getReviewComments, postReviewComment, deleteReview } from '../../lib/reviewService'
 import { formatRelativeDate } from '../../lib/formatRelativeDate'
 import { Link } from 'react-router-dom'
+import DefaultAvatar from '../DefaultAvatar'
 import './Reviews.css'
 
 export default function ReviewCard({ review, myReaction, onReactionUpdate, onEdit, onDelete }) {
@@ -132,14 +133,12 @@ export default function ReviewCard({ review, myReaction, onReactionUpdate, onEdi
                 <div className="review-user-block">
                     {review.profiles ? (
                         <Link to={`/profile/${review.profiles.username}`}>
-                            <img
-                                src={review.profiles.avatar_url || 'https://via.placeholder.com/48'}
-                                alt={review.profiles.username}
-                                className="review-author-avatar"
-                            />
+                            {review.profiles.avatar_url
+                                ? <img src={review.profiles.avatar_url} alt={review.profiles.username} className="review-author-avatar" />
+                                : <DefaultAvatar accent={review.profiles.theme_color} className="review-author-avatar" />}
                         </Link>
                     ) : (
-                        <div className="review-author-avatar" style={{ background: '#333' }}></div>
+                        <DefaultAvatar className="review-author-avatar" />
                     )}
                     <div className="review-meta-text">
                         <span className="review-author-name">
@@ -225,11 +224,9 @@ export default function ReviewCard({ review, myReaction, onReactionUpdate, onEdi
                         <div key={c.id} className="comment-bubble">
                             <div className="comment-header">
                                 <Link to={`/profile/${c.profiles?.username}`} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', textDecoration: 'none' }}>
-                                    <img
-                                        src={c.profiles?.avatar_url || 'https://via.placeholder.com/32'}
-                                        alt=""
-                                        className="comment-avatar"
-                                    />
+                                    {c.profiles?.avatar_url
+                                        ? <img src={c.profiles.avatar_url} alt="" className="comment-avatar" />
+                                        : <DefaultAvatar accent={c.profiles?.theme_color} className="comment-avatar" />}
                                     <span className="comment-author-name">{c.profiles?.display_name}</span>
                                 </Link>
                                 <span style={{ opacity: 0.5, fontSize: '0.8rem' }}>

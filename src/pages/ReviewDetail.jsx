@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { FaFacebookF, FaRedditAlien, FaTelegram, FaWhatsapp, FaXTwitter } from 'react-icons/fa6'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import DefaultAvatar from '../components/DefaultAvatar'
 import { supabase } from '../lib/supabase'
 import { getVisibleAccentColor } from '../lib/colorContrast'
 import { formatRelativeDate } from '../lib/formatRelativeDate'
@@ -62,7 +63,7 @@ function getReviewShareCover(url) {
 function ProfileAvatar({ profile, size = 'normal' }) {
   const name = profile?.display_name || profile?.username || 'Usuario'
   return <span className={`review-detail-avatar ${size}`} style={{ '--review-author-theme': profile?.theme_color || 'var(--brand-primary)' }}>
-    {profile?.avatar_url ? <img src={profile.avatar_url} alt="" /> : <span aria-hidden="true">{name.charAt(0).toUpperCase()}</span>}
+    {profile?.avatar_url ? <img src={profile.avatar_url} alt="" /> : <DefaultAvatar accent={profile?.theme_color} />}
   </span>
 }
 

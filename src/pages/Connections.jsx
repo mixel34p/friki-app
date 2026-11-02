@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import DefaultAvatar from '../components/DefaultAvatar'
 import {
     getPendingRequests,
     getConnections,
@@ -126,11 +127,7 @@ export default function Connections() {
                                         <div className="request-avatar">
                                             {request.requester.avatar_url ? (
                                                 <img src={request.requester.avatar_url} alt="" />
-                                            ) : (
-                                                <div className="avatar-placeholder">
-                                                    {request.requester.display_name?.charAt(0)}
-                                                </div>
-                                            )}
+                                            ) : <DefaultAvatar accent={request.requester.theme_color} />}
                                         </div>
                                         <div className="request-details">
                                             <h3>{request.requester.display_name}</h3>
@@ -194,11 +191,7 @@ export default function Connections() {
                                     <div className="connection-avatar">
                                         {conn.otherUser?.avatar_url ? (
                                             <img src={conn.otherUser.avatar_url} alt="" />
-                                        ) : (
-                                            <div className="avatar-placeholder">
-                                                {conn.otherUser?.display_name?.charAt(0)}
-                                            </div>
-                                        )}
+                                        ) : <DefaultAvatar accent={conn.otherUser?.theme_color} />}
                                     </div>
                                     <div className="connection-info">
                                         <h3>{conn.otherUser?.display_name}</h3>

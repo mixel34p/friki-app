@@ -5,7 +5,9 @@ import { SiKofi } from 'react-icons/si'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { getAccentTextColor, getVisibleAccentColor } from '../lib/colorContrast'
+import { hasCustomAvatar } from '../lib/avatar'
 import { ListsEntryModal } from '../pages/lists/ListsEntry'
+import DefaultAvatar from './DefaultAvatar'
 import './Layout.css'
 
 const Icon = ({ name }) => {
@@ -40,7 +42,7 @@ function MoreMenu({ profile, image, username, accentColor, onSignOut, accounts =
     </div>
     <div className="more-submenu-divider" />
     <button className={`more-current-account ${switchingAccountId === userId ? 'is-switching' : ''}`} type="button" aria-current="true" aria-busy={switchingAccountId === userId} aria-label={`${displayName}, cuenta actual`}>
-      {image ? <img src={image} alt="" /> : <span className="more-account-avatar-placeholder">{displayName[0]?.toUpperCase() || 'U'}</span>}
+      {image ? <img src={image} alt="" /> : <DefaultAvatar className="more-account-avatar-placeholder" accent={profile?.theme_color} />}
       <span className="more-account-copy"><strong>{displayName}</strong><small>@{username || 'usuario'}</small></span>
       {switchingAccountId === userId
         ? <span className="more-account-loading-spinner" role="status" aria-label="Cambiando de cuenta" />
@@ -50,10 +52,10 @@ function MoreMenu({ profile, image, username, accentColor, onSignOut, accounts =
       const savedProfile = account.profile
       const savedName = savedProfile?.display_name || savedProfile?.username || account.email || 'Cuenta'
       const savedUsername = savedProfile?.username
-      const savedImage = savedProfile?.avatar_url || savedProfile?.profile_picture
+      const savedImage = (hasCustomAvatar(savedProfile?.avatar_url) && savedProfile.avatar_url) || (hasCustomAvatar(savedProfile?.profile_picture) && savedProfile.profile_picture) || null
       const isSwitching = account.id === switchingAccountId
       return <button key={account.id} className={`more-current-account ${isSwitching ? 'is-switching' : ''}`} type="button" onClick={() => onSwitchAccount(account.id)} aria-label={`Cambiar a ${savedName}`} aria-busy={isSwitching}>
-        {savedImage ? <img src={savedImage} alt="" /> : <span className="more-account-avatar-placeholder">{savedName[0]?.toUpperCase() || 'U'}</span>}
+        {savedImage ? <img src={savedImage} alt="" /> : <DefaultAvatar className="more-account-avatar-placeholder" accent={savedProfile?.theme_color} />}
         <span className="more-account-copy"><strong>{savedName}</strong><small>{savedUsername ? `@${savedUsername}` : account.email}</small></span>
         {isSwitching && <span className="more-account-loading-spinner" role="status" aria-label="Cambiando de cuenta" />}
       </button>
@@ -66,13 +68,14 @@ function MoreMenu({ profile, image, username, accentColor, onSignOut, accounts =
   </>
   return <>
     <button className="more-account" type="button" aria-haspopup="true" aria-expanded="false" onClick={() => setAccountsOpen(true)}>
-      {image ? <img src={image} alt="" /> : <span className="more-account-avatar-placeholder">{displayName[0]?.toUpperCase() || 'U'}</span>}
+      {image ? <img src={image} alt="" /> : <DefaultAvatar className="more-account-avatar-placeholder" accent={profile?.theme_color} />}
       <span className="more-account-copy"><strong>{displayName}</strong><small>@{username || 'usuario'}</small></span>
       <svg className="more-account-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m8 10 4-4 4 4M8 14l4 4 4-4"/></svg>
     </button>
     <nav className="more-menu-links" aria-label="Más opciones">
       <Link className="more-menu-link" to="/settings">Ajustes</Link>
       <button className="more-menu-link" type="button" aria-disabled="true">Guardados</button>
+      <Link className="more-menu-link" to="/groups">Grupos</Link>
       <button className="more-menu-link" type="button" aria-disabled="true">Invitar</button>
       <a className="more-menu-link more-menu-support" href="https://ko-fi.com/mixel34" target="_blank" rel="noopener noreferrer" aria-label="Apoyar en Ko-fi (se abre en una pestaña nueva)">
         <SiKofi className="more-menu-kofi-icon" aria-hidden="true" />
@@ -109,7 +112,7 @@ export default function Layout() {
   const username = profile?.username
   const profilePath = username ? `/profile/${username}` : (user ? '/onboarding' : '/profile')
   const spacesPath = user && !profile ? '/onboarding' : '/spaces'
-  const image = profile?.avatar_url || profile?.profile_picture || '/default-avatar.svg'
+  const image = (hasCustomAvatar(profile?.avatar_url) && profile.avatar_url) || (hasCustomAvatar(profile?.profile_picture) && profile.profile_picture) || null
   const handleSignOut = async () => { setMoreOpen(false); await signOut(); navigate('/login') }
   const addAccount = async () => {
     await rememberCurrentAccount()
@@ -218,7 +221,7 @@ export default function Layout() {
         </nav>
 
         <Link className={`sidebar-link sidebar-profile ${isProfilePage ? 'active current-page' : ''}`} to={profilePath} aria-label="Mi perfil" aria-current={isProfilePage ? 'page' : undefined}>
-          {image ? <img className="sidebar-avatar" src={image} alt=""/> : <span className="sidebar-avatar sidebar-avatar-placeholder">{username?.[0]?.toUpperCase() || 'U'}</span>}
+          {image ? <img className="sidebar-avatar" src={image} alt=""/> : <DefaultAvatar className="sidebar-avatar" accent={profile?.theme_color} />}
           <span className="sidebar-label" style={isProfilePage ? { fontWeight: 800 } : undefined}>Mi perfil</span>
         </Link>
         <div className="sidebar-bottom-space" />
@@ -262,7 +265,7 @@ export default function Layout() {
           <Link className={`mobile-nav-item ${active('/spaces') ? 'active' : ''}`} to={spacesPath} aria-label="Espacios" aria-current={active('/spaces') ? 'page' : undefined}><Icon name="spaces"/></Link>
         </div>
         <Link className={`mobile-profile-link ${isProfilePage ? 'active' : ''}`} to={profilePath} aria-label="Mi perfil" aria-current={isProfilePage ? 'page' : undefined}>
-          {image ? <img className="mobile-nav-avatar" src={image} alt=""/> : <span className="mobile-nav-avatar mobile-nav-avatar-placeholder">{username?.[0]?.toUpperCase() || 'U'}</span>}
+          {image ? <img className="mobile-nav-avatar" src={image} alt=""/> : <DefaultAvatar className="mobile-nav-avatar" accent={profile?.theme_color} />}
         </Link>
         </>}
       </nav>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import DefaultAvatar from '../components/DefaultAvatar'
 import { getUsersByCommonWorks } from '../lib/discoverUsersService'
 import SEO from '../components/SEO'
 import './DiscoverWorks.css'
@@ -81,7 +82,7 @@ export default function DiscoverUsers() {
                   <span className="common-person-avatar" style={{ '--person-theme': themeColor }}>
                     {person.avatar_url
                       ? <img src={person.avatar_url} alt="" loading="lazy" />
-                      : <span aria-hidden="true">{displayName.charAt(0).toUpperCase()}</span>}
+                      : <DefaultAvatar accent={themeColor} />}
                   </span>
                   <strong className="common-person-name">{displayName}</strong>
                   <span className="common-person-matches">

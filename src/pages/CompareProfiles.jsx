@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import DefaultAvatar from '../components/DefaultAvatar'
 import {
     compareProfiles,
     sendConnectionRequest,
@@ -127,9 +128,7 @@ export default function CompareProfiles() {
                         {profile1?.avatar_url ? (
                             <img src={profile1.avatar_url} alt="" className="compare-avatar" />
                         ) : (
-                            <div className="compare-avatar-placeholder">
-                                {profile1?.display_name?.charAt(0) || 'T'}
-                            </div>
+                            <DefaultAvatar className="compare-avatar-placeholder" accent={profile1?.theme_color} />
                         )}
                         <span className="compare-name">Tú</span>
                     </div>
@@ -145,9 +144,7 @@ export default function CompareProfiles() {
                         {profile2?.avatar_url ? (
                             <img src={profile2.avatar_url} alt="" className="compare-avatar" />
                         ) : (
-                            <div className="compare-avatar-placeholder">
-                                {profile2?.display_name?.charAt(0) || '?'}
-                            </div>
+                            <DefaultAvatar className="compare-avatar-placeholder" accent={profile2?.theme_color} />
                         )}
                         <Link to={`/profile/${profile2?.username}`} className="compare-name">
                             {profile2?.display_name}

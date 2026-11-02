@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { getComments, addComment, deleteComment } from '../lib/supabase'
 import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
+import DefaultAvatar from './DefaultAvatar'
 import useAutoResizeTextarea from '../hooks/useAutoResizeTextarea'
 import './CommentSection.css'
 
@@ -74,11 +75,7 @@ export default function CommentSection({ tierlistId, ownerId }) {
                             <Link to={`/profile/${comment.profiles.username}`} className="comment-avatar">
                                 {comment.profiles.avatar_url ? (
                                     <img src={comment.profiles.avatar_url} alt={comment.profiles.username} />
-                                ) : (
-                                    <div className="avatar-placeholder">
-                                        {comment.profiles.display_name?.[0].toUpperCase()}
-                                    </div>
-                                )}
+                                ) : <DefaultAvatar accent={comment.profiles.theme_color} />}
                             </Link>
                             <div className="comment-content">
                                 <div className="comment-header">

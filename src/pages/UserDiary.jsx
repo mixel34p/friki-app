@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { getUserLibrary } from '../lib/libraryService'
 import { getWorkById } from '../lib/workPageService'
 import { getAccentTextColor, getVisibleAccentColor } from '../lib/colorContrast'
+import { getDefaultAvatarDataUrl } from '../components/DefaultAvatar'
 import LoadingSpinner from '../components/LoadingSpinner'
 import '../components/LibraryGrid.css'
 import './UserReviews.css' // Reusing some header styles
@@ -158,7 +159,7 @@ export default function UserDiary() {
                         <Link to={`/profile/${username}`}>
                             <div 
                                 className="user-page-avatar" 
-                                style={{ backgroundImage: `url(${profile?.avatar_url || '/default-avatar.png'})` }}
+                                style={{ backgroundImage: `url("${profile?.avatar_url || getDefaultAvatarDataUrl(profile?.theme_color)}")` }}
                             ></div>
                         </Link>
                         <h2>

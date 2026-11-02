@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import LoadingSpinner from '../components/LoadingSpinner'
 import SpoilerNotice from '../components/reviews/SpoilerNotice'
 import { useAuth } from '../context/AuthContext'
+import DefaultAvatar from '../components/DefaultAvatar'
 import { getHomePosts } from '../lib/postService'
 import { getHomeSnapshot, getFollowingUserIds } from '../lib/homeService'
 import { getUsersByCommonWorks } from '../lib/discoverUsersService'
@@ -81,7 +82,7 @@ export function PostCard({ post, hideAvatar = false, hideAuthor = false, useDesk
         <header className="home-post-header">
             {!hideAuthor && <Link className="home-post-author" to={profilePath} aria-label={`Ver perfil de ${name}`}>
                 {!hideAvatar && <span className="home-post-avatar">
-                    {author.avatar_url ? <img src={author.avatar_url} alt="" loading="lazy" /> : <span>{name.slice(0, 1).toLocaleUpperCase()}</span>}
+                    {author.avatar_url ? <img src={author.avatar_url} alt="" loading="lazy" /> : <DefaultAvatar accent={author.theme_color} />}
                 </span>}
                 <strong>{name}</strong>
             </Link>}
@@ -249,7 +250,7 @@ export default function Home() {
           <section className="home-summary-review">
             {snapshot.review && reviewWork
               ? <Link to={`/reviews/${snapshot.review.id}`} className="home-summary-review-card">
-                  <span className="home-summary-review-avatar" style={{ '--review-accent': snapshot.review.profile?.theme_color || 'var(--brand-primary)' }}>{snapshot.review.profile?.avatar_url ? <img src={snapshot.review.profile.avatar_url} alt="" loading="lazy" /> : (snapshot.review.profile?.display_name || snapshot.review.profile?.username || reviewWork.title).slice(0, 1).toLocaleUpperCase()}</span>
+                  <span className="home-summary-review-avatar" style={{ '--review-accent': snapshot.review.profile?.theme_color || 'var(--brand-primary)' }}>{snapshot.review.profile?.avatar_url ? <img src={snapshot.review.profile.avatar_url} alt="" loading="lazy" /> : <DefaultAvatar accent={snapshot.review.profile?.theme_color} />}</span>
                   <span className="home-summary-review-copy">
                     <small className="home-summary-eyebrow">Reseña reciente</small>
                     <strong className="home-summary-review-quote">“{snapshot.review.review_text}”</strong>
@@ -290,10 +291,10 @@ export default function Home() {
           <Link className="home-compatible-card" to={`/profile/${compatibleUser.username || compatibleUser.user_id}`} style={{ '--compatible-own-accent': profile?.theme_color || 'var(--brand-primary)', '--compatible-match-accent': compatibleUser.theme_color || 'var(--brand-primary)' }}>
             <span className="home-compatible-avatars" aria-hidden="true">
               <span className="home-compatible-avatar is-current" style={{ '--compatible-accent': profile?.theme_color || 'var(--brand-primary)' }}>
-                {profile?.avatar_url ? <img src={profile.avatar_url} alt="" loading="lazy" /> : <span>{(profile?.display_name || profile?.username || 'T').slice(0, 1).toLocaleUpperCase()}</span>}
+                {profile?.avatar_url ? <img src={profile.avatar_url} alt="" loading="lazy" /> : <DefaultAvatar accent={profile?.theme_color} />}
               </span>
               <span className="home-compatible-avatar is-match" style={{ '--compatible-accent': compatibleUser.theme_color || 'var(--brand-primary)' }}>
-                {compatibleUser.avatar_url ? <img src={compatibleUser.avatar_url} alt="" loading="lazy" /> : <span>{(compatibleUser.display_name || compatibleUser.username || 'U').slice(0, 1).toLocaleUpperCase()}</span>}
+                {compatibleUser.avatar_url ? <img src={compatibleUser.avatar_url} alt="" loading="lazy" /> : <DefaultAvatar accent={compatibleUser.theme_color} />}
               </span>
             </span>
             <span className="home-compatible-copy">

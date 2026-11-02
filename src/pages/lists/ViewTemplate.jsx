@@ -1,9 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { FaFacebookF, FaRedditAlien, FaTelegram, FaWhatsapp, FaXTwitter } from 'react-icons/fa6';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { deleteTemplate, getMoreListsByUser, getTemplateById } from '../../lib/listService';
 import { getMorePostsByUser } from '../../lib/postService';
 import { BADGES_MAP } from '../../lib/badges';
+import DefaultAvatar from '../../components/DefaultAvatar';
 import { formatRelativeDate } from '../../lib/formatRelativeDate';
 import MoreContentCards, { normalizeMoreContent } from '../../components/MoreContentCards';
 import { ListPostPreview } from './ViewList';
@@ -16,7 +19,7 @@ function Avatar({ profile, className = '' }) {
   const name = profile?.display_name || profile?.username || 'Usuario';
   return (
     <span className={`review-detail-avatar ${className}`} style={{ '--review-author-theme': profile?.theme_color || 'var(--brand-primary)' }}>
-      {image ? <img src={image} alt="" /> : name.slice(0, 1).toUpperCase()}
+      {image ? <img src={image} alt="" /> : <DefaultAvatar accent={profile?.theme_color} />}
     </span>
   );
 }
@@ -36,6 +39,8 @@ export default function ViewTemplate() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
 
   useEffect(() => {
     // The app's entrance animation applies a transform to .main, which makes
@@ -97,6 +102,31 @@ export default function ViewTemplate() {
   const previewList = useMemo(() => template ? ({ ...template, content: {} }) : null, [template]);
   const backdrop = template?.default_items?.find(item => item?.image_url)?.image_url;
   const listType = template?.list_type === 'grid' ? 'Grid' : 'Tierlist';
+  const shareUrl = template ? new URL(`/lists/new?template=${encodeURIComponent(template.id)}`, window.location.origin).toString() : '';
+  const encodedShareUrl = encodeURIComponent(shareUrl);
+  const encodedShareTitle = encodeURIComponent(template?.title || 'Crea tu lista con esta plantilla');
+  const sharePreviewImages = (template?.cover_items?.length ? template.cover_items : template?.default_items || [])
+    .map(item => typeof item === 'string' ? item : item?.image_url || item?.cover_url || item?.cover?.url)
+    .filter(Boolean).slice(0, 3);
+
+  const copyShareLink = async () => {
+    try {
+      if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(shareUrl);
+      else {
+        const input = document.createElement('textarea');
+        input.value = shareUrl;
+        input.setAttribute('readonly', '');
+        input.style.position = 'fixed';
+        input.style.opacity = '0';
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        input.remove();
+      }
+      setShareCopied(true);
+      window.setTimeout(() => setShareCopied(false), 1800);
+    } catch (copyError) { console.error(copyError); }
+  };
 
   const handleDelete = async () => {
     setMenuOpen(false);
@@ -165,7 +195,10 @@ export default function ViewTemplate() {
         <div className="review-post-actions template-detail-actions">
           <span className="template-detail-action-note">{template.uses_count || 0} usos · {listType}</span>
           <span className="review-post-action-spacer" />
-          <Link to={'/lists/new?template=' + encodeURIComponent(template.id)} className="template-use-button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{user ? 'Usar plantilla' : 'Hacer la mía'}</Link>
+          <Link to={'/lists/new?template=' + encodeURIComponent(template.id)} className="review-post-action guest-make-list-action"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{user ? 'Usar plantilla' : 'Hacer la mía'}</Link>
+          <button type="button" className="review-post-action review-share-trigger" onClick={() => { setShareCopied(false); setShareOpen(true); }} aria-label="Compartir plantilla" title="Compartir plantilla">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.7 10.7 6.6-4.4M8.7 13.3l6.6 4.4"/></svg><span>Compartir</span>
+          </button>
         </div>
       </article>
 
@@ -180,6 +213,39 @@ export default function ViewTemplate() {
               : <p className="vl-more-state">Aún no hay más publicaciones.</p>}
         </div>
       </aside>
+
+      {shareOpen && createPortal((
+        <div className="review-share-overlay" onClick={() => setShareOpen(false)}>
+          <section className="review-share-dialog" style={{ '--review-page-accent': accent }} role="dialog" aria-modal="true" aria-labelledby="template-share-title" onClick={event => event.stopPropagation()}>
+            <header className="review-share-heading">
+              <div><span className="review-share-eyebrow">COMPARTIR PLANTILLA</span><h2 id="template-share-title">Que la vean los demás</h2></div>
+              <button className="review-share-close" type="button" onClick={() => setShareOpen(false)} aria-label="Cerrar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m18 6-12 12M6 6l12 12"/></svg></button>
+            </header>
+            <div className="review-share-preview" style={{ '--review-page-accent': accent }}>
+              <div className={`review-share-preview-cover${sharePreviewImages.length > 1 ? ' vl-share-cover-fan' : ''}`}>
+                {sharePreviewImages.length > 1 ? sharePreviewImages.map((image, index) => <img key={`${image}-${index}`} src={image} alt="" className={`vl-fan-img-${index}`} />)
+                  : sharePreviewImages.length === 1 ? <img src={sharePreviewImages[0]} alt="" />
+                    : <div className="vl-share-cover-placeholder"><span>GS</span></div>}
+              </div>
+              <div className="review-share-preview-copy">
+                <div className="review-share-preview-author"><Avatar profile={profile} className="small" /><span>{displayName}<small>@{username}</small></span></div>
+                <strong>{template.title || 'Plantilla'}</strong><span>{listType} · {template.uses_count || 0} usos</span>
+              </div>
+            </div>
+            <button className="review-share-link" type="button" onClick={copyShareLink} aria-label="Copiar enlace para crear una lista con esta plantilla">
+              <span>{shareCopied ? 'ENLACE COPIADO' : 'ENLACE PARA USAR LA PLANTILLA'}</span><strong>{shareUrl}</strong><i>{shareCopied ? '✓' : '↗'}</i>
+            </button>
+            <div className="review-share-section-label">Compartir directamente</div>
+            <div className="review-share-networks">
+              <a className="whatsapp" href={`https://wa.me/?text=${encodedShareTitle}%20${encodedShareUrl}`} target="_blank" rel="noreferrer"><b><FaWhatsapp /></b><span>WhatsApp</span></a>
+              <a className="x-twitter" href={`https://twitter.com/intent/tweet?text=${encodedShareTitle}&url=${encodedShareUrl}`} target="_blank" rel="noreferrer"><b><FaXTwitter /></b><span>X</span></a>
+              <a className="telegram" href={`https://t.me/share/url?url=${encodedShareUrl}&text=${encodedShareTitle}`} target="_blank" rel="noreferrer"><b><FaTelegram /></b><span>Telegram</span></a>
+              <a className="reddit" href={`https://www.reddit.com/submit?url=${encodedShareUrl}&title=${encodedShareTitle}`} target="_blank" rel="noreferrer"><b><FaRedditAlien /></b><span>Reddit</span></a>
+              <a className="facebook" href={`https://www.facebook.com/sharer/sharer.php?u=${encodedShareUrl}`} target="_blank" rel="noreferrer"><b><FaFacebookF /></b><span>Facebook</span></a>
+            </div>
+          </section>
+        </div>
+      ), document.body)}
     </main>
   );
 }

@@ -69,7 +69,7 @@ export function ListsEntryModal({ onClose, onCreateTemplate }) {
 
     const goCustomGroups = () => {
         onClose?.();
-        navigate(user ? '/custom-groups' : '/register');
+        navigate(user ? '/groups' : '/register');
     };
 
     return (

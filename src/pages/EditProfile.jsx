@@ -4,11 +4,13 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { getAccentTextColor } from '../lib/colorContrast'
+import { hasCustomAvatar } from '../lib/avatar'
 import { searchGames } from '../lib/gameService'
 import { getBlockedUsers, unblockUser } from '../lib/socialDiscoveryService'
 import { BADGES_MAP } from '../lib/badges'
 import './EditProfile.css'
 import { SocialIcons } from '../components/SocialIcons'
+import DefaultAvatar from '../components/DefaultAvatar'
 import ImageCropperModal from '../components/ImageCropperModal'
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { arrayMove, SortableContext, rectSortingStrategy } from '@dnd-kit/sortable'
@@ -236,11 +238,11 @@ export default function EditProfile({ onClose, standalone = false }) {
         featured_badge:  profile?.featured_badge  || null
     })
     const savedFormDataRef = useRef(JSON.stringify(formData))
-    const savedAvatarPreviewRef = useRef(profile?.avatar_url || null)
+    const savedAvatarPreviewRef = useRef(hasCustomAvatar(profile?.avatar_url) ? profile.avatar_url : null)
     const savedBannerPreviewRef = useRef(profile?.banner_url || null)
 
     const [avatarFile, setAvatarFile] = useState(null)
-    const [avatarPreview, setAvatarPreview] = useState(profile?.avatar_url || null)
+    const [avatarPreview, setAvatarPreview] = useState(hasCustomAvatar(profile?.avatar_url) ? profile.avatar_url : null)
     const [bannerFile, setBannerFile] = useState(null)
     const [bannerPreview, setBannerPreview] = useState(profile?.banner_url || null)
     const [saving, setSaving] = useState(false)
@@ -542,7 +544,7 @@ export default function EditProfile({ onClose, standalone = false }) {
         if (formData.username.length > 20) { setError('El username no puede superar los 20 caracteres'); return }
         setSaving(true); setError('')
         try {
-            let avatarUrl = profile?.avatar_url
+            let avatarUrl = hasCustomAvatar(profile?.avatar_url) ? profile.avatar_url : null
             let bannerUrl = profile?.banner_url
             const previousAvatarPath = avatarFile ? getOwnedAvatarStoragePath(profile?.avatar_url, user?.id) : null
             const previousBannerPath = bannerFile ? getOwnedBannerStoragePath(profile?.banner_url, user?.id) : null
@@ -678,7 +680,7 @@ export default function EditProfile({ onClose, standalone = false }) {
                             <section className="ep-settings-card ep-settings-personal-card">
                                 <div className="ep-settings-photo-row">
                                     <button type="button" className="ep-settings-photo-button" onClick={() => fileInputRef.current?.click()} aria-label="Cambiar foto de perfil">
-                                        {avatarPreview ? <img src={avatarPreview} alt="" /> : <img src="/default-avatar.svg" alt="" />}
+                                        {avatarPreview ? <img src={avatarPreview} alt="" /> : <DefaultAvatar accent={formData.theme_color} />}
                                         <span><IconPlus size={16} /></span>
                                     </button>
                                     <div><strong>Foto</strong><p>Cuadrada, haz clic para cambiarla.</p><small>JPG, PNG o GIF · Máx. 2 MB</small></div>
@@ -851,7 +853,7 @@ export default function EditProfile({ onClose, standalone = false }) {
                             {accountError && !deleteAccountOpen && <div className="ep-alert ep-alert--error">{accountError}</div>}
                         </div> : <div className="ep-settings-card ep-settings-blocked-card">
                             {loadingBlocked ? <p>Cargando usuarios bloqueados…</p> : blockedUsers.length === 0 ? <p>No tienes usuarios bloqueados.</p> : blockedUsers.map(block => <div key={block.blocked_id} className="ep-blocked-item">
-                                <div className="ep-blocked-user">{block.blocked?.avatar_url ? <img src={block.blocked.avatar_url} alt="" className="ep-blocked-avatar" /> : <div className="ep-blocked-avatar">{block.blocked?.display_name?.charAt(0) || '?'}</div>}<div className="ep-blocked-names"><span className="ep-blocked-display-name">{block.blocked?.display_name || 'Usuario'}</span><span className="ep-blocked-username">@{block.blocked?.username}</span></div></div>
+                                <div className="ep-blocked-user">{block.blocked?.avatar_url ? <img src={block.blocked.avatar_url} alt="" className="ep-blocked-avatar" /> : <DefaultAvatar className="ep-blocked-avatar" accent={block.blocked?.theme_color} />}<div className="ep-blocked-names"><span className="ep-blocked-display-name">{block.blocked?.display_name || 'Usuario'}</span><span className="ep-blocked-username">@{block.blocked?.username}</span></div></div>
                                 <button type="button" className="ep-unblock-btn" onClick={() => handleUnblock(block.blocked_id)}>Desbloquear</button>
                             </div>)}
                         </div>}
@@ -864,7 +866,7 @@ export default function EditProfile({ onClose, standalone = false }) {
                         <article className="ep-settings-profile-preview" style={{ '--preview-accent': formData.theme_color || '#14b8a6' }}>
                             <div className="ep-settings-preview-banner">{bannerPreview && <img src={bannerPreview} alt="" />}</div>
                             <div className="ep-settings-preview-content">
-                                <div className="ep-settings-preview-avatar">{avatarPreview ? <img src={avatarPreview} alt="" /> : <img src="/default-avatar.svg" alt="" />}</div>
+                                <div className="ep-settings-preview-avatar">{avatarPreview ? <img src={avatarPreview} alt="" /> : <DefaultAvatar accent={formData.theme_color} />}</div>
                                 <div className="ep-settings-preview-name-row"><strong>{formData.display_name || 'Tu nombre'}</strong>{formData.pronouns && <span className="ep-settings-preview-pronouns">{formData.pronouns}</span>}</div>
                                 <div className="ep-settings-preview-identity-row"><span className="ep-settings-preview-username">@{formData.username || 'usuario'}</span>{formData.featured_badge && BADGES_MAP[formData.featured_badge] && <span className="ep-settings-preview-badge" style={{ '--badge-accent': BADGES_MAP[formData.featured_badge].color }} aria-label={BADGES_MAP[formData.featured_badge].title} title={BADGES_MAP[formData.featured_badge].title}>{BADGES_MAP[formData.featured_badge].icon}</span>}</div>
                                 <p>{formData.bio || 'Tu biografía aparecerá aquí.'}</p>
@@ -959,11 +961,7 @@ export default function EditProfile({ onClose, standalone = false }) {
                                         <button type="button" className="ep-avatar-upload" onClick={() => fileInputRef.current?.click()}>
                                             {avatarPreview ? (
                                                 <img src={avatarPreview} alt="Avatar" className="ep-avatar-img" />
-                                            ) : (
-                                                <div className="ep-avatar-placeholder">
-                                                    {formData.display_name?.charAt(0).toUpperCase() || '?'}
-                                                </div>
-                                            )}
+                                            ) : <DefaultAvatar className="ep-avatar-placeholder" accent={formData.theme_color} />}
                                             <div className="ep-avatar-overlay">
                                                 <IconPlus size={16} />
                                             </div>
@@ -1372,11 +1370,7 @@ export default function EditProfile({ onClose, standalone = false }) {
                                                 <div className="ep-blocked-user">
                                                     {block.blocked?.avatar_url ? (
                                                         <img src={block.blocked.avatar_url} alt="" className="ep-blocked-avatar" />
-                                                    ) : (
-                                                        <div className="ep-blocked-avatar">
-                                                            {block.blocked?.display_name?.charAt(0) || '?'}
-                                                        </div>
-                                                    )}
+                                                    ) : <DefaultAvatar className="ep-blocked-avatar" accent={block.blocked?.theme_color} />}
                                                     <div className="ep-blocked-names">
                                                         <span className="ep-blocked-display-name">{block.blocked?.display_name || 'Usuario'}</span>
                                                         <span className="ep-blocked-username">@{block.blocked?.username}</span>
@@ -1406,7 +1400,7 @@ export default function EditProfile({ onClose, standalone = false }) {
                     <article className="ep-settings-profile-preview" style={{ '--preview-accent': formData.theme_color || '#14b8a6' }}>
                         <div className="ep-settings-preview-banner">{bannerPreview && <img src={bannerPreview} alt="" />}</div>
                         <div className="ep-settings-preview-content">
-                            <div className="ep-settings-preview-avatar">{avatarPreview ? <img src={avatarPreview} alt="" /> : <img src="/default-avatar.svg" alt="" />}</div>
+                            <div className="ep-settings-preview-avatar">{avatarPreview ? <img src={avatarPreview} alt="" /> : <DefaultAvatar accent={formData.theme_color} />}</div>
                             <div className="ep-settings-preview-name-row"><strong>{formData.display_name || 'Tu nombre'}</strong>{formData.pronouns && <span className="ep-settings-preview-pronouns">{formData.pronouns}</span>}</div>
                             <div className="ep-settings-preview-identity-row"><span className="ep-settings-preview-username">@{formData.username || 'usuario'}</span>{formData.featured_badge && BADGES_MAP[formData.featured_badge] && <span className="ep-settings-preview-badge" style={{ '--badge-accent': BADGES_MAP[formData.featured_badge].color }} aria-label={BADGES_MAP[formData.featured_badge].title} title={BADGES_MAP[formData.featured_badge].title}>{BADGES_MAP[formData.featured_badge].icon}</span>}</div>
                             <p>{formData.bio || 'Tu biografía aparecerá aquí.'}</p>

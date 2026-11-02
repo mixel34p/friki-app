@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { createReview, updateReview } from '../../lib/reviewService'
 import { useAuth } from '../../context/AuthContext'
+import DefaultAvatar from '../DefaultAvatar'
 import { formatRelativeDate } from '../../lib/formatRelativeDate'
 import './Reviews.css'
 
@@ -84,11 +85,9 @@ export default function ReviewForm({ workId, workType, onClose, onReviewAdded, i
                 <form onSubmit={handleSubmit}>
                     <div className="review-composer-layout">
                         <div className="review-composer-author">
-                            <img
-                                className="review-composer-avatar"
-                                src={profile?.avatar_url || 'https://via.placeholder.com/64'}
-                                alt={profile?.display_name || profile?.username || 'Tu perfil'}
-                            />
+                            {profile?.avatar_url
+                                ? <img className="review-composer-avatar" src={profile.avatar_url} alt={profile?.display_name || profile?.username || 'Tu perfil'} />
+                                : <DefaultAvatar className="review-composer-avatar" accent={profile?.theme_color} />}
                             <span className="review-composer-name">
                                 {profile?.display_name || profile?.username || 'Tu perfil'}
                             </span>

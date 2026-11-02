@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import DefaultAvatar from '../components/DefaultAvatar'
 import { getMoreListsByUser } from '../lib/listService'
 import LoadingSpinner from '../components/LoadingSpinner'
 import MoreContentCards, { normalizeMoreContent } from '../components/MoreContentCards'
@@ -15,7 +16,7 @@ import './PostDetail.css'
 function Avatar({ profile, size = '' }) {
   const name = profile?.display_name || profile?.username || 'Usuario'
   return <span className={`review-detail-avatar ${size}`} style={{ '--review-author-theme': profile?.theme_color || 'var(--brand-primary)' }}>
-    {profile?.avatar_url ? <img src={profile.avatar_url} alt="" /> : <span>{name.slice(0, 1).toLocaleUpperCase()}</span>}
+    {profile?.avatar_url ? <img src={profile.avatar_url} alt="" /> : <DefaultAvatar accent={profile?.theme_color} />}
   </span>
 }
 

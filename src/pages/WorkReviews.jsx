@@ -8,6 +8,7 @@ import ReviewLikeButton from '../components/ReviewLikeButton'
 import SpoilerNotice from '../components/reviews/SpoilerNotice'
 import SEO from '../components/SEO'
 import { BADGES_MAP } from '../lib/badges'
+import { getDefaultAvatarDataUrl } from '../components/DefaultAvatar'
 import '../components/LibraryGrid.css'
 import './WorkReviews.css'
 
@@ -276,7 +277,7 @@ export default function WorkReviews({ mediaType }) {
                                     <div
                                         className="wr-user-avatar"
                                         style={{
-                                            backgroundImage: `url(${log.profiles?.avatar_url || 'https://via.placeholder.com/48'})`,
+                                            backgroundImage: `url("${log.profiles?.avatar_url || getDefaultAvatarDataUrl(log.profiles?.theme_color)}")`,
                                             borderColor: log.profiles?.theme_color || 'var(--brand-primary)'
                                         }}
                                     />
@@ -297,7 +298,7 @@ export default function WorkReviews({ mediaType }) {
                                         <Link to={`/profile/${log.profiles?.username}`} className="review-poster-link">
                                             <div
                                                 className="review-poster"
-                                                style={{ backgroundImage: `url(${log.profiles?.avatar_url || 'https://via.placeholder.com/48'})`, borderRadius: '50%', width: '48px', height: '48px', border: `2px solid ${log.profiles?.theme_color || 'var(--brand-primary)'}`, boxSizing: 'border-box' }}
+                                                style={{ backgroundImage: `url("${log.profiles?.avatar_url || getDefaultAvatarDataUrl(log.profiles?.theme_color)}")`, borderRadius: '50%', width: '48px', height: '48px', border: `2px solid ${log.profiles?.theme_color || 'var(--brand-primary)'}`, boxSizing: 'border-box' }}
                                             ></div>
                                         </Link>
                                         <div className="review-author-name-group">

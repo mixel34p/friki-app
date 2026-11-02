@@ -33,6 +33,18 @@ export async function getUserCustomItemGroups(userId) {
     return data || []
 }
 
+export async function getCustomItemGroupById(groupId) {
+    const { data, error } = await supabase.from('custom_item_groups').select('*').eq('id', groupId).single()
+    if (error) throw error
+    if (data?.owner_id) {
+        const { data: owner } = await supabase.from('profiles')
+            .select('username, display_name, avatar_url, theme_color')
+            .eq('id', data.owner_id).maybeSingle()
+        data.owner = owner || null
+    }
+    return data
+}
+
 export async function createCustomItemGroup(group) {
     const { data, error } = await supabase.from('custom_item_groups').insert(group).select('*').single()
     if (error) throw error

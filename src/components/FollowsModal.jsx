@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import LoadingSpinner from './LoadingSpinner'
 import { BADGES_MAP } from '../lib/badges'
+import DefaultAvatar from './DefaultAvatar'
 import './FollowsModal.css'
 
 const IconClose = () => (
@@ -168,9 +169,7 @@ export default function FollowsModal({ isOpen, onClose, type, userId, themeColor
                                         {u.avatar_url ? (
                                             <img src={u.avatar_url} alt="" className="follows-user-avatar" style={{ borderColor: u.theme_color || 'var(--brand-primary)' }} />
                                         ) : (
-                                            <div className="follows-user-placeholder" style={{ borderColor: u.theme_color || 'var(--brand-primary)' }}>
-                                                {u.display_name?.charAt(0).toUpperCase() || '?'}
-                                            </div>
+                                            <DefaultAvatar className="follows-user-placeholder" accent={u.theme_color} style={{ borderColor: u.theme_color || 'var(--brand-primary)' }} />
                                         )}
                                         <div className="follows-user-text">
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>

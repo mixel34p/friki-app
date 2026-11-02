@@ -10,6 +10,7 @@ import EmojiPicker from '../../components/EmojiPicker';
 import './LiveChat.css';
 import './LiveChatGrid.css';
 import { BADGES_MAP } from '../../lib/badges';
+import { getDefaultAvatarDataUrl } from '../../components/DefaultAvatar';
 
 function toCodePoint(unicodeSurrogates, sep) {
   let r = [], c = 0, p = 0, i = 0;
@@ -546,14 +547,14 @@ export default function LiveChat() {
                     .from('space_messages')
                     .select(`
                         *,
-                        user:profiles (username, display_name, avatar_url, featured_badge),
+                        user:profiles (username, display_name, avatar_url, featured_badge, theme_color),
                         reactions:space_message_reactions (
                             id, emoji, user_id,
-                            user:profiles (username, display_name, avatar_url, featured_badge)
+                            user:profiles (username, display_name, avatar_url, featured_badge, theme_color)
                         ),
                         reply_to:space_messages (
                             id, content,
-                            user:profiles (username, display_name, avatar_url, featured_badge)
+                            user:profiles (username, display_name, avatar_url, featured_badge, theme_color)
                         )
                     `)
                     .eq('id', payload.new.id)
@@ -593,7 +594,7 @@ export default function LiveChat() {
                 if (payload.eventType === 'INSERT') {
                     const { data: reaction } = await supabase
                         .from('space_message_reactions')
-                        .select('id, emoji, user_id, user:profiles(username, display_name, avatar_url, featured_badge)')
+                        .select('id, emoji, user_id, user:profiles(username, display_name, avatar_url, featured_badge, theme_color)')
                         .eq('id', payload.new.id)
                         .single();
                     if (reaction) {
@@ -1056,7 +1057,7 @@ export default function LiveChat() {
                                         <div className="chat-reply-banner" onClick={() => scrollToMessage(msg.reply_to_id)}>
                                             {replyMsg ? (
                                                 <>
-                                                    <img src={replyMsg.user?.avatar_url || '/default-avatar.png'} alt="avatar" className="chat-reply-tiny-avatar" />
+                                                    <img src={replyMsg.user?.avatar_url || getDefaultAvatarDataUrl(replyMsg.user?.theme_color)} alt="avatar" className="chat-reply-tiny-avatar" />
                                                     <span className="chat-reply-user">@{replyMsg.user?.display_name || replyMsg.user?.username || 'Usuario'}</span>
                                                     <span className="chat-reply-snippet">{replyMsg.content || 'Mensaje sin texto'}</span>
                                                 </>
@@ -1070,7 +1071,7 @@ export default function LiveChat() {
                                     )}
                                         <div className="chat-left-col">
                                             {!msg.isConsecutive ? (
-                                                <img src={msg.user?.avatar_url || '/default-avatar.png'} alt="avatar" className="chat-avatar" />
+                                                <img src={msg.user?.avatar_url || getDefaultAvatarDataUrl(msg.user?.theme_color)} alt="avatar" className="chat-avatar" />
                                             ) : (
                                                 <div className="chat-timestamp-hover">{timeOnlyString}</div>
                                             )}
@@ -1168,7 +1169,7 @@ export default function LiveChat() {
                                                                     {displayUsers.map((u, i) => (
                                                                         <img 
                                                                             key={i} 
-                                                                            src={u.avatar_url || '/default-avatar.png'} 
+                                                                            src={u.avatar_url || getDefaultAvatarDataUrl(u.theme_color)} 
                                                                             alt="avatar"
                                                                             className="chat-reaction-mini-avatar"
                                                                         />
@@ -1477,7 +1478,7 @@ export default function LiveChat() {
 
                         return (
                             <div className={`lightbox-overlay ${isClosingLightbox ? 'closing' : ''}`} style={{ position: 'fixed', top: '20px', left: '20px', display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(0,0,0,0.5)', padding: '8px 16px 8px 8px', borderRadius: '30px', zIndex: 100000 }} onClick={(e) => e.stopPropagation()}>
-                                <img src={zoomedImage.user.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + zoomedImage.user.username} alt={zoomedImage.user.username} style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
+                                <img src={zoomedImage.user.avatar_url || getDefaultAvatarDataUrl(zoomedImage.user.theme_color)} alt={zoomedImage.user.username} style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
                                 <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                                     <div style={{ display: 'flex', alignItems: 'center' }}>
                                         <span style={{ color: '#fff', fontWeight: '600', fontSize: '14px' }}>{zoomedImage.user.display_name || zoomedImage.user.username || 'Usuario'}</span>

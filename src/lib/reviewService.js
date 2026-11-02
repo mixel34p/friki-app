@@ -17,7 +17,8 @@ export async function getReviews(workId, workType, sortBy = 'recent', page = 0, 
             profiles:user_id (
                 username,
                 display_name,
-                avatar_url
+                avatar_url,
+                theme_color
             ),
             my_reaction:review_reactions(reaction_type)
         `)
@@ -58,7 +59,8 @@ export async function getRecentReviews(limit = 6) {
             profiles:user_id (
                 username,
                 display_name,
-                avatar_url
+                avatar_url,
+                theme_color
             )
         `)
         .order('created_at', { ascending: false })
@@ -199,7 +201,8 @@ export async function getReviewComments(reviewId) {
             profiles:user_id (
                 username,
                 display_name,
-                avatar_url
+                avatar_url,
+                theme_color
             )
         `)
         .eq('review_id', reviewId)
@@ -225,7 +228,8 @@ export async function postReviewComment(reviewId, content, userId) {
             profiles:user_id (
                 username,
                 display_name,
-                avatar_url
+                avatar_url,
+                theme_color
             )
         `)
         .single()

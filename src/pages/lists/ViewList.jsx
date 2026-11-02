@@ -9,6 +9,7 @@ import {
     getListComments, addListComment, updateListComment, deleteListComment,
 } from '../../lib/listService';
 import { BADGES_MAP } from '../../lib/badges';
+import DefaultAvatar, { getDefaultAvatarDataUrl } from '../../components/DefaultAvatar';
 import { getTierLabelFontSize } from '../../lib/tierLabel';
 import { formatRelativeDate } from '../../lib/formatRelativeDate';
 import { getMorePostsByUser } from '../../lib/postService';
@@ -30,7 +31,7 @@ function ProfileAvatar({ profile, size = 'normal' }) {
         >
             {profile?.avatar_url
                 ? <img src={profile.avatar_url} alt="" />
-                : <span aria-hidden="true">{name.charAt(0).toUpperCase()}</span>}
+                : <DefaultAvatar accent={profile?.theme_color} />}
         </span>
     );
 }
@@ -151,6 +152,42 @@ function buildPreviewSvg(preview, imageSources, w, h) {
     const rr = (rect, r, fill, stroke = 'none', sw = 0) => `<rect x="${rect.x}" y="${rect.y}" width="${rect.width}" height="${rect.height}" rx="${r}" fill="${escapeSvg(fill)}" stroke="${escapeSvg(stroke)}" stroke-width="${sw}"/>`;
 
     const drawText = (tn, parent, style) => {
+        if (parent.classList?.contains('cl-tier-label')) {
+            const text = tn.nodeValue.replace(/\r/g, '').trim();
+            if (!text || style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0) return '';
+            const box = lr(parent);
+            const fs = parseFloat(style.fontSize) || 14;
+            const ff = style.fontFamily || 'sans-serif';
+            const fw = style.fontWeight || '400';
+            const fi = style.fontStyle || 'normal';
+            const lineHeight = fs * 1.05;
+            const padding = (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0);
+            const availableWidth = Math.max(1, box.width - padding);
+            mc.font = `${fi} ${fw} ${fs}px ${ff}`;
+            const lines = [];
+            text.split('\n').forEach(explicitLine => {
+                const words = explicitLine.trim().split(/\s+/).filter(Boolean);
+                if (!words.length) { lines.push(''); return; }
+                let line = '';
+                words.forEach(word => {
+                    const candidate = line ? `${line} ${word}` : word;
+                    if (line && mc.measureText(candidate).width > availableWidth) {
+                        lines.push(line);
+                        line = word;
+                    } else {
+                        line = candidate;
+                    }
+                });
+                if (line) lines.push(line);
+            });
+            const metrics = mc.measureText('Mg');
+            const ascent = metrics.actualBoundingBoxAscent || fs * .75;
+            const descent = metrics.actualBoundingBoxDescent || fs * .2;
+            const blockHeight = Math.max(ascent + descent, (lines.length - 1) * lineHeight + ascent + descent);
+            const firstBaseline = box.y + (box.height - blockHeight) / 2 + ascent;
+            const x = box.x + box.width / 2;
+            return `<text x="${x}" fill="${escapeSvg(style.color || '#000')}" font-family="${escapeSvg(ff)}" font-size="${fs}" font-weight="${escapeSvg(fw)}" font-style="${escapeSvg(fi)}" text-anchor="middle">${lines.map((line, index) => `<tspan x="${x}" y="${firstBaseline + index * lineHeight}">${escapeSvg(line)}</tspan>`).join('')}</text>`;
+        }
         const text = tn.nodeValue.replace(/\s+/g, ' ').trim();
         if (!text || style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0) return '';
         const range = document.createRange(); range.selectNodeContents(tn);
@@ -228,7 +265,7 @@ function buildPreviewSvg(preview, imageSources, w, h) {
     return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><defs>${defs.join('')}</defs>${body.join('')}</svg>`;
 }
 
-export async function generateListImage(preview, listTitle, authorName, authorAvatar, authorThemeColor, authorUsername, bgCoverUrl, listType) {
+export async function generateListImage(preview, listTitle, authorName, authorAvatar, authorThemeColor, authorUsername, bgCoverUrl, listType, includeAuthor = true) {
     if (!preview) throw new Error('No se encontró el preview');
     await document.fonts?.ready;
     const vc = preview.querySelector('.cl-tierlist, .vl-ranking-stack, .cl-grid-cells') || preview;
@@ -249,7 +286,9 @@ export async function generateListImage(preview, listTitle, authorName, authorAv
         const ctx = canvas.getContext('2d');
         canvas.width = 1200;
         const dynamic = vc.matches('.cl-tierlist, .vl-ranking-stack');
-        const pa = dynamic ? { x: 24, y: 180, width: canvas.width - 48, height: 920 } : { x: 24, y: 180, width: 1152, height: 920 };
+        const imageMargin = includeAuthor ? 24 : 12;
+        const contentTop = dynamic && !includeAuthor ? 112 : 180;
+        const pa = { x: imageMargin, y: contentTop, width: canvas.width - imageMargin * 2, height: 920 };
         const scale = dynamic ? pa.width / bounds.width : Math.min(pa.width / bounds.width, pa.height / bounds.height);
         const dw = bounds.width * scale, dh = bounds.height * scale;
         canvas.height = dynamic ? Math.max(340, Math.ceil(pa.y + dh + 130)) : 1200;
@@ -292,56 +331,58 @@ export async function generateListImage(preview, listTitle, authorName, authorAv
 
         const bf = document.querySelector('.sidebar-brand-name');
         const font = bf ? window.getComputedStyle(bf).fontFamily : 'sans-serif';
-        const hl = dynamic ? pa.x : 48;
+        const hl = dynamic ? pa.x : (includeAuthor ? 48 : 24);
 
-        // ── 3. Usuario (encima del título, con avatar + acento + username) ──
-        const avatarX = hl;
-        const avatarY = 32;
-        const avatarSize = 54;
-        let adu = '';
-        try { adu = await imageToDataUrl(authorAvatar || '/default-avatar.png'); } catch { /* skip */ }
-        if (adu) {
-            const ai = new Image();
-            await new Promise(res => { ai.onload = res; ai.onerror = res; ai.src = adu; });
-            if (ai.naturalWidth) {
-                ctx.save();
+        if (includeAuthor) {
+            // ── 3. Usuario (avatar + nombre + username) ──
+            const avatarX = hl;
+            const avatarY = 32;
+            const avatarSize = 54;
+            let adu = '';
+            try { adu = await imageToDataUrl(authorAvatar || getDefaultAvatarDataUrl(authorThemeColor)); } catch { /* skip */ }
+            if (adu) {
+                const ai = new Image();
+                await new Promise(res => { ai.onload = res; ai.onerror = res; ai.src = adu; });
+                if (ai.naturalWidth) {
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.arc(avatarX + avatarSize / 2, avatarY + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
+                    ctx.clip();
+                    ctx.drawImage(ai, avatarX, avatarY, avatarSize, avatarSize);
+                    ctx.restore();
+                }
+            } else {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
                 ctx.beginPath();
                 ctx.arc(avatarX + avatarSize / 2, avatarY + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
-                ctx.clip();
-                ctx.drawImage(ai, avatarX, avatarY, avatarSize, avatarSize);
-                ctx.restore();
+                ctx.fill();
             }
-        } else {
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+
+            ctx.strokeStyle = authorThemeColor || '#14b8a6';
+            ctx.lineWidth = 3;
             ctx.beginPath();
-            ctx.arc(avatarX + avatarSize / 2, avatarY + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
-            ctx.fill();
+            ctx.arc(avatarX + avatarSize / 2, avatarY + avatarSize / 2, avatarSize / 2 - 1.5, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'alphabetic';
+            ctx.fillStyle = '#f4f4f5';
+            ctx.font = `700 24px ${font}`;
+            ctx.fillText(authorName || 'Usuario', avatarX + avatarSize + 16, avatarY + 24, canvas.width - avatarX - avatarSize - 40);
+
+            ctx.fillStyle = '#a1a1aa';
+            ctx.font = `400 17px ${font}`;
+            ctx.fillText(`@${authorUsername || 'usuario'}`, avatarX + avatarSize + 16, avatarY + 47, canvas.width - avatarX - avatarSize - 40);
+
+            // Línea divisoria bajo el autor.
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+            ctx.fillRect(hl, 102, canvas.width - hl * 2, 1);
         }
 
-        ctx.strokeStyle = authorThemeColor || '#14b8a6';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.arc(avatarX + avatarSize / 2, avatarY + avatarSize / 2, avatarSize / 2 - 1.5, 0, Math.PI * 2);
-        ctx.stroke();
-
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'alphabetic';
-        ctx.fillStyle = '#f4f4f5';
-        ctx.font = `700 24px ${font}`;
-        ctx.fillText(authorName || 'Usuario', avatarX + avatarSize + 16, avatarY + 24, canvas.width - avatarX - avatarSize - 40);
-
-        ctx.fillStyle = '#a1a1aa';
-        ctx.font = `400 17px ${font}`;
-        ctx.fillText(`@${authorUsername || 'usuario'}`, avatarX + avatarSize + 16, avatarY + 47, canvas.width - avatarX - avatarSize - 40);
-
-        // Línea divisoria bajo el autor (idéntica a las reviews)
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
-        ctx.fillRect(hl, 102, canvas.width - hl * 2, 1);
-
-        // ── 4. Título de la lista (debajo del autor) ──
+        // ── Título de la lista ──
         ctx.fillStyle = '#f5f5f5';
         ctx.font = `750 34px ${font}`;
-        ctx.fillText(listTitle || 'Lista', hl, 148, canvas.width - hl * 2);
+        ctx.fillText(listTitle || 'Lista', hl, includeAuthor ? 148 : 88, canvas.width - hl * 2);
 
         // ── 5. Footer con separador y GeekSphere branding (idéntico a las reviews) ──
         const footerY = canvas.height - 62;

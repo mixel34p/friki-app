@@ -120,6 +120,7 @@ export default function CreateList() {
 
     const [customName, setCustomName] = useState('');
     const [customImageUrl, setCustomImageUrl] = useState('');
+    const [customEntryOpen, setCustomEntryOpen] = useState(false);
 
     const [activeItem, setActiveItem] = useState(null);
     const [saving, setSaving] = useState(false);
@@ -136,7 +137,6 @@ export default function CreateList() {
     
     // UI states
     const [editingTitle, setEditingTitle] = useState(false);
-    const [titleInput, setTitleInput] = useState('');
     const [guestFinishOpen, setGuestFinishOpen] = useState(false);
     const [guestDraftKey, setGuestDraftKey] = useState(null);
     const [guestImageUrl, setGuestImageUrl] = useState('');
@@ -341,7 +341,7 @@ export default function CreateList() {
         setGuestImageUrl('');
         const preview = guestPreviewRef.current?.querySelector('.vl-post-visual-wrapper');
         const coverUrl = guestPreviewCover?.image_url || guestPreviewCover?.cover_url || guestPreviewCover?.cover?.url || '';
-        generateListImage(preview, title, 'Invitado', null, '#14b8a6', 'invitado', coverUrl, listType)
+        generateListImage(preview, title, 'Invitado', null, '#14b8a6', 'invitado', coverUrl, listType, false)
             .then(blob => {
                 if (!active) return;
                 objectUrl = URL.createObjectURL(blob);
@@ -786,11 +786,7 @@ export default function CreateList() {
                                 <option value="ranking">Ranking</option>
                             </select>
                         )}
-                        {!user ? (
-                            <span className="cl-title-display cl-guest-title" aria-label="Nombre de la lista">
-                                <span className="cl-title-text">{title || 'Lista sin título'}</span>
-                            </span>
-                        ) : editingTitle ? (
+                        {editingTitle ? (
                             <input
                                 className="cl-title-input"
                                 type="text"
@@ -804,11 +800,11 @@ export default function CreateList() {
                             />
                         ) : (
                             <button
-                                className="cl-title-display"
+                                className={`cl-title-display${user ? '' : ' cl-guest-title'}`}
                                 onClick={() => setEditingTitle(true)}
                                 title="Editar título"
                             >
-                                <span className="cl-title-text">{title || 'Sin título'}</span>
+                                <span className="cl-title-text">{title || (user ? 'Sin título' : 'Lista sin título')}</span>
                                 <span className="cl-title-pencil"><IconEdit /></span>
                             </button>
                         )}
@@ -1115,49 +1111,31 @@ export default function CreateList() {
                                 {activeTab === 'custom' && (
                                     <div className="cl-custom-form">
                                         <CustomItemGroupsPicker userId={user?.id} onAddGroup={handleAddGroup} />
-                                        <p className="cl-custom-one-by-one-label">O añade un elemento uno a uno</p>
-                                        <div className="cl-custom-field">
-                                            <label className="cl-custom-label">Título o Nombre</label>
-                                            <input
-                                                className="cl-custom-input"
-                                                type="text"
-                                                placeholder="Ej: Bloodborne, Evangelion..."
-                                                value={customName}
-                                                onChange={e => setCustomName(e.target.value)}
-                                            />
-                                        </div>
-                                        <div className="cl-custom-field">
-                                            <label className="cl-custom-label">URL de la carátula</label>
-                                            <input
-                                                className="cl-custom-input"
-                                                type="url"
-                                                placeholder="https://ejemplo.com/portada.jpg"
-                                                value={customImageUrl}
-                                                onChange={e => setCustomImageUrl(e.target.value)}
-                                            />
-                                        </div>
-                                        {customImageUrl && (
-                                            <div className="cl-custom-preview-card">
-                                                <div className="cl-custom-preview">
-                                                    <img src={customImageUrl} alt="Preview" onError={e => e.target.style.display = 'none'} />
+                                        {!customEntryOpen ? (
+                                            <button type="button" className="cl-custom-entry-trigger" onClick={() => setCustomEntryOpen(true)}>
+                                                <IconPlus /><span>Añadir elemento</span>
+                                            </button>
+                                        ) : (
+                                            <div className="cl-custom-entry-form">
+                                                <div className="cl-custom-entry-heading"><strong>Nuevo elemento</strong><button type="button" onClick={() => setCustomEntryOpen(false)} aria-label="Cerrar">×</button></div>
+                                                <div className="cl-custom-field">
+                                                    <label className="cl-custom-label">Nombre</label>
+                                                    <input className="cl-custom-input" type="text" placeholder="Ej: Bloodborne, Evangelion..." value={customName} onChange={e => setCustomName(e.target.value)} />
                                                 </div>
-                                                <span className="cl-custom-preview-name">{customName || 'Vista previa'}</span>
+                                                <div className="cl-custom-field">
+                                                    <label className="cl-custom-label">Imagen</label>
+                                                    <input className="cl-custom-input" type="url" placeholder="https://ejemplo.com/portada.jpg" value={customImageUrl} onChange={e => setCustomImageUrl(e.target.value)} />
+                                                </div>
+                                                {customImageUrl && <div className="cl-custom-preview-card"><div className="cl-custom-preview"><img src={customImageUrl} alt="" onError={e => e.currentTarget.style.display = 'none'} /></div><span className="cl-custom-preview-name">{customName || 'Vista previa'}</span></div>}
+                                                <button type="button" className="cl-custom-add-btn" onClick={() => {
+                                                    if (!customName || !customImageUrl) return;
+                                                    handleAddToPool({ id: `custom_${Date.now()}`, name: customName, image_url: customImageUrl });
+                                                    setCustomName('');
+                                                    setCustomImageUrl('');
+                                                    setCustomEntryOpen(false);
+                                                }} disabled={!customName || !customImageUrl}><IconPlus /><span>Añadir a la lista</span></button>
                                             </div>
                                         )}
-                                        <button
-                                            className="cl-custom-add-btn"
-                                            onClick={() => {
-                                                if (!customName || !customImageUrl) return;
-                                                const newItem = { id: `custom_${Date.now()}`, name: customName, image_url: customImageUrl };
-                                                handleAddToPool(newItem);
-                                                setCustomName('');
-                                                setCustomImageUrl('');
-                                            }}
-                                            disabled={!customName || !customImageUrl}
-                                        >
-                                            <IconPlus />
-                                            <span>Añadir a la biblioteca</span>
-                                        </button>
                                     </div>
                                 )}
                             </div>
@@ -1257,23 +1235,39 @@ export default function CreateList() {
 
                             {activeTab === 'custom' && (
                                 <div className="cl-custom-form">
-                                    <label className="cl-custom-label">Nombre</label>
-                                    <input
-                                        className="cl-custom-input"
-                                        type="text"
-                                        placeholder="Nombre del item"
-                                        value={customName}
-                                        onChange={e => setCustomName(e.target.value)}
-                                    />
-                                    <label className="cl-custom-label">URL de imagen</label>
-                                    <input
-                                        className="cl-custom-input"
-                                        type="url"
-                                        placeholder="https://ejemplo.com/imagen.jpg"
-                                        value={customImageUrl}
-                                        onChange={e => setCustomImageUrl(e.target.value)}
-                                    />
-                                    <button className="cl-custom-add-btn" onClick={handleAddCustom} disabled={!customName || !customImageUrl}>
+                                    <div className="cl-custom-section-heading">
+                                        <h4>Añadir un elemento</h4>
+                                        <p>Incluye una imagen para identificarlo en la grid.</p>
+                                    </div>
+                                    <div className="cl-custom-field">
+                                        <label className="cl-custom-label">Nombre</label>
+                                        <input
+                                            className="cl-custom-input"
+                                            type="text"
+                                            placeholder="Nombre del elemento"
+                                            value={customName}
+                                            onChange={e => setCustomName(e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="cl-custom-field">
+                                        <label className="cl-custom-label">Imagen</label>
+                                        <input
+                                            className="cl-custom-input"
+                                            type="url"
+                                            placeholder="https://ejemplo.com/imagen.jpg"
+                                            value={customImageUrl}
+                                            onChange={e => setCustomImageUrl(e.target.value)}
+                                        />
+                                    </div>
+                                    {customImageUrl && (
+                                        <div className="cl-custom-preview-card">
+                                            <div className="cl-custom-preview">
+                                                <img src={customImageUrl} alt="" onError={e => e.currentTarget.style.display = 'none'} />
+                                            </div>
+                                            <span className="cl-custom-preview-name">{customName || 'Vista previa'}</span>
+                                        </div>
+                                    )}
+                                    <button type="button" className="cl-custom-add-btn" onClick={handleAddCustom} disabled={!customName || !customImageUrl}>
                                         <IconPlus />
                                         Añadir
                                     </button>
@@ -1304,6 +1298,7 @@ export default function CreateList() {
                             <span><strong>Crear cuenta</strong><small>Publica tu lista al terminar el registro</small></span>
                             <span aria-hidden="true">→</span>
                         </button>
+                        <a className="cl-guest-kofi-link" href="https://ko-fi.com/mixel34" target="_blank" rel="noopener noreferrer">¿Quieres apoyar? <strong>Invítanos a un café en Ko-fi</strong></a>
                     </section>
                 </div>
             )}

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
+import DefaultAvatar from './DefaultAvatar'
 import './RecommendationCard.css'
 
 export default function RecommendationCard({ recommendation, onAddToLibrary }) {
@@ -59,9 +60,11 @@ export default function RecommendationCard({ recommendation, onAddToLibrary }) {
                     )}
 
                     {/* Social Source Avatar (instead of score) */}
-                    {reasons && reasons[0]?.type === 'following' && reasons[0]?.user?.avatar_url && (
+                    {reasons && reasons[0]?.type === 'following' && reasons[0]?.user && (
                         <div className="recommendation-social-avatar" title={`Recomendado por ${reasons[0].user.username}`}>
-                            <img src={reasons[0].user.avatar_url} alt={reasons[0].user.username} />
+                            {reasons[0].user.avatar_url
+                                ? <img src={reasons[0].user.avatar_url} alt={reasons[0].user.username} />
+                                : <DefaultAvatar accent={reasons[0].user.theme_color} title={reasons[0].user.username} />}
                         </div>
                     )}
                 </div>

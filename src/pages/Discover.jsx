@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import DefaultAvatar from '../components/DefaultAvatar'
 import { supabase } from '../lib/supabase'
 import { discoverSimilarUsers, calculateAffinityClient } from '../lib/socialDiscoveryService'
 import { getRecommendations } from '../lib/recommendationService'
@@ -123,7 +124,7 @@ export default function Discover() {
                     const userIds = [...new Set(rawTierlists.map(t => t.user_id))]
                     const { data: profiles } = await supabase
                         .from('profiles')
-                        .select('user_id, username, display_name, avatar_url')
+                        .select('user_id, username, display_name, avatar_url, theme_color')
                         .in('user_id', userIds)
 
                     const profileMap = {}
@@ -415,9 +416,7 @@ export default function Discover() {
                                         {u.avatar_url ? (
                                             <img src={u.avatar_url} alt="" className="user-card-avatar" />
                                         ) : (
-                                            <div className="user-card-avatar-placeholder">
-                                                {u.display_name?.charAt(0) || '?'}
-                                            </div>
+                                            <DefaultAvatar className="user-card-avatar-placeholder" accent={u.theme_color} />
                                         )}
                                         <h3 className="user-card-name">{u.display_name}</h3>
                                         <span className="user-card-username">Identidad oculta hasta conectar</span>
@@ -505,9 +504,7 @@ export default function Discover() {
                                             {t.profiles?.avatar_url ? (
                                                 <img src={t.profiles.avatar_url} alt="" className="mini-avatar" />
                                             ) : (
-                                                <div className="mini-avatar placeholder">
-                                                    {t.profiles?.display_name?.charAt(0) || '?'}
-                                                </div>
+                                                <DefaultAvatar className="mini-avatar placeholder" accent={t.profiles?.theme_color} />
                                             )}
                                             <span className="poster-author">@{t.profiles?.username}</span>
                                             <span className="poster-likes">❤️ {t.likes_count || 0}</span>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import DefaultAvatar from '../components/DefaultAvatar'
 import { supabase } from '../lib/supabase'
 import CommentSection from '../components/CommentSection'
 import ThematicReactions from '../components/ThematicReactions'
@@ -349,14 +350,7 @@ export default function ViewTierlist() {
                         {owner.avatar_url ? (
                             <img src={owner.avatar_url} alt="" className="owner-avatar-img" />
                         ) : (
-                            <div
-                                className="owner-avatar"
-                                style={{
-                                    background: `linear-gradient(135deg, ${owner.color_primary || '#8b5cf6'}, ${owner.color_secondary || '#6366f1'})`
-                                }}
-                            >
-                                {owner.display_name?.charAt(0).toUpperCase() || '?'}
-                            </div>
+                            <DefaultAvatar className="owner-avatar" accent={owner.theme_color} />
                         )}
                         <div className="owner-info">
                             <span className="owner-name">{owner.display_name}</span>

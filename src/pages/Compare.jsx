@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import DefaultAvatar from '../components/DefaultAvatar'
 import { supabase } from '../lib/supabase'
 import LoadingSpinner from '../components/LoadingSpinner'
 import './Compare.css'
@@ -82,9 +83,7 @@ export default function Compare() {
 
                 <div className="compare-users">
                     <div className="compare-user">
-                        <div className="user-avatar" style={{ background: `linear-gradient(135deg, ${myProfile?.color_primary}, ${myProfile?.color_secondary})` }}>
-                            {myProfile?.display_name?.charAt(0) || '?'}
-                        </div>
+                        {myProfile?.avatar_url ? <img className="user-avatar" src={myProfile.avatar_url} alt="" /> : <DefaultAvatar className="user-avatar" accent={myProfile?.theme_color} />}
                         <span className="user-name">Tú</span>
                     </div>
                     <div className={`affinity-circle affinity-${affinity >= 70 ? 'high' : affinity >= 40 ? 'medium' : 'low'}`}>
@@ -92,9 +91,7 @@ export default function Compare() {
                         <span className="affinity-label">Afinidad</span>
                     </div>
                     <div className="compare-user">
-                        <div className="user-avatar" style={{ background: `linear-gradient(135deg, ${otherProfile.color_primary}, ${otherProfile.color_secondary})` }}>
-                            {otherProfile.display_name?.charAt(0) || '?'}
-                        </div>
+                        {otherProfile.avatar_url ? <img className="user-avatar" src={otherProfile.avatar_url} alt="" /> : <DefaultAvatar className="user-avatar" accent={otherProfile.theme_color} />}
                         <span className="user-name">{otherProfile.display_name}</span>
                     </div>
                 </div>

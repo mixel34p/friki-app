@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import DefaultAvatar from '../components/DefaultAvatar'
 import { supabase } from '../lib/supabase'
 import { deleteWorkLog, getUserLibrary, getWorkLog, logWork } from '../lib/libraryService'
 import { getAccentTextColor } from '../lib/colorContrast'
@@ -751,7 +752,7 @@ export default function SharePage() {
         {isListAttachmentFlow ? listDraft?.payload ? <>
           <div className="share-list-composer-entry">
             <span className="share-composer-avatar" aria-label={`Foto de ${displayName}`}>
-              {avatar ? <img src={avatar} alt="" /> : <span>{displayName.slice(0, 1).toLocaleUpperCase()}</span>}
+              {avatar ? <img src={avatar} alt="" /> : <DefaultAvatar accent={accent} />}
             </span>
             <div className="share-list-attachment">
               <ListPostPreview list={listDraft.payload} onClick={handleReturnToListEditor} className="share-list-published-preview" ariaLabel="Volver a editar la lista" />
@@ -764,7 +765,7 @@ export default function SharePage() {
         </> : isTemplateComposerFlow ? <>
           <div className="share-list-composer-entry">
             <span className="share-composer-avatar" aria-label={`Foto de ${displayName}`}>
-              {avatar ? <img src={avatar} alt="" /> : <span>{displayName.slice(0, 1).toLocaleUpperCase()}</span>}
+              {avatar ? <img src={avatar} alt="" /> : <DefaultAvatar accent={accent} />}
             </span>
             <div className="share-list-attachment">
               <ListPostPreview list={makeEmptyTemplateList(selectedTemplate)} onClick={handleEditSelectedList} className="share-list-published-preview" ariaLabel={`Editar lista basada en ${selectedTemplate.title}`} />
@@ -777,7 +778,7 @@ export default function SharePage() {
         </> : isStandaloneListComposer ? <>
           <div className="share-list-composer-entry">
             <span className="share-composer-avatar" aria-label={`Foto de ${displayName}`}>
-              {avatar ? <img src={avatar} alt="" /> : <span>{displayName.slice(0, 1).toLocaleUpperCase()}</span>}
+              {avatar ? <img src={avatar} alt="" /> : <DefaultAvatar accent={accent} />}
             </span>
             <div className="share-list-attachment">
               <ListPostPreview list={makeEmptyStandaloneList(selectedStandaloneType)} onClick={handleEditSelectedList} className="share-list-published-preview" ariaLabel={`Editar ${selectedStandaloneType === 'ranking' ? 'ranking' : selectedStandaloneType === 'grid' ? 'cuadrícula' : 'tierlist'}`} />
@@ -792,7 +793,7 @@ export default function SharePage() {
           {selectedReview ? <div className="share-review-identity">
             {selectedReview.image && <div className="share-review-cover"><img src={selectedReview.image} alt={selectedReview.title} /></div>}
           </div> : <span className="share-composer-avatar" aria-label={`Foto de ${displayName}`}>
-            {avatar ? <img src={avatar} alt="" /> : <span>{displayName.slice(0, 1).toLocaleUpperCase()}</span>}
+            {avatar ? <img src={avatar} alt="" /> : <DefaultAvatar accent={accent} />}
           </span>}
           <div className="share-composer-input">
             <span className="share-sr-only">{selectedReview ? 'Escribe tu reseña' : 'Escribe tu post'}</span>

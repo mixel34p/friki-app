@@ -2,6 +2,7 @@
 import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import LoadingSpinner from '../components/LoadingSpinner'
+import { getDefaultAvatarDataUrl } from '../components/DefaultAvatar'
 import './UserReviews.css'
 import './Library.css'
 
@@ -58,7 +59,7 @@ export default function WishlistPage() {
                         <Link to={`/profile/${username}`}>
                             <div 
                                 className="user-page-avatar" 
-                                style={{ backgroundImage: `url(${profile?.avatar_url || '/default-avatar.png'})` }}
+                                style={{ backgroundImage: `url("${profile?.avatar_url || getDefaultAvatarDataUrl(profile?.theme_color)}")` }}
                             ></div>
                         </Link>
                         <h2>

@@ -4,6 +4,8 @@ import { getSearchHighlights, searchPlatform } from '../lib/platformSearchServic
 import { getSearchRecommendations } from '../lib/searchRecommendationsService'
 import { getDiscoverLists } from '../lib/listService'
 import { useAuth } from '../context/AuthContext'
+import DefaultAvatar from '../components/DefaultAvatar'
+import { hasCustomAvatar } from '../lib/avatar'
 import SEO from '../components/SEO'
 import './Search.css'
 
@@ -94,7 +96,7 @@ function ResultLink({ item, active, id, onClick, display = 'row' }) {
   if (item.type === 'list') {
     const listType = item.list_type === 'ranking' ? 'Ranking' : item.list_type === 'grid' ? 'Grid' : 'Tierlist'
     const authorName = item.author?.username || 'usuario'
-    const authorAvatar = item.author?.avatar_url
+    const authorAvatar = hasCustomAvatar(item.author?.avatar_url) ? item.author.avatar_url : null
     const typeIcon = item.list_type === 'ranking'
       ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
       : item.list_type === 'grid'
@@ -104,22 +106,24 @@ function ResultLink({ item, active, id, onClick, display = 'row' }) {
       <ListPoster list={item}/>
       <span className="search-list-card-content">
         <strong>{nameOf(item)}</strong>
-        <span className="search-list-card-author"><span className="search-list-author-avatar">{authorAvatar ? <img src={authorAvatar} alt="" loading="lazy"/> : authorName.slice(0, 1).toUpperCase()}</span>@{authorName}</span>
+        <span className="search-list-card-author"><span className="search-list-author-avatar">{authorAvatar ? <img src={authorAvatar} alt="" loading="lazy"/> : <DefaultAvatar accent={item.author?.theme_color} />}</span>@{authorName}</span>
         <span className="search-list-tags"><span className={`search-list-tag type-${item.list_type || 'tierlist'}`}>{typeIcon}{listType}</span>{item.list_type !== 'ranking' && item.media_type && <span className={`search-list-tag media-${item.media_type}`}>{item.media_type === 'game' ? 'Videojuegos' : item.media_type === 'anime' ? 'Anime' : item.media_type}</span>}</span>
       </span>
     </Link>
     const username = item.author?.username || 'usuario'
-    const avatar = item.author?.avatar_url
+    const avatar = hasCustomAvatar(item.author?.avatar_url) ? item.author.avatar_url : null
     return <Link id={id} role="option" aria-selected={active} to={resultHref(item)} className={`search-result search-list-result search-list-row${active ? ' is-active' : ''}`} onClick={onClick}>
       <ListPoster list={item} compact/>
-      <span className="search-result-copy"><strong>{nameOf(item)}</strong><small className="search-list-author"><span className="search-list-author-avatar">{avatar ? <img src={avatar} alt="" loading="lazy"/> : username.slice(0, 1).toUpperCase()}</span><span>@{username}</span></small></span>
+      <span className="search-result-copy"><strong>{nameOf(item)}</strong><small className="search-list-author"><span className="search-list-author-avatar">{avatar ? <img src={avatar} alt="" loading="lazy"/> : <DefaultAvatar accent={item.author?.theme_color} />}</span><span>@{username}</span></small></span>
       <span className="search-kind list-kind">{listType}</span>
     </Link>
   }
-  const image = isCard && item.owner_id ? item.avatar_url || item.banner_url || resultImage(item) : resultImage(item)
+  const image = item.username && !hasCustomAvatar(item.avatar_url)
+    ? null
+    : isCard && item.owner_id ? item.avatar_url || item.banner_url || resultImage(item) : resultImage(item)
   const title = nameOf(item)
   const imageType = item.type || (item.username ? 'user' : 'space')
-  const artwork = image ? <img className={`search-result-image ${imageType}`} src={image} alt="" loading="lazy" /> : <span className={`search-result-fallback ${imageType}`} aria-hidden="true">{item.type === 'anime' ? '▣' : item.type === 'game' ? '▤' : item.username ? title.slice(0, 1).toUpperCase() : '◈'}</span>
+  const artwork = image ? <img className={`search-result-image ${imageType}`} src={image} alt="" loading="lazy" /> : item.username ? <DefaultAvatar className="search-result-fallback user" accent={item.theme_color} /> : <span className={`search-result-fallback ${imageType}`} aria-hidden="true">{item.type === 'anime' ? '▣' : item.type === 'game' ? '▤' : '◈'}</span>
   const titleContent = item.owner_id ? <span className="search-space-title-line"><strong>{title}</strong>{item.is_verified && <VerifiedBadge />}</span> : <strong>{title}</strong>
   const profileAccent = item.username ? { '--search-user-accent': item.theme_color || 'var(--brand-primary)' } : undefined
   return <Link id={id} role="option" aria-selected={active} to={resultHref(item)} className={`search-result${active ? ' is-active' : ''}${isCard ? ' search-result-card' : ''}`} onClick={onClick} style={profileAccent}>
@@ -195,7 +199,7 @@ function SpotlightRow({ kind, items = [], loading = false, isLoggedIn = false })
     <Link to={href} className={`search-spotlight-mobile-link ${people ? 'people' : 'spaces'}`}>
       <span className="search-spotlight-mobile-avatars" aria-hidden="true">
         {(mobileItems.length ? mobileItems : Array.from({ length: 3 }, (_, index) => ({ id: `loading-${index}` }))).map((item, index) => <span className={`mobile-avatar${loading ? ' loading' : ''}`} key={item.user_id || item.id} style={{ '--avatar-index': index }}>
-          {!loading && item.avatar_url && <img src={item.avatar_url} alt="" loading="lazy"/>}
+          {!loading && (hasCustomAvatar(item.avatar_url) ? <img src={item.avatar_url} alt="" loading="lazy"/> : people ? <DefaultAvatar accent={item.theme_color} /> : null)}
         </span>)}
       </span>
       <span className="search-spotlight-mobile-copy">
@@ -216,11 +220,11 @@ function SpotlightRow({ kind, items = [], loading = false, isLoggedIn = false })
     </div> : orderedItems.length ? <div className="search-spotlight-row">
       {orderedItems.slice(0, 8).map(item => {
         const name = item.display_name || item.name || item.username || 'Usuario'
-        const image = item.avatar_url
+        const image = hasCustomAvatar(item.avatar_url) ? item.avatar_url : null
         const destination = people ? `/profile/${item.username || item.user_id || item.id}` : `/spaces/${item.id}`
         const subtitle = isLoggedIn ? `${item.commonWorks || 0} en común` : `${item.registeredWorks || 0} obras`
         return <Link className={`search-spotlight-card ${people ? 'person' : 'space'}`} to={destination} key={item.user_id || item.id} title={name}>
-          {people ? <span className="search-spotlight-avatar" style={{ '--person-theme': item.theme_color || 'var(--brand-primary)' }}>{image ? <img src={image} alt="" loading="lazy"/> : <span>{name.slice(0, 1).toUpperCase()}</span>}</span>
+          {people ? <span className="search-spotlight-avatar" style={{ '--person-theme': item.theme_color || 'var(--brand-primary)' }}>{image ? <img src={image} alt="" loading="lazy"/> : <DefaultAvatar accent={item.theme_color} />}</span>
             : <span className="search-spotlight-cover">{image ? <img src={image} alt="" loading="lazy"/> : <span>{name.slice(0, 1).toUpperCase()}</span>}</span>}
           <strong>{name}</strong>
           {people && <small>{subtitle}</small>}
@@ -256,7 +260,7 @@ function FeaturedListCard({ list }) {
   return <Link className="search-featured-list-card" to={`/lists/${list.id}`} title={list.title || 'Lista sin título'}>
     <span className="search-featured-list-art"><ListPoster list={list}/></span>
     <strong>{list.title || 'Lista sin título'}</strong>
-    <small className="search-featured-list-author"><span className="search-featured-list-avatar">{list.author?.avatar_url ? <img src={list.author.avatar_url} alt="" loading="lazy"/> : author.slice(0, 1).toUpperCase()}</span><span>@{author}</span></small>
+    <small className="search-featured-list-author"><span className="search-featured-list-avatar">{hasCustomAvatar(list.author?.avatar_url) ? <img src={list.author.avatar_url} alt="" loading="lazy"/> : <DefaultAvatar accent={list.author?.theme_color} />}</span><span>@{author}</span></small>
   </Link>
 }
 

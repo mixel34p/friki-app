@@ -3,6 +3,8 @@ import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import DefaultAvatar from '../components/DefaultAvatar'
+import { hasCustomAvatar } from '../lib/avatar'
 import { supabase } from '../lib/supabase'
 import { getAccentTextColor, getVisibleAccentColor } from '../lib/colorContrast'
 import ReactMarkdown from 'react-markdown'
@@ -489,12 +491,10 @@ export default function Profile() {
                 </button>
                 <div className={`profile-mobile-mini-info ${isScrolled ? 'visible' : ''}`}>
                     <div className="profile-mobile-name-row">
-                        {profile.avatar_url ? (
+                        {hasCustomAvatar(profile.avatar_url) ? (
                             <img className="profile-mobile-mini-avatar" src={profile.avatar_url} alt="" />
                         ) : (
-                            <span className="profile-mobile-mini-avatar profile-mobile-mini-avatar-placeholder">
-                                {profile.display_name?.charAt(0).toUpperCase() || '?'}
-                            </span>
+                            <DefaultAvatar className="profile-mobile-mini-avatar profile-mobile-mini-avatar-placeholder" accent={profile.theme_color} />
                         )}
                         <span className="profile-mobile-name">{profile.display_name}</span>
                     </div>
@@ -525,16 +525,14 @@ export default function Profile() {
                 <div className="profile-header-inner">
                     {/* El avatar comparte el ancho centrado del contenido del perfil. */}
                     <div className="profile-avatar-wrapper">
-                        {profile.avatar_url ? (
+                        {hasCustomAvatar(profile.avatar_url) ? (
                             <img
                                 src={profile.avatar_url}
                                 alt={profile.display_name}
                                 className="profile-avatar"
                             />
                         ) : (
-                            <div className="profile-avatar-placeholder">
-                                {profile.display_name?.charAt(0).toUpperCase() || '?'}
-                            </div>
+                            <DefaultAvatar className="profile-avatar-placeholder" accent={profile.theme_color} />
                         )}
                     </div>
 
