@@ -4,7 +4,6 @@ import { useAuth } from '../context/AuthContext'
 import DefaultAvatar from '../components/DefaultAvatar'
 import { supabase } from '../lib/supabase'
 import { getAccentTextColor, getVisibleAccentColor } from '../lib/colorContrast'
-import LoadingSpinner from '../components/LoadingSpinner'
 import './ActivityPage.css'
 
 function notificationTarget(item) {
@@ -482,7 +481,15 @@ export default function ActivityPage() {
       </header>
 
       {error && <p className="activity-error" role="alert">{error}</p>}
-      {loading ? <div className="activity-loading"><LoadingSpinner /></div> : groupedNotifications.length ? (
+      {loading ? <section className="activity-loading" aria-label="Cargando actividad" aria-busy="true">
+        <div className="activity-skeleton-day"><span className="activity-skeleton-heading" />
+          <div className="activity-skeleton-feed">{Array.from({ length: 6 }, (_, index) => <div className="activity-skeleton-row" key={index} aria-hidden="true">
+            <span className="activity-skeleton-avatar" />
+            <span className="activity-skeleton-copy"><i /><i className={index % 2 ? 'short' : ''} /><i className="tiny" /></span>
+            <span className="activity-skeleton-preview" />
+          </div>)}</div>
+        </div>
+      </section> : groupedNotifications.length ? (
         <>
           {groupedNotifications.slice(0, visibleDayCount).map(group => (
             <section className="activity-day-group" key={group.key}>

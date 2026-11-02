@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import LoadingSpinner from '../components/LoadingSpinner'
 import SpoilerNotice from '../components/reviews/SpoilerNotice'
 import { useAuth } from '../context/AuthContext'
 import DefaultAvatar from '../components/DefaultAvatar'
@@ -115,6 +114,7 @@ export default function Home() {
     const [snapshotError, setSnapshotError] = useState(false)
     const [compatibleUser, setCompatibleUser] = useState(null)
     const [activeSpaces, setActiveSpaces] = useState([])
+    const [activeSpacesLoading, setActiveSpacesLoading] = useState(true)
 
     useEffect(() => {
         let active = true
@@ -165,6 +165,7 @@ export default function Home() {
                     .slice(0, 3))
             })
             .catch(error => console.error('No se pudieron cargar los espacios activos:', error))
+            .finally(() => { if (active) setActiveSpacesLoading(false) })
         return () => { active = false }
     }, [])
 
@@ -201,7 +202,15 @@ export default function Home() {
             <button type="button" className={activeFeed === 'following' ? 'is-active' : ''} onClick={() => setActiveFeed('following')} aria-pressed={activeFeed === 'following'}>Siguiendo</button>
         </nav>
         {loading
-            ? <div className="home-feed-state"><LoadingSpinner /></div>
+            ? <section className="home-post-grid home-post-grid-skeleton" aria-label="Cargando publicaciones" aria-busy="true">
+                {[0, 1].map(column => <div className="home-post-column" key={column}>
+                  {[0, 1, 2].map((card, index) => <article className="home-post-skeleton" key={card} aria-hidden="true">
+                    <div className="home-post-skeleton-header"><span className="home-skeleton-block is-avatar" /><span className="home-skeleton-block is-name" /><span className="home-skeleton-block is-time" /></div>
+                    {((column + index) % 2 === 0) && <span className="home-skeleton-block is-media" />}
+                    <div className="home-post-skeleton-copy"><span /><span /><span /></div>
+                  </article>)}
+                </div>)}
+              </section>
             : error
                 ? <p className="home-feed-state">{error}</p>
                 : posts.length
@@ -229,7 +238,10 @@ export default function Home() {
           <time>{today}</time>
         </header>
         {snapshotError && <p className="home-summary-empty">No se pudo cargar el resumen ahora mismo.</p>}
-        {!snapshot && !snapshotError && <div className="home-summary-loading"><LoadingSpinner /></div>}
+        {!snapshot && !snapshotError && <div className="home-summary-loading" aria-label="Cargando resumen" aria-busy="true">
+          <span className="home-summary-skeleton-cover" aria-hidden="true" />
+          <span className="home-summary-skeleton-copy" aria-hidden="true"><i /><i /><i /></span>
+        </div>}
         {snapshot && <>
           <section className="home-summary-daily-work">
             {snapshot.daily?.work
@@ -281,7 +293,14 @@ export default function Home() {
         </>}
         <section className="home-active-spaces" aria-label="Espacios activos">
           <header className="home-active-spaces-header"><h2>Espacios activos</h2><Link to="/discover/spaces">todo <span aria-hidden="true">→</span></Link></header>
-          {activeSpaces.map(space => <Link className="home-active-space" to={`/spaces/${space.id}`} key={space.id} style={{ '--space-accent': space.theme_color || 'var(--brand-primary)' }}>
+          {activeSpacesLoading
+            ? <div className="home-active-spaces-skeleton" aria-label="Cargando espacios activos" aria-busy="true">
+                {[0, 1, 2].map(index => <div className="home-active-space-skeleton" key={index} aria-hidden="true">
+                  <span className="home-space-skeleton-avatar" />
+                  <span className="home-space-skeleton-copy"><i /><i /></span>
+                </div>)}
+              </div>
+            : activeSpaces.map(space => <Link className="home-active-space" to={`/spaces/${space.id}`} key={space.id} style={{ '--space-accent': space.theme_color || 'var(--brand-primary)' }}>
             <span className="home-active-space-avatar">{space.avatar_url ? <img src={space.avatar_url} alt="" loading="lazy" /> : <span>{(space.name || 'E').slice(0, 1).toLocaleUpperCase()}</span>}</span>
             <span className="home-active-space-copy"><strong>{space.name}</strong><small>{space.memberCount.toLocaleString('es-ES')} {space.memberCount === 1 ? 'miembro' : 'miembros'}</small></span>
           </Link>)}

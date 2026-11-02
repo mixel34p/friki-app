@@ -349,7 +349,7 @@ export default function SharePage() {
 
   useEffect(() => {
     const query = registerQuery.trim()
-    if (selectedReview || query.length < 2) { setRegisterResults([]); return undefined }
+    if (query.length < 2) { setRegisterResults([]); setRegisterLoading(false); return undefined }
     const controller = new AbortController()
     const timer = window.setTimeout(async () => {
       setRegisterLoading(true)
@@ -362,7 +362,7 @@ export default function SharePage() {
       finally { if (!controller.signal.aborted) setRegisterLoading(false) }
     }, 300)
     return () => { window.clearTimeout(timer); controller.abort() }
-  }, [registerCategory, registerQuery, selectedReview])
+  }, [registerCategory, registerQuery])
 
   const accent = profile?.theme_color || '#14b8a6'
   const avatar = profile?.avatar_url || profile?.profile_picture || ''
@@ -910,8 +910,8 @@ export default function SharePage() {
               </label>
               <a className="share-gif-attribution" href="https://giphy.com" target="_blank" rel="noreferrer">Powered by <strong>GIPHY</strong></a>
             </div>
-            <div className="share-gif-results" aria-live="polite">
-              {gifLoading && <div className="share-gif-state">Buscando GIFs…</div>}
+            <div className="share-gif-results" aria-live="polite" aria-busy={gifLoading}>
+              {gifLoading && Array.from({ length: 8 }, (_, index) => <span className="share-gif-skeleton" key={`gif-loading-${index}`} aria-hidden="true" />)}
               {!gifLoading && gifError && <div className="share-gif-state is-error">{gifError}</div>}
               {!gifLoading && !gifError && gifResults.length === 0 && <div className="share-gif-state">No se encontraron GIFs.</div>}
               {!gifLoading && !gifError && gifResults.map(gif => {
@@ -944,8 +944,8 @@ export default function SharePage() {
             </button>
           </div> : <>
           <label className="share-template-picker-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="7.3"/><path d="m16.2 16.2 4.3 4.3"/></svg><input autoFocus type="search" value={templateQuery} onChange={event => setTemplateQuery(event.target.value)} placeholder="Buscar plantillas…" /></label>
-          <div className="share-template-picker-results" aria-live="polite">
-            {templateLoading && <div className="share-template-picker-state">Buscando plantillas…</div>}
+          <div className="share-template-picker-results" aria-live="polite" aria-busy={templateLoading}>
+            {templateLoading && Array.from({ length: 3 }, (_, index) => <div className="share-template-skeleton" key={`template-loading-${index}`} aria-hidden="true"><span className="share-template-skeleton-art" /><span className="share-template-skeleton-copy"><i /><i /><i /></span><span className="share-template-skeleton-arrow" /></div>)}
             {!templateLoading && templateError && <div className="share-template-picker-state is-error">{templateError}</div>}
             {!templateLoading && !templateError && templateResults.map(template => {
               const covers = getTemplateCoverUrls(template, 2)
@@ -968,17 +968,17 @@ export default function SharePage() {
       <section className="share-register" aria-label="Registrar obras">
         <h2>REGISTRAR</h2>
         <div className="share-register-controls">
-          <div className={`share-register-switch${registerCategory === 'anime' ? ' anime-selected' : ''}`} role="tablist" aria-label="Categoría"><button type="button" role="tab" aria-selected={registerCategory === 'game'} className={registerCategory === 'game' ? 'active' : ''} onClick={() => { setRegisterCategory('game'); setRegisterQuery('') }}>Juegos</button><button type="button" role="tab" aria-selected={registerCategory === 'anime'} className={registerCategory === 'anime' ? 'active' : ''} onClick={() => { setRegisterCategory('anime'); setRegisterQuery('') }}>Anime</button></div>
+          <div className={`share-register-switch${registerCategory === 'anime' ? ' anime-selected' : ''}`} role="tablist" aria-label="Categoría"><button type="button" role="tab" aria-selected={registerCategory === 'game'} className={registerCategory === 'game' ? 'active' : ''} onClick={() => { setRegisterCategory('game'); setRegisterQuery(''); setRegisterResults([]); setRegisterLoading(false) }}>Juegos</button><button type="button" role="tab" aria-selected={registerCategory === 'anime'} className={registerCategory === 'anime' ? 'active' : ''} onClick={() => { setRegisterCategory('anime'); setRegisterQuery(''); setRegisterResults([]); setRegisterLoading(false) }}>Anime</button></div>
         </div>
-        <label className="share-register-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="7.3"/><path d="m16.2 16.2 4.3 4.3"/></svg><input value={registerQuery} onChange={event => setRegisterQuery(event.target.value)} placeholder={`Buscar ${registerCategory === 'game' ? 'juegos' : 'anime'}…`} /></label>
+        <label className="share-register-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="7.3"/><path d="m16.2 16.2 4.3 4.3"/></svg><input value={registerQuery} onChange={event => { const query = event.target.value; setRegisterQuery(query); setRegisterResults([]); setRegisterLoading(query.trim().length >= 2) }} placeholder={`Buscar ${registerCategory === 'game' ? 'juegos' : 'anime'}…`} /></label>
         <h3>{registerQuery.trim().length >= 2 ? 'RESULTADOS' : 'LO MÁS REGISTRADO'}</h3>
-        <div className="share-register-grid">
+        <div className="share-register-grid" aria-busy={registerQuery.trim().length >= 2 ? registerLoading : recommendedLoading}>
           {(registerQuery.trim().length >= 2 ? registerResults : recommended).map(work => <button className="share-register-card" type="button" key={work.id} onClick={() => handleRegisterWorkSelection(work)}>
             {work.image ? <img src={work.image} alt="" loading="lazy" /> : <span className="share-register-no-cover" />}
             <strong>{work.title}</strong>{registerQuery.trim().length < 2 && <small>{work.count} {work.count === 1 ? 'registrado' : 'registrados'}</small>}
           </button>)}
-          {(registerQuery.trim().length >= 2 ? registerLoading : recommendedLoading) && <span className="share-register-state">Cargando…</span>}
-          {!registerLoading && !recommendedLoading && (registerQuery.trim().length >= 2 ? registerResults : recommended).length === 0 && <span className="share-register-state">No se encontraron obras.</span>}
+          {(registerQuery.trim().length >= 2 ? registerLoading : recommendedLoading) && Array.from({ length: 6 }, (_, index) => <div className="share-register-skeleton-card" key={`loading-${index}`} aria-hidden="true"><span className="share-register-skeleton-cover" /><span className="share-register-skeleton-line" /><span className="share-register-skeleton-line is-short" /></div>)}
+          {!(registerQuery.trim().length >= 2 ? registerLoading : recommendedLoading) && (registerQuery.trim().length >= 2 ? registerResults : recommended).length === 0 && <span className="share-register-state">No se encontraron obras.</span>}
         </div>
       </section>
       {removeListConfirmOpen && createPortal(<div className="share-delete-overlay" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) { setRemoveListConfirmOpen(false); setPendingReviewWork(null) } }}>

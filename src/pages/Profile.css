@@ -535,6 +535,29 @@
     min-width: 0;
 }
 
+@keyframes profile-skeleton-shimmer { to { background-position: -220% 0; } }
+.profile-post-skeleton { min-width: 0; }
+.profile-post-skeleton-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.profile-post-skeleton-header i { display: block; }
+.profile-post-skeleton-header .is-avatar { width: 38px; height: 38px; flex: 0 0 38px; border-radius: 50%; }
+.profile-post-skeleton-header .is-name { width: 42%; height: 10px; }
+.profile-post-skeleton-header .is-time { width: 23px; height: 7px; margin-left: auto; }
+.profile-post-skeleton-media { width: min(calc(100% - 16px),230px); height: 150px; margin: 0 0 10px 16px; border-radius: 14px; }
+.profile-post-skeleton-copy { display: grid; gap: 8px; }
+.profile-post-skeleton-copy i { width: 92%; height: 8px; }
+.profile-post-skeleton-copy i:nth-child(2) { width: 75%; }
+.profile-post-skeleton-copy i:nth-child(3) { width: 48%; }
+.profile-list-skeleton { display: grid; gap: 1rem; }
+.profile-list-skeleton-card { display: flex; gap: .9rem; align-items: center; }
+.profile-list-skeleton-card .is-poster { width: 84px; height: 94px; flex: 0 0 84px; border-radius: 10px; }
+.profile-list-skeleton-card span,.profile-template-skeleton-row span { display: grid; flex: 1; gap: .55rem; }
+.profile-list-skeleton-card span i,.profile-template-skeleton-row span i { width: 84%; height: 9px; }
+.profile-list-skeleton-card span i:last-child,.profile-template-skeleton-row span i:last-child { width: 55%; height: 7px; }
+.profile-template-skeleton { display: grid; gap: 12px; }
+.profile-template-skeleton-row { display: flex; align-items: center; gap: 12px; }
+.profile-template-skeleton-row .is-art { width: 58px; height: 58px; flex: 0 0 58px; border-radius: 9px; }
+.profile-post-skeleton-header i,.profile-post-skeleton-media,.profile-post-skeleton-copy i,.profile-list-skeleton-card .is-poster,.profile-list-skeleton-card span i,.profile-template-skeleton-row .is-art,.profile-template-skeleton-row span i { background: linear-gradient(100deg,rgba(255,255,255,.045) 20%,rgba(255,255,255,.11) 45%,rgba(255,255,255,.045) 70%); background-size: 220% 100%; animation: profile-skeleton-shimmer 1.45s ease-in-out infinite; }
+
 .profile-posts-grid {
     display: grid;
     grid-template-columns: repeat(var(--profile-post-columns, 2), minmax(0, 230px));
@@ -1232,6 +1255,7 @@
 
 @media (prefers-reduced-motion: reduce) {
     .fav-tab-switch::before { transition: none; }
+    .profile-post-skeleton-header i,.profile-post-skeleton-media,.profile-post-skeleton-copy i,.profile-list-skeleton-card .is-poster,.profile-list-skeleton-card span i,.profile-template-skeleton-row .is-art,.profile-template-skeleton-row span i { animation: none; }
 }
 
 .vl-tag {

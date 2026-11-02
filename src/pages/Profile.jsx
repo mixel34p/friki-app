@@ -114,6 +114,7 @@ export default function Profile() {
     const [activeProfileTab, setActiveProfileTab] = useState('actividad')
     const [userLists, setUserLists] = useState([])
     const [userTemplates, setUserTemplates] = useState([])
+    const [profileListsLoading, setProfileListsLoading] = useState(true)
     const [profilePosts, setProfilePosts] = useState([])
     const [profilePostsLoading, setProfilePostsLoading] = useState(false)
     const [profilePostsError, setProfilePostsError] = useState('')
@@ -138,6 +139,32 @@ export default function Profile() {
                 if (active) setProfilePostsError('No se pudieron cargar las publicaciones.')
             })
             .finally(() => { if (active) setProfilePostsLoading(false) })
+        return () => { active = false }
+    }, [profile?.id])
+
+    useEffect(() => {
+        let active = true
+        if (!profile?.id) {
+            setUserLists([])
+            setUserTemplates([])
+            setProfileListsLoading(false)
+            return () => { active = false }
+        }
+        setUserLists([])
+        setUserTemplates([])
+        setProfileListsLoading(true)
+        import('../lib/listService.js').then(({ getUserLists, getUserTemplates }) => Promise.all([
+            getUserLists(profile.id),
+            getUserTemplates(profile.id),
+        ])).then(([lists, templates]) => {
+            if (!active) return
+            setUserLists(lists || [])
+            setUserTemplates(templates || [])
+        }).catch(error => {
+            console.error('No se pudieron cargar las listas del perfil:', error)
+        }).finally(() => {
+            if (active) setProfileListsLoading(false)
+        })
         return () => { active = false }
     }, [profile?.id])
 
@@ -289,15 +316,6 @@ export default function Profile() {
             }
 
             if (!userId) { setLoading(false); return }
-
-            const { getUserLists, getUserTemplates } = await import('../lib/listService.js')
-
-            const [lists, templates] = await Promise.all([
-                getUserLists(userId),
-                getUserTemplates(userId)
-            ])
-            setUserLists(lists || [])
-            setUserTemplates(templates || [])
 
             if (!isOwnProfile && user) {
                 const [followingResult, followedByResult] = await Promise.all([
@@ -740,7 +758,15 @@ export default function Profile() {
                 {activeProfileTab === 'posts' && (
                     <section className="profile-posts-section" aria-label={`Posts de ${profile?.display_name || profile?.username || 'este perfil'}`}>
                         {profilePostsLoading
-                            ? <div className="profile-posts-state"><LoadingSpinner /></div>
+                            ? <div className="profile-posts-grid profile-posts-grid-skeleton" aria-label="Cargando posts" aria-busy="true">
+                                {[0, 1].map(column => <div className="profile-post-column" key={column}>
+                                    {[0, 1, 2].map((card, index) => <article className="profile-post-skeleton" key={card} aria-hidden="true">
+                                        <div className="profile-post-skeleton-header"><i className="is-avatar" /><i className="is-name" /><i className="is-time" /></div>
+                                        {((column + index) % 2 === 0) && <i className="profile-post-skeleton-media" />}
+                                        <span className="profile-post-skeleton-copy"><i /><i /><i /></span>
+                                    </article>)}
+                                </div>)}
+                            </div>
                             : profilePostsError
                                 ? <p className="profile-posts-state">{profilePostsError}</p>
                                 : profilePosts.length
@@ -762,7 +788,7 @@ export default function Profile() {
                                 <h3>Tierlists Destacadas</h3>
                                 {profile?.username && <Link to={`/profile/${profile.username}/tierlists`} className="activity-view-all">Ver todas</Link>}
                             </div>
-                            {userLists.length === 0 ? (
+                            {profileListsLoading ? <div className="profile-list-skeleton" aria-label="Cargando listas destacadas" aria-busy="true">{[0, 1, 2].map(index => <div className="profile-list-skeleton-card" key={index} aria-hidden="true"><i className="is-poster" /><span><i /><i /></span></div>)}</div> : userLists.length === 0 ? (
                                 <div className="activity-empty-box">Aún no hay tierlists.</div>
                             ) : (
                                 <div className="reviews-list">
@@ -858,7 +884,7 @@ export default function Profile() {
                                 <h3>Plantillas</h3>
                                 {profile?.username && <Link to={`/profile/${profile.username}/templates`} className="activity-view-all">Ver todas</Link>}
                             </div>
-                            {userTemplates.length === 0 ? (
+                            {profileListsLoading ? <div className="profile-template-skeleton" aria-label="Cargando plantillas" aria-busy="true">{[0, 1, 2, 3].map(index => <div className="profile-template-skeleton-row" key={index} aria-hidden="true"><i className="is-art" /><span><i /><i /></span></div>)}</div> : userTemplates.length === 0 ? (
                                 <div className="activity-empty-box">Aún no hay plantillas creadas.</div>
                             ) : (
                                 <div className="diary-entries" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>

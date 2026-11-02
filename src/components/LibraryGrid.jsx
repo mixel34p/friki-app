@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { getUserLibrary } from '../lib/libraryService'
 import { getWorkById } from '../lib/workPageService'
-import LoadingSpinner from './LoadingSpinner'
 import ReviewLikeButton from './ReviewLikeButton'
 import SpoilerNotice from './reviews/SpoilerNotice'
 import { useAuth } from '../context/AuthContext'
@@ -125,8 +124,16 @@ export default function LibraryGrid({ profile, userId, username, wishlist = [] }
 
     if (loading) {
         return (
-            <div className="activity-loading">
-                <LoadingSpinner size="md" />
+            <div className="profile-activity-skeleton" aria-label="Cargando actividad del perfil" aria-busy="true">
+                <section className="profile-activity-skeleton-column">
+                    <span className="profile-activity-skeleton-heading" />
+                    {[0, 1].map(index => <div className="profile-review-skeleton" key={index} aria-hidden="true"><i className="is-poster" /><span><i /><i /><i /><i /></span></div>)}
+                </section>
+                <section className="profile-activity-skeleton-column">
+                    <span className="profile-activity-skeleton-heading is-short" />
+                    {[0, 1, 2].map(index => <div className="profile-diary-skeleton" key={index} aria-hidden="true"><i className="is-cover" /><span><i /><i /></span></div>)}
+                </section>
+                <section className="profile-activity-skeleton-wishlist" aria-hidden="true"><span className="profile-activity-skeleton-heading is-short" /><div>{[0, 1, 2, 3, 4].map(index => <i key={index} />)}</div></section>
             </div>
         )
     }

@@ -15,6 +15,7 @@ const FILTERS = [
 ]
 const FILTER_IDS = new Set(FILTERS.map(filter => filter.id))
 const CATEGORY_LABELS = { works: 'Obras', spaces: 'Espacios', users: 'Usuarios', lists: 'Listas' }
+const MAX_SEARCH_LISTS = 4
 const nameOf = item => item.title || item.name || item.display_name || item.username || 'Sin nombre'
 
 function resultHref(item) {
@@ -152,7 +153,7 @@ function SearchSkeleton() {
 
 function Preview({ query, data, loading, error, activeIndex, onSelect, onViewAll, listRef }) {
   const groups = [
-    ['works', data.works.slice(0, 8)], ['spaces', data.spaces.slice(0, 8)], ['lists', data.lists.slice(0, 8)], ['users', data.users.slice(0, 8)],
+    ['works', data.works.slice(0, 8)], ['spaces', data.spaces.slice(0, 8)], ['lists', data.lists.slice(0, MAX_SEARCH_LISTS)], ['users', data.users.slice(0, 8)],
   ].filter(([, items]) => items?.length)
   const flat = groups.flatMap(([, items]) => items)
   return <div className="search-preview" ref={listRef} id="search-preview" role="listbox" aria-label="Resultados sugeridos">
@@ -423,7 +424,7 @@ export default function Search() {
     return () => document.removeEventListener('pointerdown', onPointer)
   }, [])
 
-  const flatResults = useMemo(() => [...previewData.works.slice(0, 8), ...previewData.spaces.slice(0, 8), ...previewData.lists.slice(0, 8), ...previewData.users.slice(0, 8)], [previewData])
+  const flatResults = useMemo(() => [...previewData.works.slice(0, 8), ...previewData.spaces.slice(0, 8), ...previewData.lists.slice(0, MAX_SEARCH_LISTS), ...previewData.users.slice(0, 8)], [previewData])
   const viewAll = useCallback(() => {
     const next = new URLSearchParams({ q: query.trim(), filter: 'all' })
     setIsFocused(false)

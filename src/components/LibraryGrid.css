@@ -142,6 +142,26 @@
     padding: 3rem 0;
 }
 
+.profile-activity-skeleton { display: grid; grid-template-columns: 5fr 3fr; gap: 3rem; width: 100%; align-items: start; }
+.profile-activity-skeleton-column { display: grid; align-content: start; gap: 1rem; min-width: 0; }
+.profile-activity-skeleton-heading,.profile-review-skeleton i,.profile-review-skeleton span i,.profile-diary-skeleton i,.profile-diary-skeleton span i,.profile-activity-skeleton-wishlist > div i { display: block; border-radius: 999px; background: linear-gradient(100deg,rgba(255,255,255,.045) 20%,rgba(255,255,255,.11) 45%,rgba(255,255,255,.045) 70%); background-size: 220% 100%; animation: profile-activity-shimmer 1.45s ease-in-out infinite; }
+.profile-activity-skeleton-heading { width: 68%; height: 15px; margin-bottom: .45rem; }
+.profile-activity-skeleton-heading.is-short { width: 53%; }
+.profile-review-skeleton { display: flex; align-items: center; gap: 1rem; padding: .6rem 0 1rem; border-bottom: 1px solid var(--border-subtle); }
+.profile-review-skeleton .is-poster { width: 90px; height: 112px; flex: 0 0 90px; border-radius: 10px; }
+.profile-review-skeleton > span,.profile-diary-skeleton > span { display: grid; flex: 1; gap: .55rem; }
+.profile-review-skeleton span i { width: 90%; height: 8px; }
+.profile-review-skeleton span i:first-child { width: 62%; height: 11px; }
+.profile-review-skeleton span i:last-child { width: 48%; }
+.profile-diary-skeleton { display: flex; align-items: center; gap: .8rem; }
+.profile-diary-skeleton .is-cover { width: 55px; height: 72px; flex: 0 0 55px; border-radius: 8px; }
+.profile-diary-skeleton span i { width: 88%; height: 8px; }
+.profile-diary-skeleton span i:last-child { width: 57%; height: 7px; }
+.profile-activity-skeleton-wishlist { grid-column: 1 / -1; display: grid; gap: 1rem; margin-top: .5rem; }
+.profile-activity-skeleton-wishlist > div { display: flex; gap: 12px; flex-wrap: wrap; }
+.profile-activity-skeleton-wishlist > div i { width: 90px; aspect-ratio: 3 / 4; border-radius: 9px; }
+@keyframes profile-activity-shimmer { to { background-position: -220% 0; } }
+
 .activity-empty {
     text-align: center;
     color: var(--text-muted);
@@ -441,10 +461,16 @@
         grid-template-columns: 1fr !important;
         gap: 2rem !important;
     }
+    .profile-activity-skeleton { grid-template-columns: 1fr; gap: 2rem; }
+    .profile-activity-skeleton-wishlist { grid-column: auto; }
     
     .diary-entry-title {
         max-width: 200px;
     }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .profile-activity-skeleton-heading,.profile-review-skeleton i,.profile-review-skeleton span i,.profile-diary-skeleton i,.profile-diary-skeleton span i,.profile-activity-skeleton-wishlist > div i { animation: none; }
 }
 
 .review-metadata {
