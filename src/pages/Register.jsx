@@ -119,6 +119,7 @@ export default function Register() {
                         </div>
                     </form>}
                     <div className="auth-card-footer"><span>¿Ya tienes cuenta?</span><Link to={`/login${addAccount ? '?addAccount=1' : ''}`}>Inicia sesión</Link></div>
+                    <nav className="register-legal-links" aria-label="Documentos legales"><Link to="/terms">Términos</Link><Link to="/privacy">Privacidad</Link><Link to="/community-guidelines">Normas de comunidad</Link></nav>
                 </section>
             </div>
         </div>

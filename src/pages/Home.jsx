@@ -7,6 +7,7 @@ import { getHomePosts } from '../lib/postService'
 import { getHomeSnapshot, getFollowingUserIds } from '../lib/homeService'
 import { getUsersByCommonWorks } from '../lib/discoverUsersService'
 import { formatRelativeDate } from '../lib/formatRelativeDate'
+import { getSpaces } from '../lib/spaceService'
 import './Home.css'
 
 function getAccentTextColor(color) {
@@ -103,7 +104,8 @@ export function PostCard({ post, hideAvatar = false, hideAuthor = false, useDesk
 }
 
 export default function Home() {
-    const { user, profile } = useAuth()
+    const { user, profile, loading: authLoading } = useAuth()
+    const isGuest = !authLoading && !user
     const [posts, setPosts] = useState([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
@@ -111,6 +113,7 @@ export default function Home() {
     const [snapshot, setSnapshot] = useState(null)
     const [snapshotError, setSnapshotError] = useState(false)
     const [compatibleUser, setCompatibleUser] = useState(null)
+    const [activeSpaces, setActiveSpaces] = useState([])
 
     useEffect(() => {
         let active = true
@@ -150,13 +153,32 @@ export default function Home() {
         return () => { active = false }
     }, [user?.id])
 
+    useEffect(() => {
+        let active = true
+        getSpaces()
+            .then(spaces => {
+                if (!active) return
+                setActiveSpaces((spaces || [])
+                    .map(space => ({ ...space, memberCount: space.space_members?.[0]?.count ?? 0 }))
+                    .sort((a, b) => b.memberCount - a.memberCount)
+                    .slice(0, 3))
+            })
+            .catch(error => console.error('No se pudieron cargar los espacios activos:', error))
+        return () => { active = false }
+    }, [])
+
     const today = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date())
     const workPath = work => work ? `/${work.type}/${work.id}` : '#'
     const reviewWork = snapshot?.review?.work
     const recentListImages = getListCoverImages(snapshot?.recentList?.content)
 
-    return <main className="home-feed-layout">
+    return <main className={`home-feed-layout${isGuest ? ' is-guest' : ''}`}>
       <div className="home-feed-page">
+        {isGuest && <section className="home-guest-create-actions is-mobile" aria-label="Crear una lista">
+          <header className="home-daily-header"><h1>Empieza una lista</h1></header>
+          <Link to="/lists/new?type=grid"><span className="home-guest-create-icon" aria-hidden="true">▦</span><strong>Crear un grid</strong><b aria-hidden="true">→</b></Link>
+          <Link to="/lists/new?type=tierlist"><span className="home-guest-create-icon" aria-hidden="true">≡</span><strong>Crear una tierlist</strong><b aria-hidden="true">→</b></Link>
+        </section>}
         {snapshot?.daily?.work && <section className="home-mobile-daily" aria-label="Resumen de hoy">
           {snapshot.daily.work.image && <span className="home-mobile-daily-backdrop" aria-hidden="true"><img src={snapshot.daily.work.image} alt="" loading="lazy" /></span>}
           <div className="home-mobile-daily-heading"><h1>Resumen de hoy</h1><time>{today}</time></div>
@@ -196,6 +218,11 @@ export default function Home() {
                     : <p className="home-feed-state">{activeFeed === 'following' ? 'Todavía no hay publicaciones de las personas que sigues.' : 'Todavía no hay publicaciones.'}</p>}
       </div>
       <aside className="home-daily-summary" aria-label="Resumen de hoy">
+        {isGuest && <section className="home-guest-create-actions is-desktop" aria-label="Crear una lista">
+          <header className="home-daily-header"><h1>Empieza una lista</h1></header>
+          <Link to="/lists/new?type=grid"><span className="home-guest-create-icon" aria-hidden="true">▦</span><strong>Crear un grid</strong><b aria-hidden="true">→</b></Link>
+          <Link to="/lists/new?type=tierlist"><span className="home-guest-create-icon" aria-hidden="true">≡</span><strong>Crear una tierlist</strong><b aria-hidden="true">→</b></Link>
+        </section>}
         <header className="home-daily-header">
           <h1>Resumen de hoy</h1>
           <time>{today}</time>
@@ -251,6 +278,13 @@ export default function Home() {
               : <p className="home-summary-empty">Todavía no hay listas públicas.</p>}
           </section>
         </>}
+        <section className="home-active-spaces" aria-label="Espacios activos">
+          <header className="home-active-spaces-header"><h2>Espacios activos</h2><Link to="/discover/spaces">todo <span aria-hidden="true">→</span></Link></header>
+          {activeSpaces.map(space => <Link className="home-active-space" to={`/spaces/${space.id}`} key={space.id} style={{ '--space-accent': space.theme_color || 'var(--brand-primary)' }}>
+            <span className="home-active-space-avatar">{space.avatar_url ? <img src={space.avatar_url} alt="" loading="lazy" /> : <span>{(space.name || 'E').slice(0, 1).toLocaleUpperCase()}</span>}</span>
+            <span className="home-active-space-copy"><strong>{space.name}</strong><small>{space.memberCount.toLocaleString('es-ES')} {space.memberCount === 1 ? 'miembro' : 'miembros'}</small></span>
+          </Link>)}
+        </section>
         {compatibleUser && <section className="home-compatible-section" aria-label="Usuario compatible">
           <h2 className="home-compatible-heading">USUARIO COMPATIBLE</h2>
           <Link className="home-compatible-card" to={`/profile/${compatibleUser.username || compatibleUser.user_id}`} style={{ '--compatible-own-accent': profile?.theme_color || 'var(--brand-primary)', '--compatible-match-accent': compatibleUser.theme_color || 'var(--brand-primary)' }}>

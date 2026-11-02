@@ -299,6 +299,22 @@
     white-space: pre-wrap;
 }
 
+.work-synopsis-source {
+    margin: 8px 0 0;
+    color: #777780;
+    font-size: 0.72rem;
+}
+
+.work-synopsis-source a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.work-synopsis-source a:hover {
+    color: var(--text-secondary);
+    text-decoration: underline;
+}
+
 .meta-block {
     display: flex;
     flex-direction: column;

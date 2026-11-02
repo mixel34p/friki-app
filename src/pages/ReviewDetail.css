@@ -151,6 +151,8 @@
 .review-post-action.upcoming { opacity: .52; cursor: not-allowed; }
 .review-post-action.review-share-trigger { color: var(--text-secondary); cursor: pointer; transition: color .18s ease, transform .18s ease; }
 .review-post-action.review-share-trigger:hover { color: var(--review-page-accent); transform: translateY(-1px); }
+.review-post-action.guest-make-list-action { color: var(--review-page-accent); text-decoration: none; }
+.review-post-action.guest-make-list-action:hover { color: var(--review-page-accent); transform: translateY(-1px); }
 
 .review-share-overlay { position: fixed; inset: 0; z-index: 2400; display: grid; place-items: center; padding: max(18px, env(safe-area-inset-top)) 16px max(18px, env(safe-area-inset-bottom)); background: rgba(0,0,0,.78); backdrop-filter: blur(12px); animation: review-share-fade .18s ease-out; }
 .review-share-dialog { width: min(100%, 520px); max-height: min(90dvh, 780px); overflow-y: auto; overscroll-behavior: contain; padding: 23px; border: 1px solid rgba(255,255,255,.1); border-radius: 21px; color: var(--text-primary); background: #101114; box-shadow: 0 28px 100px rgba(0,0,0,.68), 0 1px 0 rgba(255,255,255,.035) inset; animation: review-share-rise .24s cubic-bezier(.2,.8,.2,1); }

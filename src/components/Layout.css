@@ -1280,6 +1280,7 @@
 .more-link { min-height: 48px; }
 .header { margin-left: 282px; }
 .main { min-height: 100vh; margin-left: 282px; padding: 22px clamp(18px, 3vw, 42px) 44px; }
+.main.legal-main { padding: 32px 24px 44px 24px; }
 .main.discover-works-main { padding:12px clamp(12px,1.5vw,22px) 44px; }
 /* Los contenedores de página ocupan el ancho útil que deja la barra lateral. */
 .main > .container,
@@ -1473,6 +1474,7 @@
     .mobile-nav-avatar { display: block; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
     .mobile-nav-avatar-placeholder { display: grid; place-items: center; color: #fff; background: #29232f; font-size: .85rem; font-weight: 750; }
     .main { width: auto; min-height: 100vh; margin-left: 0; padding: 76px 16px calc(88px + env(safe-area-inset-bottom)); }
+    .main.legal-main { padding: 106px 16px calc(88px + env(safe-area-inset-bottom)); }
     .main.discover-works-main { padding: 56px 6px calc(88px + env(safe-area-inset-bottom)); }
     .main.work-main { padding: 58px 0 calc(88px + env(safe-area-inset-bottom)); }
     .main.work-main > .work-page-cinematic,
@@ -1534,6 +1536,9 @@
 }
 
 .guest-sidebar-top-space { height: 24px; }
+.guest-legal-links { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: auto; padding: 15px 7px 4px; border-top: 1px solid rgba(255,255,255,.07); }
+.guest-legal-links a { color: #777; font-size: .72rem; text-decoration: none; }
+.guest-legal-links a:hover { color: #c5ccca; }
 .guest-mobile-actions { display: grid; width: 100%; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 5px; pointer-events: auto; }
 .guest-mobile-actions a { display: flex; min-height: 48px; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border-radius: 12px; color: #aaa6b2; font-size: .66rem; font-weight: 650; text-decoration: none; }
 .guest-mobile-actions a:hover,.guest-mobile-actions a:focus-visible { color: #fff; background: rgba(255,255,255,.075); }
@@ -1603,6 +1608,9 @@
 .more-menu-signout { display: flex; width: 100%; min-height: 34px; align-items: center; justify-content: space-between; padding: 0 9px; border: 0; border-radius: 8px; color: #d8dae0; background: transparent; font: 600 .8rem var(--font-sans); text-align: left; cursor: pointer; transition: color 160ms ease, background 160ms ease; }
 .more-menu-signout:hover, .more-menu-signout:focus-visible { color: #ff8a8a; background: #191c23; outline: 0; }
 .more-menu-signout svg { width: 15px; height: 15px; color: #858993; }
+.more-menu-legal-links { display: flex; flex-wrap: wrap; gap: 7px 13px; padding: 7px 3px 4px; }
+.more-menu-legal-links a { color: #858993; font-size: .72rem; line-height: 1.4; text-decoration: none; transition: color 160ms ease; }
+.more-menu-legal-links a:hover,.more-menu-legal-links a:focus-visible { color: #e6e6e9; outline: 0; }
 
 .more-submenu-heading { display: flex; min-height: 31px; align-items: center; gap: 8px; padding: 0 1px; color: #f3f4f6; }
 .more-submenu-heading strong { font-size: .9rem; font-weight: 750; }

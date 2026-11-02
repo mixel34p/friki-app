@@ -228,7 +228,7 @@ function buildPreviewSvg(preview, imageSources, w, h) {
     return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><defs>${defs.join('')}</defs>${body.join('')}</svg>`;
 }
 
-async function downloadListImage(preview, listTitle, authorName, authorAvatar, authorThemeColor, authorUsername, bgCoverUrl, listType) {
+export async function generateListImage(preview, listTitle, authorName, authorAvatar, authorThemeColor, authorUsername, bgCoverUrl, listType) {
     if (!preview) throw new Error('No se encontró el preview');
     await document.fonts?.ready;
     const vc = preview.querySelector('.cl-tierlist, .vl-ranking-stack, .cl-grid-cells') || preview;
@@ -362,21 +362,27 @@ async function downloadListImage(preview, listTitle, authorName, authorAvatar, a
 
         const png = await new Promise(res => canvas.toBlob(res, 'image/png'));
         if (!png) throw new Error('No se pudo crear el PNG');
-        const pu = URL.createObjectURL(png);
-        const link = document.createElement('a');
-        link.download = `${(listTitle || 'lista').trim().toLowerCase().replace(/[^a-z0-9]+/gi, '-')}.png`;
-        link.href = pu; link.click();
-        window.setTimeout(() => URL.revokeObjectURL(pu), 1000);
+        return png;
     } finally {
         URL.revokeObjectURL(svgUrl);
     }
+}
+
+async function downloadListImage(...args) {
+    const png = await generateListImage(...args);
+    const pu = URL.createObjectURL(png);
+    const link = document.createElement('a');
+    link.download = `${(args[1] || 'lista').trim().toLowerCase().replace(/[^a-z0-9]+/gi, '-')}.png`;
+    link.href = pu;
+    link.click();
+    window.setTimeout(() => URL.revokeObjectURL(pu), 1000);
 }
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function ViewList() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { user, profile: currentProfile } = useAuth();
+    const { user, profile: currentProfile, loading: authLoading } = useAuth();
 
     const [list, setList] = useState(null);
     const [moreItems, setMoreItems] = useState([]);
@@ -631,7 +637,7 @@ export default function ViewList() {
                                         <rect x="3" y="3" width="18" height="18" rx="2" />
                                         <path d="M3 9h18M9 21V9" />
                                     </svg>
-                                    Usar plantilla
+                                    {list.template_id ? 'Usar plantilla' : 'Usar'}
                                 </Link>
                                 {isAuthor && (
                                     <Link to={`/lists/${list.id}/edit`} className="vl-dropdown-item" onClick={() => setMenuOpen(false)}>
@@ -675,14 +681,17 @@ export default function ViewList() {
                 <div className="review-post-actions">
                     <ListLikeButton listId={id} />
                     <span className="review-post-action-spacer" />
-                    <button type="button" className="review-post-action upcoming" disabled title="Guardar listas estará disponible próximamente">
+                    {user || authLoading ? <button type="button" className="review-post-action upcoming" disabled title="Guardar listas estará disponible próximamente">
                         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.75A1.75 1.75 0 0 1 7.75 3h8.5A1.75 1.75 0 0 1 18 4.75V21l-6-4-6 4z"/></svg>
                         Guardar
-                    </button>
-                    <button type="button" className="review-post-action upcoming" disabled title="Repostear estará disponible próximamente">
+                    </button> : <Link to={templateUseUrl} className="review-post-action guest-make-list-action">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                        Hacer la mía
+                    </Link>}
+                    {(user || authLoading) && <button type="button" className="review-post-action upcoming" disabled title="Repostear estará disponible próximamente">
                         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m17 2 4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4M21 13v2a3 3 0 0 1-3 3H3"/></svg>
                         Repostear
-                    </button>
+                    </button>}
                     <button type="button" className="review-post-action review-share-trigger" onClick={() => setShareOpen(true)} aria-label="Compartir lista">
                         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.7 10.7 6.6-4.4M8.7 13.3l6.6 4.4"/></svg>
                         Compartir

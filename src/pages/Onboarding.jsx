@@ -3,6 +3,8 @@ import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
+import { createList, incrementTemplateUses } from '../lib/listService'
+import { clearGuestListDraft, readGuestListDraft } from '../lib/guestListDraft'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ImageCropperModal from '../components/ImageCropperModal'
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
@@ -227,14 +229,14 @@ export default function Onboarding() {
 
             if (!isCurrent) return
             if (availabilityError) setUsernameAvailability('error')
-            else setUsernameAvailability(data ? 'taken' : 'available')
+            else setUsernameAvailability(data && data.id !== user?.id ? 'taken' : 'available')
         }, 350)
 
         return () => {
             isCurrent = false
             clearTimeout(timeout)
         }
-    }, [username])
+    }, [username, user?.id])
 
     useEffect(() => {
         if (gameSearchQuery.length < 3) { setGameSearchResults([]); return }
@@ -361,7 +363,7 @@ export default function Onboarding() {
             .eq('username', username)
             .maybeSingle()
         if (error) throw error
-        return !data // True if not taken
+        return !data || data.id === user?.id // The profile may already exist if guest-list publication needs a retry.
     }
 
     const handleNextStep = async () => {
@@ -407,6 +409,7 @@ export default function Onboarding() {
         setError(null)
         
         try {
+            let publishedGuestListId = null
             let finalAvatarUrl = DEFAULT_AVATAR
             if (avatarFile) {
                 let url = await uploadImage(avatarFile, 'avatars')
@@ -432,9 +435,28 @@ export default function Onboarding() {
                 
             if (profileError) {
                 if (profileError.code === '23505') {
-                     throw new Error('Ese nombre de usuario ya está registrado.')
+                    const { data: existingProfile, error: profileLookupError } = await supabase
+                        .from('profiles').select('id').eq('id', user.id).maybeSingle()
+                    if (profileLookupError) throw profileLookupError
+                    if (!existingProfile) throw new Error('Ese nombre de usuario ya está registrado.')
+                } else throw profileError
+            }
+
+            const guestListDraft = readGuestListDraft(null, { requireRegistration: true })
+            if (guestListDraft?.payload) {
+                const baseTitle = guestListDraft.templateTitle || guestListDraft.baseTitle || guestListDraft.payload.title || 'Mi lista'
+                const publishedList = await createList({
+                    ...guestListDraft.payload,
+                    title: `${baseTitle} (${displayName.trim()})`,
+                    user_id: user.id,
+                    visibility: 'public',
+                })
+                publishedGuestListId = publishedList?.id || null
+                if (guestListDraft.payload.template_id) {
+                    try { await incrementTemplateUses(guestListDraft.payload.template_id) }
+                    catch (counterError) { console.error('La lista se publicó, pero no se pudo actualizar el contador de usos:', counterError) }
                 }
-                throw profileError
+                if (publishedList?.id) clearGuestListDraft()
             }
             
             try {
@@ -442,7 +464,7 @@ export default function Onboarding() {
                 if (onboardingDraftStorageKey) window.sessionStorage.removeItem(onboardingDraftStorageKey)
             } catch {}
             await refreshProfile()
-            navigate(`/profile/${username.toLowerCase()}`)
+            navigate(publishedGuestListId ? `/lists/${publishedGuestListId}` : `/profile/${username.toLowerCase()}`)
             
         } catch (err) {
             console.error('Onboarding Error:', err)

@@ -8,7 +8,7 @@ import { getAccentTextColor } from '../lib/colorContrast'
 import { useToast } from '../components/Toast'
 import { searchGames } from '../lib/gameService'
 import { searchAnime } from '../lib/animeService'
-import { createList, getTemplateById, getTemplates, incrementTemplateUses } from '../lib/listService'
+import { createList, getTemplateById, getTemplates, incrementTemplateUses, DEFAULT_TIER_CONFIG } from '../lib/listService'
 import { createPost } from '../lib/postService'
 import { uploadChatImage } from '../lib/socialDiscoveryService'
 import { ListPostPreview } from './lists/ViewList'
@@ -56,13 +56,22 @@ function makeEmptyTemplateList(template) {
   return { ...template, content }
 }
 
-function makeEmptyStandaloneRanking() {
+function makeEmptyStandaloneList(type) {
+  const typeConfig = JSON.parse(JSON.stringify(DEFAULT_TIER_CONFIG[type] || DEFAULT_TIER_CONFIG.tierlist))
+  let content = {}
+  if (type === 'tierlist') {
+    typeConfig.tiers.forEach(tier => { content[tier.id] = [] })
+  } else if (type === 'grid') {
+    typeConfig.cells.forEach((_, index) => { content[`c${index}`] = null })
+  } else {
+    content = Array.from({ length: typeConfig.max_items }, () => null)
+  }
   return {
-    title: 'Nuevo ranking',
-    list_type: 'ranking',
-    media_type: 'mixed',
-    type_config: { max_items: 3 },
-    content: [null, null, null],
+    title: type === 'ranking' ? 'Nuevo ranking' : type === 'grid' ? 'Nueva cuadrícula' : 'Nueva tierlist',
+    list_type: type,
+    media_type: type === 'ranking' ? 'mixed' : 'game',
+    type_config: typeConfig,
+    content,
   }
 }
 
@@ -101,9 +110,9 @@ export default function SharePage() {
   const [placeholder] = useState(() => PLACEHOLDERS[Math.floor(Math.random() * PLACEHOLDERS.length)])
   const [selectedTool, setSelectedTool] = useState(null)
   const [selectedTemplate, setSelectedTemplate] = useState(null)
-  const [selectedStandaloneRanking, setSelectedStandaloneRanking] = useState(false)
+  const [selectedStandaloneType, setSelectedStandaloneType] = useState(null)
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false)
-  const [templatePickerSection, setTemplatePickerSection] = useState('templates')
+  const [templatePickerSection, setTemplatePickerSection] = useState('standalone')
   const [templateQuery, setTemplateQuery] = useState('')
   const [templateResults, setTemplateResults] = useState([])
   const [templateLoading, setTemplateLoading] = useState(false)
@@ -150,20 +159,20 @@ export default function SharePage() {
   const overage = Math.max(0, text.length - POST_LIMIT)
   const canPost = (Boolean(text.trim()) || images.length > 0) && !isOverLimit
   const isTemplateComposerFlow = Boolean(selectedTemplate && !isListPublishingFlow && !selectedReview)
-  const isStandaloneRankingComposer = selectedStandaloneRanking && !isListPublishingFlow && !selectedReview
-  const isListSetupComposerFlow = isTemplateComposerFlow || isStandaloneRankingComposer
+  const isStandaloneListComposer = Boolean(selectedStandaloneType) && !isListPublishingFlow && !selectedReview
+  const isListSetupComposerFlow = isTemplateComposerFlow || isStandaloneListComposer
   const isListAttachmentFlow = isListPublishingFlow || isListSetupComposerFlow
 
   useEffect(() => {
     if (new URLSearchParams(location.search).get('openList') !== '1') return
-    setTemplatePickerSection('templates')
+    setTemplatePickerSection('standalone')
     setTemplatePickerOpen(true)
     setSelectedTool('list')
   }, [location.search])
 
   useEffect(() => {
     const standaloneType = new URLSearchParams(location.search).get('listType')
-    setSelectedStandaloneRanking(standaloneType === 'ranking' && !isListPublishingFlow)
+    setSelectedStandaloneType(['tierlist', 'grid', 'ranking'].includes(standaloneType) && !isListPublishingFlow ? standaloneType : null)
   }, [location.search, isListPublishingFlow])
 
   useEffect(() => {
@@ -583,7 +592,7 @@ export default function SharePage() {
     setRemoveListConfirmOpen(false)
     setInitialListDraft({ token: null, draft: null })
     setSelectedTemplate(null)
-    setSelectedStandaloneRanking(false)
+    setSelectedStandaloneType(null)
     navigate('/share', { replace: true })
     if (pendingReviewWork) {
       const work = pendingReviewWork
@@ -600,23 +609,23 @@ export default function SharePage() {
 
   const handleChooseTemplate = template => {
     setSelectedTemplate(template)
-    setSelectedStandaloneRanking(false)
+    setSelectedStandaloneType(null)
     setSelectedTool(null)
     setTemplatePickerOpen(false)
     setTemplateQuery('')
     navigate(`/share?listTemplate=${encodeURIComponent(template.id)}`, { replace: true })
   }
 
-  const handleChooseStandaloneRanking = () => {
+  const handleChooseStandaloneType = type => {
     setSelectedTemplate(null)
-    setSelectedStandaloneRanking(true)
+    setSelectedStandaloneType(type)
     setSelectedTool(null)
     setTemplatePickerOpen(false)
-    navigate('/share?listType=ranking', { replace: true })
+    navigate(`/share?listType=${encodeURIComponent(type)}`, { replace: true })
   }
 
   const handleEditSelectedList = () => {
-    if (selectedStandaloneRanking) navigate('/lists/new?type=ranking')
+    if (selectedStandaloneType) navigate(`/lists/new?type=${encodeURIComponent(selectedStandaloneType)}`)
     else if (selectedTemplate?.id) navigate(`/lists/new?template=${encodeURIComponent(selectedTemplate.id)}`)
   }
 
@@ -765,17 +774,17 @@ export default function SharePage() {
             <button className="share-review-clear share-list-remove-button" type="button" onClick={() => setRemoveListConfirmOpen(true)} aria-label="Quitar plantilla" title="Quitar plantilla"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m18 6-12 12M6 6l12 12"/></svg></button>
             <button className="share-post-button" type="button" onClick={handleEditSelectedList}>Editar lista</button>
           </div>
-        </> : isStandaloneRankingComposer ? <>
+        </> : isStandaloneListComposer ? <>
           <div className="share-list-composer-entry">
             <span className="share-composer-avatar" aria-label={`Foto de ${displayName}`}>
               {avatar ? <img src={avatar} alt="" /> : <span>{displayName.slice(0, 1).toLocaleUpperCase()}</span>}
             </span>
             <div className="share-list-attachment">
-              <ListPostPreview list={makeEmptyStandaloneRanking()} onClick={handleEditSelectedList} className="share-list-published-preview" ariaLabel="Editar ranking" />
+              <ListPostPreview list={makeEmptyStandaloneList(selectedStandaloneType)} onClick={handleEditSelectedList} className="share-list-published-preview" ariaLabel={`Editar ${selectedStandaloneType === 'ranking' ? 'ranking' : selectedStandaloneType === 'grid' ? 'cuadrícula' : 'tierlist'}`} />
             </div>
           </div>
           <div className="share-list-publish-actions">
-            <button className="share-review-clear share-list-remove-button" type="button" onClick={() => setRemoveListConfirmOpen(true)} aria-label="Quitar ranking" title="Quitar ranking"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m18 6-12 12M6 6l12 12"/></svg></button>
+            <button className="share-review-clear share-list-remove-button" type="button" onClick={() => setRemoveListConfirmOpen(true)} aria-label="Quitar lista" title="Quitar lista"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m18 6-12 12M6 6l12 12"/></svg></button>
             <button className="share-post-button" type="button" onClick={handleEditSelectedList}>Editar lista</button>
           </div>
         </> : <div className="share-list-draft-error" role="alert"><p>No se pudo recuperar la lista o plantilla seleccionada.</p><button type="button" className="share-post-button" onClick={() => navigate('/templates')}>Volver a plantillas</button></div> : <>
@@ -920,7 +929,15 @@ export default function SharePage() {
           <header className="share-template-picker-header"><div><h2>Añadir una lista</h2><p>Elige cómo quieres empezar</p></div></header>
           <div className="share-list-kind-tabs" role="tablist" aria-label="Tipo de lista"><button type="button" role="tab" aria-selected={templatePickerSection === 'standalone'} className={templatePickerSection === 'standalone' ? 'active' : ''} onClick={() => setTemplatePickerSection('standalone')}>Sin plantillas</button><button type="button" role="tab" aria-selected={templatePickerSection === 'templates'} className={templatePickerSection === 'templates' ? 'active' : ''} onClick={() => setTemplatePickerSection('templates')}>Plantillas</button></div>
           {templatePickerSection === 'standalone' ? <div className="share-template-picker-results share-list-kind-results">
-            <button className="share-list-kind-pill" type="button" onClick={handleChooseStandaloneRanking}>
+            <button className="share-list-kind-pill" type="button" onClick={() => handleChooseStandaloneType('tierlist')}>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5h13M8 12h13M8 19h13"/><path d="M3 5h.01M3 12h.01M3 19h.01"/></svg>
+              <span>Tierlist</span>
+            </button>
+            <button className="share-list-kind-pill" type="button" onClick={() => handleChooseStandaloneType('grid')}>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="8" height="8"/><rect x="13" y="3" width="8" height="8"/><rect x="3" y="13" width="8" height="8"/><rect x="13" y="13" width="8" height="8"/></svg>
+              <span>Cuadrícula</span>
+            </button>
+            <button className="share-list-kind-pill" type="button" onClick={() => handleChooseStandaloneType('ranking')}>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 3 6.2 6.8 1-4.9 4.8 1.2 6.8-6.1-3.2-6.1 3.2L7 14 2.1 9.2l6.8-1L12 2Z"/></svg>
               <span>Ranking</span>
             </button>

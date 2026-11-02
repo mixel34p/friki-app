@@ -27,6 +27,12 @@ const IconEdit = () => (
     </svg>
 );
 
+const IconGroup = () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0M15 15.5a4.5 4.5 0 0 1 5.5 3.5"/>
+    </svg>
+);
+
 // ─── Modal component (reutilizable) ──────────────────────────────────────────
 export function ListsEntryModal({ onClose, onCreateTemplate }) {
     const navigate = useNavigate();
@@ -59,6 +65,11 @@ export function ListsEntryModal({ onClose, onCreateTemplate }) {
         } else {
             navigate('/register');
         }
+    };
+
+    const goCustomGroups = () => {
+        onClose?.();
+        navigate(user ? '/custom-groups' : '/register');
     };
 
     return (
@@ -119,6 +130,17 @@ export function ListsEntryModal({ onClose, onCreateTemplate }) {
                             <span className="le-option-arrow">
                                 <IconArrow />
                             </span>
+                        </button>
+                    </div>
+
+                    <div className="le-option-wrap">
+                        <button className="le-option" onClick={goCustomGroups}>
+                            <div className="le-option-icon"><IconGroup /></div>
+                            <div className="le-option-text">
+                                <div className="le-option-title">Gestionar grupos de elementos</div>
+                                <div className="le-option-desc">Guarda elementos personalizados para reutilizarlos en tus plantillas.</div>
+                            </div>
+                            <span className="le-option-arrow"><IconArrow /></span>
                         </button>
                     </div>
                 </div>

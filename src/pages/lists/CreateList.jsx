@@ -15,6 +15,9 @@ import { searchGames } from '../../lib/gameService';
 import { searchAnime } from '../../lib/animeService';
 import { getDiscoverWorks } from '../../lib/discoverWorksService';
 import { getTierLabelFontSize } from '../../lib/tierLabel';
+import CustomItemGroupsPicker from '../../components/CustomItemGroupsPicker';
+import { ListPostPreview, generateListImage } from './ViewList';
+import { requestGuestListRegistration, saveGuestListDraft } from '../../lib/guestListDraft';
 import TierLabelEditor from './TierLabelEditor';
 import './CreateList.css';
 
@@ -134,6 +137,22 @@ export default function CreateList() {
     // UI states
     const [editingTitle, setEditingTitle] = useState(false);
     const [titleInput, setTitleInput] = useState('');
+    const [guestFinishOpen, setGuestFinishOpen] = useState(false);
+    const [guestDraftKey, setGuestDraftKey] = useState(null);
+    const [guestImageUrl, setGuestImageUrl] = useState('');
+    const [guestImageLoading, setGuestImageLoading] = useState(false);
+    const [guestImageError, setGuestImageError] = useState('');
+    const guestPreviewRef = useRef(null);
+    const guestPreviewContent = listType === 'ranking'
+        ? Array.from({ length: typeConfig.max_items || 3 }, (_, index) => content?.[`r${index}`]?.[0] || null)
+        : listType === 'grid'
+            ? Object.fromEntries((typeConfig.cells || []).map((_, index) => [`c${index}`, content?.[`c${index}`]?.[0] || null]))
+            : content || {};
+    const guestPreviewItems = Array.isArray(guestPreviewContent)
+        ? guestPreviewContent.filter(Boolean)
+        : Object.values(guestPreviewContent).flatMap(value => Array.isArray(value) ? value.filter(Boolean) : value ? [value] : []);
+    const guestPreviewCover = guestPreviewItems.find(item => item.image_url || item.cover_url || item.cover?.url);
+    const guestPreviewList = { title, list_type: listType, type_config: typeConfig, content: guestPreviewContent };
 
     useEffect(() => {
         if (isMobileSearchOpen) {
@@ -149,19 +168,30 @@ export default function CreateList() {
     useEffect(() => {
         if (id) return;
         if (templateId) {
-            if (template && profile && !defaultTitleSet) {
-                setTitle(`${template.title} (${profile.display_name || profile.username || 'Usuario'})`);
+            if (template && !defaultTitleSet) {
+                setTitle(profile
+                    ? `${template.title} (${profile.display_name || profile.username || 'Usuario'})`
+                    : template.title);
                 setDefaultTitleSet(true);
             }
         } else if (fromListId) {
             // Handled when list loads
         } else if (standaloneType === 'ranking') {
-            if (profile && !defaultTitleSet) {
-                setTitle(`Nuevo ranking (${profile.display_name || profile.username || 'Usuario'})`);
+            if (!defaultTitleSet) {
+                setTitle(profile ? `Nuevo ranking (${profile.display_name || profile.username || 'Usuario'})` : 'Nuevo ranking');
+                setDefaultTitleSet(true);
+            }
+        } else if (standaloneType) {
+            if (!defaultTitleSet) {
+                const label = standaloneType === 'grid' ? 'cuadrícula' : 'tierlist';
+                setTitle(profile ? `Nueva ${label} (${profile.display_name || profile.username || 'Usuario'})` : `Nueva ${label}`);
                 setDefaultTitleSet(true);
             }
         } else {
-            navigate('/share?openList=1', { replace: true });
+            if (!defaultTitleSet) {
+                setTitle(profile ? `Nueva tierlist (${profile.display_name || profile.username || 'Usuario'})` : 'Nueva tierlist');
+                setDefaultTitleSet(true);
+            }
         }
     }, [id, templateId, fromListId, standaloneType, template, profile, defaultTitleSet, navigate]);
 
@@ -193,6 +223,25 @@ export default function CreateList() {
             setMediaType('game');
             setTypeConfig(config);
             setContent(Object.fromEntries(Array.from({ length: config.max_items }, (_, index) => [`r${index}`, []])));
+            setPool([]);
+            setDefaultTitleSet(false);
+        } else if (standaloneType && standaloneType !== 'ranking' && !templateId && !fromListId && !id) {
+            const config = JSON.parse(JSON.stringify(DEFAULT_TIER_CONFIG[standaloneType] || DEFAULT_TIER_CONFIG.tierlist));
+            setTemplate(null);
+            setListType(standaloneType);
+            setMediaType('game');
+            setTypeConfig(config);
+            if (standaloneType === 'grid') setContent(Object.fromEntries(config.cells.map((_, index) => [`c${index}`, []])));
+            else setContent(Object.fromEntries(config.tiers.map(tier => [tier.id, []])));
+            setPool([]);
+            setDefaultTitleSet(false);
+        } else if (!templateId && !fromListId && !id) {
+            const config = JSON.parse(JSON.stringify(DEFAULT_TIER_CONFIG.tierlist));
+            setTemplate(null);
+            setListType('tierlist');
+            setMediaType('game');
+            setTypeConfig(config);
+            setContent(Object.fromEntries(config.tiers.map(tier => [tier.id, []])));
             setPool([]);
             setDefaultTitleSet(false);
         } else if (templateId) {
@@ -254,10 +303,8 @@ export default function CreateList() {
                     return true;
                 });
                 setPool(uniquePool);
-                if (profile) {
-                    setTitle(`${data.title} (${profile.display_name || profile.username || 'Usuario'})`);
-                    setDefaultTitleSet(true);
-                }
+                setTitle(profile ? `${data.title} (${profile.display_name || profile.username || 'Usuario'})` : data.title);
+                setDefaultTitleSet(true);
             }).catch(err => setError(err.message));
         } else if (id) {
             getListById(id).then(data => {
@@ -284,6 +331,32 @@ export default function CreateList() {
             }).catch(err => setError(err.message));
         }
     }, [templateId, fromListId, id, profile, standaloneType]);
+
+    useEffect(() => {
+        if (!guestFinishOpen) return undefined;
+        let active = true;
+        let objectUrl = null;
+        setGuestImageLoading(true);
+        setGuestImageError('');
+        setGuestImageUrl('');
+        const preview = guestPreviewRef.current?.querySelector('.vl-post-visual-wrapper');
+        const coverUrl = guestPreviewCover?.image_url || guestPreviewCover?.cover_url || guestPreviewCover?.cover?.url || '';
+        generateListImage(preview, title, 'Invitado', null, '#14b8a6', 'invitado', coverUrl, listType)
+            .then(blob => {
+                if (!active) return;
+                objectUrl = URL.createObjectURL(blob);
+                setGuestImageUrl(objectUrl);
+            })
+            .catch(error => {
+                console.error('No se pudo preparar la imagen de la lista invitada:', error);
+                if (active) setGuestImageError('No se pudo generar la vista previa. Inténtalo de nuevo.');
+            })
+            .finally(() => { if (active) setGuestImageLoading(false); });
+        return () => {
+            active = false;
+            if (objectUrl) URL.revokeObjectURL(objectUrl);
+        };
+    }, [guestFinishOpen]);
 
     // ── Search ──
     useEffect(() => {
@@ -334,6 +407,7 @@ export default function CreateList() {
     const handleAddToPool = useCallback((item) => {
         const itemId = String(item.id);
         const newItem = {
+            ...item,
             id: itemId,
             name: item.name,
             image_url: item.image_url || item.cover_url || item.cover?.url,
@@ -358,6 +432,32 @@ export default function CreateList() {
             return [...prev, newItem];
         });
     }, [listType, template, content, pool, typeConfig.max_items, mediaType, rankingSlotTarget]);
+
+    const handleAddGroup = group => {
+        const items = (group.items || []).map((item, index) => ({
+            ...item,
+            id: `group-${group.id}-${item.id || index}`,
+            name: item.name || item.title || `Elemento ${index + 1}`,
+            image_url: item.image_url || item.cover_url || item.cover_image || '',
+            source_group_id: group.id,
+        }));
+        if (listType === 'ranking' && !template) {
+            setContent(previous => {
+                const next = { ...previous };
+                const openPositions = Array.from({ length: Number(typeConfig.max_items) || 3 }, (_, index) => `r${index}`).filter(position => !(next[position] || []).length);
+                items.slice(0, openPositions.length).forEach((item, index) => { next[openPositions[index]] = [item]; });
+                return next;
+            });
+            return;
+        }
+        setPool(previous => {
+            const existing = new Set([
+                ...previous.map(item => String(item.id)),
+                ...Object.values(content || {}).flatMap(value => (Array.isArray(value) ? value : [value]).filter(Boolean).map(item => String(item.id))),
+            ]);
+            return [...previous, ...items.filter(item => !existing.has(String(item.id)))];
+        });
+    };
 
     const handleModalItemSelect = useCallback((item) => {
         const itemId = String(item.id);
@@ -471,7 +571,59 @@ export default function CreateList() {
         setTypeConfig(previous => ({ ...previous, max_items: next }));
     };
 
-    const isEditableTemplateTierlist = Boolean(!id && template?.id && listType === 'tierlist');
+    const changeStandaloneType = nextType => {
+        const config = JSON.parse(JSON.stringify(DEFAULT_TIER_CONFIG[nextType]));
+        const allItems = [...pool, ...Object.values(content || {}).flatMap(value => Array.isArray(value) ? value.filter(Boolean) : value ? [value] : [])];
+        const seen = new Set();
+        setPool(allItems.filter(item => {
+            const key = item?.id || item?.name;
+            if (!key || seen.has(String(key))) return false;
+            seen.add(String(key));
+            return true;
+        }));
+        setListType(nextType);
+        setTypeConfig(config);
+        if (nextType === 'tierlist') setContent(Object.fromEntries(config.tiers.map(tier => [tier.id, []])));
+        else if (nextType === 'grid') setContent(Object.fromEntries(config.cells.map((_, index) => [`c${index}`, []])));
+        else setContent(Object.fromEntries(Array.from({ length: config.max_items }, (_, index) => [`r${index}`, []])));
+    };
+
+    // The list editor also owns the structure for lists created without a template.
+    // Keep template-backed lists editable while they are being created, and allow
+    // existing standalone lists to retain that flexibility when edited later.
+    const isEditableTemplateTierlist = Boolean(listType === 'tierlist' && (!id || !template?.id));
+    const isEditableStandaloneGrid = Boolean(listType === 'grid' && (!id || !template?.id));
+
+    const updateGridCell = (cellIndex, updates) => {
+        setTypeConfig(previous => ({
+            ...previous,
+            cells: (previous.cells || []).map((cell, index) => index === cellIndex ? { ...cell, ...updates } : cell),
+        }));
+    };
+
+    const addGridCell = () => {
+        const cells = typeConfig.cells || [];
+        const cell = { id: `c_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`, label: `Grid ${cells.length + 1}` };
+        setTypeConfig(previous => ({ ...previous, cells: [...(previous.cells || []), cell] }));
+        setContent(previous => ({ ...previous, [`c${cells.length}`]: [] }));
+    };
+
+    const removeGridCell = removedIndex => {
+        const cells = typeConfig.cells || [];
+        if (cells.length <= 1) return;
+        if (removedIndex < 0 || removedIndex >= cells.length) return;
+        const removedItem = content?.[`c${removedIndex}`]?.[0];
+        if (removedItem) setPool(previous => previous.some(item => item.id === removedItem.id) ? previous : [...previous, removedItem]);
+        setContent(previous => Object.fromEntries(cells.filter((_, index) => index !== removedIndex).map((_, index) => {
+            const oldIndex = index < removedIndex ? index : index + 1;
+            return [`c${index}`, previous[`c${oldIndex}`] || []];
+        })));
+        setTypeConfig(previous => ({ ...previous, cells: (previous.cells || []).filter((_, index) => index !== removedIndex) }));
+    };
+
+    const changeGridColumns = delta => {
+        setTypeConfig(previous => ({ ...previous, columns: Math.max(2, Math.min(6, (Number(previous.columns) || 2) + delta)) }));
+    };
 
     const updateTier = (tierId, updates) => {
         setTypeConfig(previous => ({
@@ -510,6 +662,31 @@ export default function CreateList() {
         setTypeConfig(previous => ({ ...previous, tiers: (previous.tiers || []).filter(tier => tier.id !== tierId) }));
     };
 
+    const handleGuestFinish = payload => {
+        const draftKey = saveGuestListDraft({
+            templateTitle: template?.title || '',
+            baseTitle: title.trim(),
+            editor: { title: title.trim(), listType, mediaType, typeConfig, content, pool, visibility, templateId: template?.id || null },
+            payload,
+        });
+        setGuestDraftKey(draftKey);
+        setGuestFinishOpen(true);
+    };
+
+    const handleGuestRegister = () => {
+        if (!guestDraftKey) return;
+        requestGuestListRegistration(guestDraftKey);
+        navigate(`/register?guestList=${encodeURIComponent(guestDraftKey)}`);
+    };
+
+    const handleGuestImageDownload = () => {
+        if (!guestImageUrl) return;
+        const link = document.createElement('a');
+        link.href = guestImageUrl;
+        link.download = `${(title || 'lista').trim().toLowerCase().replace(/[^a-z0-9]+/gi, '-')}.png`;
+        link.click();
+    };
+
     // ── Save ──────────────────────────────────────────────────────────────────
     const handleSave = async () => {
         if (!title.trim()) { alert('Ponle un título a la lista'); return; }
@@ -541,7 +718,12 @@ export default function CreateList() {
                 template_id: template?.id || null,
                 user_id: user?.id
             };
-            if (!id && (template?.id || listType === 'ranking')) {
+            if (!user) {
+                setSaving(false);
+                handleGuestFinish(payload);
+                return;
+            }
+            if (!id) {
                 const draftKey = publishDraftKey || (typeof crypto !== 'undefined' && crypto.randomUUID
                     ? crypto.randomUUID()
                     : `${Date.now()}-${Math.random().toString(36).slice(2)}`);
@@ -578,7 +760,7 @@ export default function CreateList() {
     if (!content) return (
         <div className="cl-loading">
             <div className="cl-loading-spinner" />
-            <span>Cargando plantilla...</span>
+            <span>Cargando lista...</span>
         </div>
     );
 
@@ -592,12 +774,23 @@ export default function CreateList() {
             ══════════════════════════════════════════ */}
             <header className="cl-header">
                 <div className="cl-header-left">
-                    <Link to="/lists" className="cl-back-btn" title="Volver a listas">
+                    {user ? <Link to="/lists" className="cl-back-btn" title="Volver a listas">
                         <IconBack />
-                    </Link>
+                    </Link> : <button type="button" className="cl-back-btn" title="Volver" onClick={() => navigate(-1)}><IconBack /></button>}
 
                     <div className="cl-title-area">
-                        {editingTitle ? (
+                        {user && !id && !templateId && !fromListId && !publishDraftKey && !standaloneType && (
+                            <select className="cl-list-type-select" value={listType} onChange={event => changeStandaloneType(event.target.value)} aria-label="Tipo de lista">
+                                <option value="tierlist">Tierlist</option>
+                                <option value="grid">Cuadrícula</option>
+                                <option value="ranking">Ranking</option>
+                            </select>
+                        )}
+                        {!user ? (
+                            <span className="cl-title-display cl-guest-title" aria-label="Nombre de la lista">
+                                <span className="cl-title-text">{title || 'Lista sin título'}</span>
+                            </span>
+                        ) : editingTitle ? (
                             <input
                                 className="cl-title-input"
                                 type="text"
@@ -627,10 +820,10 @@ export default function CreateList() {
                         {saving ? (
                             <>
                                 <div className="cl-save-spinner" style={{borderColor: 'rgba(255,255,255,0.2)', borderTopColor: '#fff'}} />
-                                <span>Guardando...</span>
+                                <span>{user ? 'Guardando...' : 'Preparando…'}</span>
                             </>
                         ) : (
-                            <span>{id ? 'Guardar cambios' : template?.id || listType === 'ranking' ? 'Continuar' : 'Publicar'}</span>
+                            <span>{saving ? 'Preparando…' : !user ? 'Terminar' : id ? 'Guardar cambios' : 'Continuar'}</span>
                         )}
                     </button>
                 </div>
@@ -708,19 +901,33 @@ export default function CreateList() {
 
                         {/* GRID */}
                         {isGrid && (
-                            <div 
-                                className="cl-grid-cells"
-                                style={{ gridTemplateColumns: `repeat(${typeConfig.columns || 2}, minmax(0, 1fr))`, maxWidth: `${(typeConfig.columns || 2) * 120}px` }}
-                            >
-                                {typeConfig.cells?.map((cell, i) => (
-                                    <div key={i} className="cl-grid-cell">
-                                        <div className="cl-grid-drop-wrapper">
-                                            <DropZone id={`c${i}`} items={content[`c${i}`] || []} />
+                            <>
+                                {isEditableStandaloneGrid && <div className="cl-grid-structure-controls" aria-label="Ajustes del grid">
+                                    <span>Columnas</span>
+                                    <button type="button" onClick={() => changeGridColumns(-1)} disabled={(typeConfig.columns || 2) <= 2} aria-label="Quitar una columna">−</button>
+                                    <strong>{typeConfig.columns || 2}</strong>
+                                    <button type="button" onClick={() => changeGridColumns(1)} disabled={(typeConfig.columns || 2) >= 6} aria-label="Añadir una columna">+</button>
+                                </div>}
+                                <div
+                                    className="cl-grid-cells"
+                                    style={{ gridTemplateColumns: `repeat(${typeConfig.columns || 2}, minmax(0, 1fr))`, maxWidth: `${(typeConfig.columns || 2) * 120}px` }}
+                                >
+                                    {typeConfig.cells?.map((cell, i) => (
+                                        <div key={cell.id || i} className="cl-grid-cell">
+                                            <div className="cl-grid-drop-wrapper">
+                                                <DropZone id={`c${i}`} items={content[`c${i}`] || []} />
+                                            </div>
+                                            {isEditableStandaloneGrid && <button type="button" className="cl-grid-remove-cell" onClick={() => removeGridCell(i)} disabled={(typeConfig.cells || []).length <= 1} aria-label={`Eliminar ${cell.label || `Grid ${i + 1}`}`} title="Eliminar grid"><IconX /></button>}
+                                            <div className="cl-grid-label">
+                                                {isEditableStandaloneGrid
+                                                    ? <textarea aria-label={`Texto de ${cell.label || `Grid ${i + 1}`}`} value={cell.label || ''} onChange={event => updateGridCell(i, { label: event.target.value })} placeholder="Etiqueta..." rows={2} />
+                                                    : cell.label}
+                                            </div>
                                         </div>
-                                        <div className="cl-grid-label">{cell.label}</div>
-                                    </div>
-                                ))}
-                            </div>
+                                    ))}
+                                    {isEditableStandaloneGrid && <button type="button" className="cl-grid-add-cell" onClick={addGridCell} aria-label="Añadir grid" title="Añadir grid"><IconPlus /></button>}
+                                </div>
+                            </>
                         )}
 
                         {/* POOL */}
@@ -907,6 +1114,8 @@ export default function CreateList() {
                                 {/* Custom tab */}
                                 {activeTab === 'custom' && (
                                     <div className="cl-custom-form">
+                                        <CustomItemGroupsPicker userId={user?.id} onAddGroup={handleAddGroup} />
+                                        <p className="cl-custom-one-by-one-label">O añade un elemento uno a uno</p>
                                         <div className="cl-custom-field">
                                             <label className="cl-custom-label">Título o Nombre</label>
                                             <input
@@ -1074,6 +1283,31 @@ export default function CreateList() {
                     </div>
                 </div>
             )}
+
+            {guestFinishOpen && (
+                <div className="cl-guest-finish-overlay" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setGuestFinishOpen(false); }}>
+                    <section className="cl-guest-finish-dialog" role="dialog" aria-modal="true" aria-labelledby="cl-guest-finish-title">
+                        <button type="button" className="cl-guest-finish-close" onClick={() => setGuestFinishOpen(false)} aria-label="Cerrar">×</button>
+                        <p className="cl-guest-finish-eyebrow">LISTA TERMINADA</p>
+                        <h2 id="cl-guest-finish-title">Tu lista está lista</h2>
+                        <p className="cl-guest-finish-intro">Descárgala ahora o crea una cuenta para publicarla en GeekSphere.</p>
+                        <div className="cl-guest-finish-preview">
+                            {guestImageLoading ? <div className="cl-guest-image-state">Generando imagen…</div>
+                                : guestImageUrl ? <img src={guestImageUrl} alt={`Vista previa de ${title}`} />
+                                    : <div className="cl-guest-image-state">{guestImageError || 'La vista previa aparecerá aquí.'}</div>}
+                        </div>
+                        {guestImageError && <p className="cl-guest-image-error" role="alert">{guestImageError}</p>}
+                        <button type="button" className="cl-guest-download-btn" onClick={handleGuestImageDownload} disabled={!guestImageUrl}>Descargar imagen</button>
+                        <div className="cl-guest-share-heading"><span>COMPÁRTELO</span><i /></div>
+                        <button type="button" className="cl-guest-register-btn" onClick={handleGuestRegister}>
+                            <span className="cl-guest-register-icon"><IconPlus /></span>
+                            <span><strong>Crear cuenta</strong><small>Publica tu lista al terminar el registro</small></span>
+                            <span aria-hidden="true">→</span>
+                        </button>
+                    </section>
+                </div>
+            )}
+            {guestFinishOpen && <div className="cl-guest-render-source" ref={guestPreviewRef} aria-hidden="true"><ListPostPreview list={guestPreviewList} /></div>}
         </div>
     );
 }

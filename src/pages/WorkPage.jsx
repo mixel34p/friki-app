@@ -379,6 +379,7 @@ export default function WorkPage({ mediaType }) {
                     <div>
                         <h3 className="work-section-title">Sinopsis</h3>
                         <p className="work-synopsis">{synopsis}</p>
+                        {mediaType === 'game' && <p className="work-synopsis-source">Datos de <a href="https://www.igdb.com" target="_blank" rel="noreferrer">IGDB</a></p>}
                     </div>
 
                     {/* Recent Reviews Section */}

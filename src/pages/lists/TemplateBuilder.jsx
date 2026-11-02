@@ -11,6 +11,8 @@ import {
 import { searchGames } from '../../lib/gameService';
 import { searchAnime } from '../../lib/animeService';
 import { getTierLabelFontSize } from '../../lib/tierLabel';
+import { useAuth } from '../../context/AuthContext';
+import CustomItemGroupsPicker from '../../components/CustomItemGroupsPicker';
 import TierLabelEditor from './TierLabelEditor';
 import './TemplateBuilder.css';
 
@@ -73,6 +75,7 @@ const IconChevronDown = () => (
 export default function TemplateBuilder() {
     const { id } = useParams();
     const navigate = useNavigate();
+    const { user } = useAuth();
 
     const [template, setTemplate]   = useState(null);
     const [loading, setLoading]     = useState(true);
@@ -235,6 +238,20 @@ export default function TemplateBuilder() {
         if (itemsPool.find(x => String(x.id) === String(item.id))) return;
         setItemsPool(p => [...p, item]);
     };
+    const addGroup = group => {
+        const groupItems = (group.items || []).map((item, index) => ({
+            ...item,
+            id: `group-${group.id}-${item.id || index}`,
+            name: item.name || item.title || `Elemento ${index + 1}`,
+            image_url: item.image_url || item.cover_url || item.cover_image || '',
+            cover_url: item.cover_url || item.image_url || item.cover_image || '',
+            source_group_id: group.id,
+        }));
+        setItemsPool(previous => {
+            const existing = new Set(previous.map(item => String(item.id)));
+            return [...previous, ...groupItems.filter(item => !existing.has(String(item.id)))];
+        });
+    };
     const removeItem = (itemId) => setItemsPool(p => p.filter(x => String(x.id) !== String(itemId)));
 
     const toggleCover = (item) => {
@@ -257,7 +274,7 @@ export default function TemplateBuilder() {
     };
 
     const addGridCell = () => setGridCells(p => [...p, { id: 'c_' + Date.now(), label: `Grid ${p.length + 1}` }]);
-    const removeGridCell = (cid) => setGridCells(p => p.filter(c => c.id !== cid));
+    const removeGridCell = cid => setGridCells(previous => previous.length <= 1 ? previous : previous.filter(cell => cell.id !== cid));
     const updateGridCell = (cid, label) => setGridCells(p => p.map(c => c.id === cid ? { ...c, label } : c));
     const moveTier = (tierId, direction) => setTiers(previous => {
         const currentIndex = previous.findIndex(tier => tier.id === tierId);
@@ -618,23 +635,21 @@ export default function TemplateBuilder() {
                         {/* GRID */}
                         {template.list_type === 'grid' && (
                             <section className="tb-section">
-                                <div className="tb-counter-card">
-                                    <span className="tb-counter-label">Columnas</span>
-                                    <div className="tb-counter-controls">
-                                        <button className="tb-counter-btn" onClick={() => setGridColumns(n => Math.max(2, n - 1))} disabled={gridColumns <= 2}><IconMinus /></button>
-                                        <span className="tb-counter-val">{gridColumns}</span>
-                                        <button className="tb-counter-btn" onClick={() => setGridColumns(n => Math.min(6, n + 1))} disabled={gridColumns >= 6}><IconPlus /></button>
-                                    </div>
+                                <div className="tb-grid-structure-controls" aria-label="Ajustes del grid">
+                                    <span>Columnas</span>
+                                    <button type="button" onClick={() => setGridColumns(n => Math.max(2, n - 1))} disabled={gridColumns <= 2} aria-label="Quitar una columna">−</button>
+                                    <strong>{gridColumns}</strong>
+                                    <button type="button" onClick={() => setGridColumns(n => Math.min(6, n + 1))} disabled={gridColumns >= 6} aria-label="Añadir una columna">+</button>
                                 </div>
 
                                 <div
                                     className="tb-grid-preview"
-                                    style={{ gridTemplateColumns: `repeat(${gridColumns}, minmax(0, 1fr))` }}
+                                    style={{ gridTemplateColumns: `repeat(${gridColumns}, minmax(0, 1fr))`, maxWidth: `${gridColumns * 120}px` }}
                                 >
                                     {gridCells.map(cell => (
                                         <div key={cell.id} className="tb-grid-cell">
                                             <div className="tb-grid-img-ph" />
-                                            <button className="tb-grid-del" onClick={() => removeGridCell(cell.id)}><IconX /></button>
+                                            <button type="button" className="tb-grid-del" onClick={() => removeGridCell(cell.id)} disabled={gridCells.length <= 1} aria-label={`Eliminar ${cell.label || 'grid'}`} title="Eliminar grid"><IconX /></button>
                                             <div className="tb-grid-label-bar">
                                                 <textarea
                                                     className="tb-grid-input"
@@ -646,7 +661,7 @@ export default function TemplateBuilder() {
                                             </div>
                                         </div>
                                     ))}
-                                    <button className="tb-grid-add-cell" onClick={addGridCell}>
+                                    <button type="button" className="tb-grid-add-cell" onClick={addGridCell} aria-label="Añadir grid" title="Añadir grid">
                                         <IconPlus />
                                     </button>
                                 </div>
@@ -843,6 +858,8 @@ export default function TemplateBuilder() {
                             {/* Tab: Personalizado */}
                             {searchTab === 'custom' && (
                                 <div className="tb-custom-form">
+                                    <CustomItemGroupsPicker userId={user?.id} onAddGroup={addGroup} />
+                                    <p className="tb-custom-one-by-one-label">O añade un elemento uno a uno</p>
                                     <div className="tb-custom-field">
                                         <label className="tb-custom-label">Título o Nombre</label>
                                         <input

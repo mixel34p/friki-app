@@ -260,8 +260,9 @@ export default function Landing() {
                         <span>GeekSphere © 2026</span>
                     </div>
                     <div className="footer-links">
-                        <Link to="/">Términos</Link>
-                        <Link to="/">Privacidad</Link>
+                        <Link to="/terms">Términos</Link>
+                        <Link to="/privacy">Privacidad</Link>
+                        <Link to="/community-guidelines">Normas</Link>
                         <Link to="/">Acerca de</Link>
                     </div>
                 </div>

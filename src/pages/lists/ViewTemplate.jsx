@@ -28,7 +28,7 @@ function DotsIcon() {
 export default function ViewTemplate() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const menuRef = useRef(null);
   const [template, setTemplate] = useState(null);
   const [moreItems, setMoreItems] = useState([]);
@@ -70,6 +70,12 @@ export default function ViewTemplate() {
     });
     return () => { cancelled = true; };
   }, [id]);
+
+  useEffect(() => {
+    if (!authLoading && !user && template?.id) {
+      navigate('/lists/new?template=' + encodeURIComponent(template.id), { replace: true });
+    }
+  }, [authLoading, user, template?.id, navigate]);
 
   useEffect(() => {
     if (!menuOpen) return undefined;
@@ -159,8 +165,7 @@ export default function ViewTemplate() {
         <div className="review-post-actions template-detail-actions">
           <span className="template-detail-action-note">{template.uses_count || 0} usos · {listType}</span>
           <span className="review-post-action-spacer" />
-          {user ? <Link to={`/lists/new?template=${template.id}`} className="template-use-button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Usar plantilla</Link>
-            : <Link to="/login" className="template-use-button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Inicia sesión para usarla</Link>}
+          <Link to={'/lists/new?template=' + encodeURIComponent(template.id)} className="template-use-button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{user ? 'Usar plantilla' : 'Hacer la mía'}</Link>
         </div>
       </article>
 

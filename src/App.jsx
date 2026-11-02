@@ -10,6 +10,7 @@ import ForgotPassword from './pages/ForgotPassword'
 import ConfirmEmail from './pages/ConfirmEmail'
 import UpdatePassword from './pages/UpdatePassword'
 import Home from './pages/Home'
+import LegalPage from './pages/LegalPage'
 
 import Profile from './pages/Profile'
 import EditProfile from './pages/EditProfile'
@@ -44,7 +45,8 @@ function getPageTitle(pathname) {
     '/': 'GeekSphere', '/home': 'Inicio', '/activity': 'Actividad', '/spaces': 'Espacios',
     '/search': 'Busca tus aficiones', '/search/results': 'Busca tus aficiones',
     '/connections': 'Conexiones', '/templates': 'Plantillas', '/old-library': 'Biblioteca',
-    '/onboarding': 'Configura tu perfil', '/lists/new': 'Crear lista', '/settings': 'Ajustes', '/share': 'Compartir',
+    '/onboarding': 'Configura tu perfil', '/lists/new': 'Crear lista', '/custom-groups': 'Grupos de elementos', '/settings': 'Ajustes', '/share': 'Compartir',
+    '/terms': 'Términos de uso', '/privacy': 'Política de privacidad', '/community-guidelines': 'Normas de la comunidad',
   }
   if (exact[pathname]) return exact[pathname]
   if (section === 'profile') {
@@ -77,6 +79,7 @@ import ViewTemplate from './pages/lists/ViewTemplate'
 import TemplateBuilder from './pages/lists/TemplateBuilder'
 import CreateList from './pages/lists/CreateList'
 import ViewList from './pages/lists/ViewList'
+import CustomItemGroups from './pages/CustomItemGroups'
 
 // Spaces System imports
 import SpacesExplore from './pages/spaces/SpacesExplore'
@@ -109,6 +112,15 @@ function ProtectedRoute({ children, requireProfile = true }) {
       return <Navigate to="/home" replace />
   }
 
+  return children
+}
+
+function GuestOrProfileRoute({ children }) {
+  const { user, profile, loading } = useAuth()
+  if (loading) {
+    return <div className="flex items-center justify-center" style={{ minHeight: '100vh' }}><LoadingSpinner size="lg" label="Cargando" /></div>
+  }
+  if (user && !profile) return <Navigate to="/onboarding" replace />
   return children
 }
 
@@ -185,11 +197,15 @@ function App() {
           <Route path="/templates/:id/edit" element={<ProtectedRoute><TemplateBuilder /></ProtectedRoute>} />
 
           {/* Editor Routes (No Layout) */}
-          <Route path="/lists/new" element={<ProtectedRoute><CreateList /></ProtectedRoute>} />
+          <Route path="/lists/new" element={<GuestOrProfileRoute><CreateList /></GuestOrProfileRoute>} />
           <Route path="/lists/:id/edit" element={<ProtectedRoute><CreateList /></ProtectedRoute>} />
 
           {/* Protected routes with Layout */}
           <Route element={<Layout />}>
+            <Route path="/terms" element={<LegalPage />} />
+            <Route path="/privacy" element={<LegalPage />} />
+            <Route path="/community-guidelines" element={<LegalPage />} />
+            <Route path="/credits" element={<LegalPage />} />
             <Route path="/onboarding" element={<ProtectedRoute requireProfile={false}><Onboarding /></ProtectedRoute>} />
             <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
             <Route path="/register" element={<PublicOnlyRoute><Register /></PublicOnlyRoute>} />
@@ -197,6 +213,7 @@ function App() {
             <Route path="/confirm-email" element={<ConfirmEmail />} />
             <Route path="/update-password" element={<UpdatePassword />} />
             <Route path="/home" element={<Home />} />
+            <Route path="/custom-groups" element={<ProtectedRoute><CustomItemGroups /></ProtectedRoute>} />
             <Route path="/share" element={<ProtectedRoute><SharePage /></ProtectedRoute>} />
             <Route path="/posts/:postId" element={<PostDetail />} />
             <Route path="/activity" element={<ProtectedRoute><ActivityPage /></ProtectedRoute>} />

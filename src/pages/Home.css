@@ -605,6 +605,18 @@
 .home-summary-daily-rating.is-unrated svg { fill: var(--text-muted); stroke: var(--text-muted); }
 .home-summary-empty { margin: 0; color: var(--text-muted); font-size: .75rem; line-height: 1.5; }
 .home-summary-loading { display: grid; min-height: 150px; place-items: center; }
+.home-active-spaces { margin-top: 19px; padding-top: 16px; border-top: 1px solid var(--border-subtle); }
+.home-active-spaces-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 13px; }
+.home-active-spaces-header h2 { margin: 0; color: var(--text-muted); font-size: .67rem; font-weight: 800; letter-spacing: .075em; text-transform: uppercase; }
+.home-active-spaces-header > a { color: var(--brand-primary); font-size: .75rem; font-weight: 700; text-decoration: none; }
+.home-active-spaces-header > a:hover { color: var(--text-primary); }
+.home-active-spaces-header > a span { margin-left: 3px; }
+.home-active-space { display: flex; min-width: 0; align-items: center; gap: 11px; padding: 7px 0; color: inherit; text-decoration: none; }
+.home-active-space-avatar { display: grid; width: 43px; height: 43px; flex: 0 0 43px; place-items: center; overflow: hidden; border: 1px solid color-mix(in srgb,var(--space-accent) 42%,var(--border-subtle)); border-radius: 13px; color: var(--space-accent); background: color-mix(in srgb,var(--space-accent) 11%,var(--bg-tertiary)); font-size: .9rem; font-weight: 800; }
+.home-active-space-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.home-active-space-copy { display: grid; min-width: 0; gap: 3px; }
+.home-active-space-copy strong { overflow: hidden; color: var(--text-primary); font-size: .86rem; font-weight: 750; line-height: 1.3; text-overflow: ellipsis; white-space: nowrap; }
+.home-active-space-copy small { color: var(--text-muted); font-size: .72rem; line-height: 1.3; }
 .home-mobile-daily { display: none; }
 @media(max-width:760px) {
   .main:has(.home-feed-layout) { padding-top: 58px; }
@@ -627,3 +639,17 @@
 @media(max-width:1050px) { .home-feed-layout { grid-template-columns: minmax(0,1fr) minmax(245px,.75fr); gap: 22px; } }
 @media(max-width:900px) and (min-width:861px) { .home-feed-layout { grid-template-columns: minmax(0,1fr) minmax(220px,.7fr); gap: 18px; } }
 @media(max-width:860px) { .home-feed-layout { display: flex; flex-direction: column; gap: 26px; } .home-feed-layout .home-feed-page { max-width: 560px; } .home-daily-summary { display: none; } }
+
+/* Minimal guest creation links, aligned with the daily-summary heading. */
+.home-guest-create-actions { display: grid; gap: 0; margin: 0 0 1.25rem; }
+.home-guest-create-actions .home-daily-header { padding-top: 7px; }
+.home-guest-create-actions > a { display: grid; grid-template-columns: 24px minmax(0,1fr) 18px; align-items: center; gap: 10px; padding: .62rem .15rem; border-bottom: 1px solid var(--border-subtle); color: var(--text-primary); text-decoration: none; transition: color .16s ease, background .16s ease; }
+.home-guest-create-actions > a:first-of-type { border-top: 1px solid var(--border-subtle); }
+.home-guest-create-actions > a:hover { color: var(--brand-primary); background: color-mix(in srgb, var(--brand-primary) 4%, transparent); }
+.home-guest-create-actions > a:focus-visible { outline: 2px solid var(--brand-primary); outline-offset: 2px; }
+.home-guest-create-actions .home-guest-create-icon { color: var(--brand-primary); font-size: 1rem; line-height: 1; text-align: center; }
+.home-guest-create-actions > a > strong { font-size: .76rem; font-weight: 680; }
+.home-guest-create-actions > a > b { justify-self: end; color: var(--text-muted); font-size: .95rem; font-weight: 450; transition: transform .16s ease, color .16s ease; }
+.home-guest-create-actions > a:hover > b { transform: translateX(3px); color: var(--brand-primary); }
+.home-guest-create-actions.is-mobile { display: none; }
+@media(max-width:860px) { .home-guest-create-actions.is-desktop { display: none; } .home-guest-create-actions.is-mobile { display: grid; width: 100%; max-width: 560px; margin: 0 auto 1rem; } }

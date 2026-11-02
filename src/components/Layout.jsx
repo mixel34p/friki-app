@@ -74,8 +74,6 @@ function MoreMenu({ profile, image, username, accentColor, onSignOut, accounts =
       <Link className="more-menu-link" to="/settings">Ajustes</Link>
       <button className="more-menu-link" type="button" aria-disabled="true">Guardados</button>
       <button className="more-menu-link" type="button" aria-disabled="true">Invitar</button>
-      <button className="more-menu-link" type="button" aria-disabled="true">Términos</button>
-      <button className="more-menu-link" type="button" aria-disabled="true">Normas</button>
       <a className="more-menu-link more-menu-support" href="https://ko-fi.com/mixel34" target="_blank" rel="noopener noreferrer" aria-label="Apoyar en Ko-fi (se abre en una pestaña nueva)">
         <SiKofi className="more-menu-kofi-icon" aria-hidden="true" />
         <span>Apoyar</span>
@@ -83,7 +81,12 @@ function MoreMenu({ profile, image, username, accentColor, onSignOut, accounts =
       </a>
     </nav>
     <div className="more-menu-divider" />
-    <button className="more-menu-signout" type="button" onClick={onSignOut}>Cerrar sesión <Icon name="logout"/></button>
+    <nav className="more-menu-legal-links" aria-label="Información legal">
+      <Link to="/privacy">Privacidad</Link>
+      <Link to="/terms">Términos</Link>
+      <Link to="/community-guidelines">Normas de la comunidad</Link>
+      <Link to="/credits">Créditos</Link>
+    </nav>
   </>
 }
 
@@ -199,6 +202,9 @@ export default function Layout() {
               <Link className={`sidebar-link ${active('/search') ? 'active current-page' : ''}`} to="/search" aria-current={active('/search') ? 'page' : undefined}><Icon name="search"/><span>Buscar</span></Link>
               <Link className={`sidebar-link ${isAuthEntry ? 'active current-page' : ''}`} to="/register" aria-current={isAuthEntry ? 'page' : undefined}><Icon name="user"/><span>Únete</span></Link>
             </nav>
+            <nav className="guest-legal-links" aria-label="Información legal">
+              <Link to="/terms">Términos</Link><Link to="/privacy">Privacidad</Link><Link to="/community-guidelines">Normas</Link>
+            </nav>
           </>
         ) : <>
         <nav className="sidebar-nav">
@@ -261,7 +267,7 @@ export default function Layout() {
         </>}
       </nav>
 
-      <main className={`main ${location.pathname === '/onboarding' ? 'onboarding-main' : ''} ${isProfilePage ? 'profile-main' : ''} ${isWorkPage ? 'work-main' : ''} ${location.pathname.startsWith('/discover/anime') || location.pathname.startsWith('/discover/games') ? 'discover-works-main' : ''} ${location.pathname === '/discover/spaces' || location.pathname === '/spaces/explore' ? 'spaces-explore-main' : ''} ${location.pathname === '/spaces' ? 'my-spaces-main' : ''} ${/^\/reviews\/[^/]+/.test(location.pathname) ? 'review-detail-main' : ''} ${/^\/posts\/[^/]+$/.test(location.pathname) ? 'post-detail-main' : ''} ${/^\/lists\/[^/]+$/.test(location.pathname) ? 'list-detail-main' : ''} ${location.pathname === '/share' ? 'share-main' : ''}`}><Outlet /></main>
+      <main className={`main ${['/terms', '/privacy', '/community-guidelines'].includes(location.pathname) ? 'legal-main' : ''} ${location.pathname === '/onboarding' ? 'onboarding-main' : ''} ${isProfilePage ? 'profile-main' : ''} ${isWorkPage ? 'work-main' : ''} ${location.pathname.startsWith('/discover/anime') || location.pathname.startsWith('/discover/games') ? 'discover-works-main' : ''} ${location.pathname === '/discover/spaces' || location.pathname === '/spaces/explore' ? 'spaces-explore-main' : ''} ${location.pathname === '/spaces' ? 'my-spaces-main' : ''} ${/^\/reviews\/[^/]+/.test(location.pathname) ? 'review-detail-main' : ''} ${/^\/posts\/[^/]+$/.test(location.pathname) ? 'post-detail-main' : ''} ${/^\/lists\/[^/]+$/.test(location.pathname) ? 'list-detail-main' : ''} ${location.pathname === '/share' ? 'share-main' : ''}`}><Outlet /></main>
 
       {listsOpen && <ListsEntryModal onClose={() => setListsOpen(false)} />}
       {moreOpen && isDesktop && createPortal(
