@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { getAccentTextColor } from '../lib/colorContrast'
+import { PROFILE_FONT_OPTIONS, getProfileFontStack, normalizeProfileFont } from '../lib/profileFonts'
 import { hasCustomAvatar } from '../lib/avatar'
 import { searchGames } from '../lib/gameService'
 import { getBlockedUsers, unblockUser } from '../lib/socialDiscoveryService'
@@ -208,6 +209,85 @@ const SECTION_TABS = [
     { id: 'blocked',   label: 'Bloqueados',icon: <IconShield /> }
 ]
 
+function ProfileFontChoice({ nameFont, bioFont, onApply, onPreview, id }) {
+    const [isOpen, setIsOpen] = useState(false)
+    const [showScope, setShowScope] = useState(() => normalizeProfileFont(nameFont) !== 'display')
+    const [chosenFont, setChosenFont] = useState(() => normalizeProfileFont(nameFont))
+    const rootRef = useRef(null)
+    const selected = PROFILE_FONT_OPTIONS.find(option => option.value === normalizeProfileFont(chosenFont)) || PROFILE_FONT_OPTIONS[0]
+
+    useEffect(() => {
+        if (!isOpen) return undefined
+        const closeOnOutside = event => {
+            if (!rootRef.current?.contains(event.target)) setIsOpen(false)
+        }
+        const closeOnEscape = event => {
+            if (event.key === 'Escape') setIsOpen(false)
+        }
+        document.addEventListener('pointerdown', closeOnOutside)
+        document.addEventListener('keydown', closeOnEscape)
+        return () => {
+            document.removeEventListener('pointerdown', closeOnOutside)
+            document.removeEventListener('keydown', closeOnEscape)
+        }
+    }, [isOpen])
+
+    useEffect(() => {
+        const normalizedFont = normalizeProfileFont(nameFont)
+        setChosenFont(normalizedFont)
+        setShowScope(normalizedFont !== 'display')
+    }, [nameFont])
+
+    return <div className={`ep-font-picker${isOpen ? ' is-open' : ''}`} ref={rootRef}>
+        <span className="ep-font-picker-label">Fuente</span>
+        <button
+            id={id}
+            className="ep-font-pill"
+            type="button"
+            aria-haspopup="listbox"
+            aria-expanded={isOpen}
+            aria-controls={`${id}-menu`}
+            onClick={() => setIsOpen(open => !open)}
+        >
+            <span style={{ fontFamily: selected.stack }}>{selected.label}</span>
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7.5 5 5 5-5" /></svg>
+        </button>
+        {isOpen && <div className="ep-font-menu" id={`${id}-menu`} role="listbox" aria-label="Fuentes disponibles">
+            {PROFILE_FONT_OPTIONS.map(option => <button
+                key={option.value}
+                className={`ep-font-menu-option${chosenFont === option.value ? ' selected' : ''}`}
+                type="button"
+                role="option"
+                aria-selected={chosenFont === option.value}
+                onClick={() => {
+                    setChosenFont(option.value)
+                    setIsOpen(false)
+                    if (option.value === 'display') {
+                        setShowScope(false)
+                        onApply(option.value, 'default')
+                    } else {
+                        setShowScope(true)
+                        // La fuente elegida se aplica ya al nombre; la segunda píldora
+                        // permite extenderla a la bio sin dejar una selección pendiente.
+                        onApply(option.value, 'name')
+                    }
+                }}
+            >
+                <span style={{ fontFamily: option.stack }}>{option.label}</span>
+                {chosenFont === option.value && <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m4 10 4 4 8-8" /></svg>}
+            </button>)}
+        </div>}
+        {showScope && <div className="ep-font-scope" aria-label="Aplicar fuente a">
+            <button className={bioFont !== 'inherit' ? 'active' : ''} type="button" onClick={() => onApply(chosenFont, 'name')}>Nombre</button>
+            <button className={bioFont === 'inherit' ? 'active' : ''} type="button" onClick={() => onApply(chosenFont, 'both')}>Nombre y bio</button>
+        </div>}
+    </div>
+}
+
+function ProfileFontControls({ nameFont, bioFont, onApply, onPreview, idPrefix }) {
+    return <ProfileFontChoice nameFont={nameFont} bioFont={bioFont} onApply={onApply} onPreview={onPreview} id={`${idPrefix}-font`} />
+}
+
 /* ──────────────────────────────────────
    Component
    ────────────────────────────────────── */
@@ -235,8 +315,11 @@ export default function EditProfile({ onClose, standalone = false }) {
         favorite_animes: profile?.favorite_animes || [],
         social_links:    profile?.social_links    || {},
         theme_color:     profile?.theme_color     || '#14b8a6',
+        name_font:       normalizeProfileFont(profile?.name_font),
+        bio_font:        profile?.bio_font        || 'sans',
         featured_badge:  profile?.featured_badge  || null
     })
+    const [fontPreview, setFontPreview] = useState(null)
     const savedFormDataRef = useRef(JSON.stringify(formData))
     const savedAvatarPreviewRef = useRef(hasCustomAvatar(profile?.avatar_url) ? profile.avatar_url : null)
     const savedBannerPreviewRef = useRef(profile?.banner_url || null)
@@ -396,6 +479,28 @@ export default function EditProfile({ onClose, standalone = false }) {
     /* ── Handlers ── */
     const handleChange = (field, value) =>
         setFormData(prev => ({ ...prev, [field]: field === 'bio' ? value.slice(0, 100) : value }))
+
+    const previewProfileFont = font => {
+        setFontPreview({
+            name_font: font,
+            bio_font: formData.bio_font === 'inherit' ? formData.name_font || 'display' : formData.bio_font || 'sans'
+        })
+    }
+
+    const applyProfileFont = (font, scope) => {
+        if (scope === 'default') {
+            handleChange('name_font', 'display')
+            handleChange('bio_font', 'sans')
+            setFontPreview({ name_font: 'display', bio_font: 'sans' })
+            return
+        }
+        handleChange('name_font', font)
+        handleChange('bio_font', scope === 'both' ? 'inherit' : 'sans')
+        setFontPreview({
+            name_font: font,
+            bio_font: scope === 'both' ? 'inherit' : 'sans'
+        })
+    }
 
     const handleUsernameChange = async (value) => {
         const clean = value.toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 20)
@@ -560,8 +665,15 @@ export default function EditProfile({ onClose, standalone = false }) {
                 let url = await uploadImage(bannerFile, 'avatars', `banners/${user.id}.${uniqueSuffix}.${ext}`, { upsert: false })
                 bannerUrl = `${url}?t=${Date.now()}`
             }
-            await updateProfile({ ...formData, avatar_url: avatarUrl, banner_url: bannerUrl })
-            savedFormDataRef.current = JSON.stringify(formData)
+            const savedProfile = await updateProfile({ ...formData, avatar_url: avatarUrl, banner_url: bannerUrl })
+            const savedData = {
+                ...formData,
+                name_font: normalizeProfileFont(savedProfile?.name_font || formData.name_font),
+                bio_font: savedProfile?.bio_font || formData.bio_font
+            }
+            setFormData(savedData)
+            setFontPreview({ name_font: savedData.name_font, bio_font: savedData.bio_font })
+            savedFormDataRef.current = JSON.stringify(savedData)
             savedAvatarPreviewRef.current = avatarUrl || null
             savedBannerPreviewRef.current = bannerUrl || null
             setAvatarFile(null)
@@ -659,7 +771,7 @@ export default function EditProfile({ onClose, standalone = false }) {
             '--profile-accent-text': getAccentTextColor(formData.theme_color || '#14b8a6')
         }}>
             <div className="ep-overlay ep-settings-overlay">
-                <div className={`ep-modal ep-settings-shell${activeSection === 'photos' ? '' : ' ep-settings-shell-no-preview'}`}>
+                <div className="ep-modal ep-settings-shell">
                     <h1 className="ep-settings-page-title">Ajustes</h1>
                     <aside className="ep-settings-nav">
                         <span className="ep-settings-nav-label">PERFIL</span>
@@ -736,6 +848,11 @@ export default function EditProfile({ onClose, standalone = false }) {
                                             </div>
                                         </div>
                                     </details>
+                                </div>
+
+                                <div className="ep-settings-row">
+                                    <label>Personaliza el nombre y la bio</label>
+                                    <ProfileFontControls nameFont={formData.name_font} bioFont={formData.bio_font} onApply={applyProfileFont} onPreview={previewProfileFont} idPrefix="settings" />
                                 </div>
 
                                 <div className="ep-settings-row">
@@ -867,9 +984,9 @@ export default function EditProfile({ onClose, standalone = false }) {
                             <div className="ep-settings-preview-banner">{bannerPreview && <img src={bannerPreview} alt="" />}</div>
                             <div className="ep-settings-preview-content">
                                 <div className="ep-settings-preview-avatar">{avatarPreview ? <img src={avatarPreview} alt="" /> : <DefaultAvatar accent={formData.theme_color} />}</div>
-                                <div className="ep-settings-preview-name-row"><strong>{formData.display_name || 'Tu nombre'}</strong>{formData.pronouns && <span className="ep-settings-preview-pronouns">{formData.pronouns}</span>}</div>
+                                <div className="ep-settings-preview-name-row"><strong style={{ fontFamily: getProfileFontStack(fontPreview?.name_font || formData.name_font) }}>{formData.display_name || 'Tu nombre'}</strong>{formData.pronouns && <span className="ep-settings-preview-pronouns">{formData.pronouns}</span>}</div>
                                 <div className="ep-settings-preview-identity-row"><span className="ep-settings-preview-username">@{formData.username || 'usuario'}</span>{formData.featured_badge && BADGES_MAP[formData.featured_badge] && <span className="ep-settings-preview-badge" style={{ '--badge-accent': BADGES_MAP[formData.featured_badge].color }} aria-label={BADGES_MAP[formData.featured_badge].title} title={BADGES_MAP[formData.featured_badge].title}>{BADGES_MAP[formData.featured_badge].icon}</span>}</div>
-                                <p>{formData.bio || 'Tu biografía aparecerá aquí.'}</p>
+                                <p style={{ fontFamily: (fontPreview?.bio_font || formData.bio_font) === 'inherit' ? getProfileFontStack(fontPreview?.name_font || formData.name_font) : getProfileFontStack(fontPreview?.bio_font || formData.bio_font) }}>{formData.bio || 'Tu biografía aparecerá aquí.'}</p>
                                 {formData.profile_song && typeof formData.profile_song === 'object' && <div className="ep-settings-preview-song"><img src={formData.profile_song.cover} alt="" /><span><strong>{formData.profile_song.name}</strong><small>{formData.profile_song.artist}</small></span></div>}
                             </div>
                         </article>
@@ -1058,6 +1175,7 @@ export default function EditProfile({ onClose, standalone = false }) {
                                             value={formData.display_name}
                                             onChange={e => handleChange('display_name', e.target.value)}
                                             maxLength={30}
+                                            style={{ fontFamily: getProfileFontStack(formData.name_font) }}
                                         />
                                     </div>
                                 </div>
@@ -1104,6 +1222,7 @@ export default function EditProfile({ onClose, standalone = false }) {
                                     <textarea
                                         ref={textareaRef}
                                         className="ep-input ep-textarea"
+                                        style={{ fontFamily: formData.bio_font === 'inherit' ? getProfileFontStack(formData.name_font) : getProfileFontStack(formData.bio_font) }}
                                         value={formData.bio}
                                         onChange={e => handleChange('bio', e.target.value)}
                                         placeholder="Cuéntanos sobre ti..."
@@ -1111,6 +1230,11 @@ export default function EditProfile({ onClose, standalone = false }) {
                                         rows={6}
                                     />
                                     <span className="ep-char-count">{formData.bio.length}/100</span>
+                                </div>
+
+                                <div className="ep-field">
+                                    <label className="ep-label">Personaliza el nombre y la bio</label>
+                                    <ProfileFontControls nameFont={formData.name_font} bioFont={formData.bio_font} onApply={applyProfileFont} onPreview={previewProfileFont} idPrefix="profile" />
                                 </div>
 
                                 <div className="ep-field">
@@ -1395,20 +1519,6 @@ export default function EditProfile({ onClose, standalone = false }) {
                 </form>
                 </div>
 
-                {standalone && <aside className="ep-settings-preview-column">
-                    <span className="ep-settings-nav-label">PERFIL</span>
-                    <article className="ep-settings-profile-preview" style={{ '--preview-accent': formData.theme_color || '#14b8a6' }}>
-                        <div className="ep-settings-preview-banner">{bannerPreview && <img src={bannerPreview} alt="" />}</div>
-                        <div className="ep-settings-preview-content">
-                            <div className="ep-settings-preview-avatar">{avatarPreview ? <img src={avatarPreview} alt="" /> : <DefaultAvatar accent={formData.theme_color} />}</div>
-                            <div className="ep-settings-preview-name-row"><strong>{formData.display_name || 'Tu nombre'}</strong>{formData.pronouns && <span className="ep-settings-preview-pronouns">{formData.pronouns}</span>}</div>
-                            <div className="ep-settings-preview-identity-row"><span className="ep-settings-preview-username">@{formData.username || 'usuario'}</span>{formData.featured_badge && BADGES_MAP[formData.featured_badge] && <span className="ep-settings-preview-badge" style={{ '--badge-accent': BADGES_MAP[formData.featured_badge].color }} aria-label={BADGES_MAP[formData.featured_badge].title} title={BADGES_MAP[formData.featured_badge].title}>{BADGES_MAP[formData.featured_badge].icon}</span>}</div>
-                            <p>{formData.bio || 'Tu biografía aparecerá aquí.'}</p>
-                            {formData.profile_song && typeof formData.profile_song === 'object' && <div className="ep-settings-preview-song"><img src={formData.profile_song.cover} alt="" /><span><strong>{formData.profile_song.name}</strong><small>{formData.profile_song.artist}</small></span></div>}
-                        </div>
-                    </article>
-                    <p className={`ep-settings-preview-hint${hasUnsavedChanges ? ' ep-settings-preview-hint--dirty' : ''}`}>{hasUnsavedChanges ? 'Tienes cambios sin guardar.' : 'No te olvides de guardar los cambios.'}</p>
-                </aside>}
         </div>
 
         {cropModal.isOpen && (
@@ -1449,6 +1559,7 @@ export default function EditProfile({ onClose, standalone = false }) {
                             </div>
                         )}
                     </div>
+
                 </div>
             </div>
         )}

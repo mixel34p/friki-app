@@ -7,6 +7,7 @@ import DefaultAvatar from '../components/DefaultAvatar'
 import { hasCustomAvatar } from '../lib/avatar'
 import { supabase } from '../lib/supabase'
 import { getAccentTextColor, getProfilePalette, getVisibleAccentColor } from '../lib/colorContrast'
+import { getProfileFontStack, getProfileTypography } from '../lib/profileFonts'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useToast } from '../components/Toast'
@@ -562,7 +563,7 @@ export default function Profile() {
         }
 
     return (
-        <div className={`profile-page${profile.theme_color || profile.banner_color || bannerColors ? ' profile-themed' : ''}`} style={profileColors}>
+        <div className={`profile-page${profile.theme_color || profile.banner_color || bannerColors ? ' profile-themed' : ''}`} style={{ ...profileColors, ...getProfileTypography(profile.name_font, profile.bio_font) }}>
             <SEO title={`${profile.display_name || profile.username} (@${profile.username})`} description={`Perfil de ${profile.display_name || profile.username} en GeekSphere.`} />
 
             {/* Mobile Topbar */}
@@ -580,7 +581,7 @@ export default function Profile() {
                         ) : (
                             <DefaultAvatar className="profile-mobile-mini-avatar profile-mobile-mini-avatar-placeholder" accent={profile.theme_color} />
                         )}
-                        <span className="profile-mobile-name">{profile.display_name}</span>
+                        <span className="profile-mobile-name" style={{ fontFamily: getProfileFontStack(profile.name_font) }}>{profile.display_name}</span>
                     </div>
                     {!isOwnProfile && (
                         <button
@@ -627,7 +628,7 @@ export default function Profile() {
                         <div className={`profile-identity ${profile.location ? 'has-location' : 'no-location'}`}>
                             
                         <div className="profile-name-row" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                            <h1 className="profile-display-name" style={{ margin: 0 }}>{profile.display_name}</h1>
+                            <h1 className="profile-display-name" style={{ margin: 0, fontFamily: getProfileFontStack(profile.name_font) }}>{profile.display_name}</h1>
                             {profile.featured_badge && BADGES_MAP[profile.featured_badge] && (
                                 <button
                                     type="button"
@@ -676,7 +677,7 @@ export default function Profile() {
                         )}
 
                         {profile.bio && (
-                            <div className="profile-bio markdown-content">
+                            <div className="profile-bio markdown-content" style={{ fontFamily: profile.bio_font === 'inherit' ? getProfileFontStack(profile.name_font) : getProfileFontStack(profile.bio_font, 'sans') }}>
                                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{profile.bio}</ReactMarkdown>
                             </div>
                         )}

@@ -1400,6 +1400,28 @@ img.square-cover { height: auto !important; aspect-ratio: 1/1 !important; }
 .ep-settings-bio-mode button { padding: 5px 9px; border: 0; border-radius: 999px; color: var(--text-muted); background: transparent; font: 600 .68rem var(--font-sans); cursor: pointer; }
 .ep-settings-bio-mode button.active { color: var(--text-primary); background: rgba(255,255,255,.08); }
 .ep-settings-bio-preview { min-height: 90px; padding: 13px 15px; border: 1px solid rgba(255,255,255,.1); border-radius: 15px; color: var(--text-secondary); background: #101112; font-size: .85rem; }
+.ep-font-picker { position: relative; z-index: 0; display: grid; justify-items: start; gap: 8px; min-width: 0; }
+.ep-font-picker.is-open { z-index: 30; }
+.ep-font-picker-label { padding-left: 2px; color: var(--text-muted); font-size: .69rem; font-weight: 750; letter-spacing: .075em; text-transform: uppercase; }
+.ep-font-pill { display: flex; width: min(100%, 320px); min-height: 46px; align-items: center; justify-content: space-between; gap: 12px; padding: 0 15px; border: 1px solid rgba(255,255,255,.13); border-radius: 999px; color: var(--text-primary); background: #101112; box-shadow: none; font: 600 .86rem/1 var(--font-sans); text-align: left; cursor: pointer; transition: border-color .16s ease, background .16s ease, box-shadow .16s ease; }
+.ep-font-pill:hover { border-color: color-mix(in srgb, var(--brand-primary) 52%, rgba(255,255,255,.13)); background: #141618; }
+.ep-font-pill:focus-visible { outline: 2px solid color-mix(in srgb, var(--brand-primary) 82%, white); outline-offset: 2px; }
+.ep-font-pill > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ep-font-pill > svg { width: 16px; height: 16px; flex: 0 0 16px; fill: none; stroke: #a5a9b0; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; transition: transform .16s ease, stroke .16s ease; }
+.ep-font-picker.is-open .ep-font-pill { border-color: color-mix(in srgb, var(--brand-primary) 58%, rgba(255,255,255,.16)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-primary) 10%, transparent); }
+.ep-font-picker.is-open .ep-font-pill > svg { transform: rotate(180deg); stroke: var(--brand-primary); }
+.ep-font-menu { position: absolute; z-index: 45; top: 74px; left: 0; display: grid; width: min(100%, 320px); max-height: min(320px, 48vh); gap: 2px; overflow-y: auto; padding: 5px; border: 1px solid rgba(255,255,255,.1); border-radius: 15px; background: #101112; box-shadow: 0 14px 32px rgba(0,0,0,.42); scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.18) transparent; animation: ep-font-menu-in .14s ease-out both; }
+.ep-font-menu-option { display: flex; width: 100%; min-height: 40px; align-items: center; justify-content: space-between; gap: 12px; padding: 0 12px; border: 1px solid transparent; border-radius: 11px; color: var(--text-secondary); background: transparent; font: 550 .82rem/1 var(--font-sans); text-align: left; cursor: pointer; transition: color .14s ease, background .14s ease, border-color .14s ease; }
+.ep-font-menu-option:hover, .ep-font-menu-option:focus-visible { outline: none; border-color: rgba(255,255,255,.06); color: var(--text-primary); background: rgba(255,255,255,.055); }
+.ep-font-menu-option.selected { border-color: color-mix(in srgb, var(--brand-primary) 20%, transparent); color: var(--text-primary); background: color-mix(in srgb, var(--brand-primary) 9%, #101112); }
+.ep-font-menu-option > svg { width: 16px; height: 16px; flex: 0 0 16px; fill: none; stroke: var(--brand-primary); stroke-linecap: round; stroke-linejoin: round; stroke-width: 2; }
+.ep-font-scope { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 2px; }
+.ep-font-scope > button { min-height: 32px; padding: 0 12px; border: 1px solid rgba(255,255,255,.1); border-radius: 999px; color: var(--text-secondary); background: #101112; font: 600 .72rem/1 var(--font-sans); cursor: pointer; transition: color .14s ease, background .14s ease, border-color .14s ease; }
+.ep-font-scope > button:hover { border-color: rgba(255,255,255,.18); color: var(--text-primary); background: #17191b; }
+.ep-font-scope > button.active { border-color: color-mix(in srgb, var(--brand-primary) 32%, transparent); color: var(--text-primary); background: color-mix(in srgb, var(--brand-primary) 13%, #101112); }
+@keyframes ep-font-menu-in { from { opacity: 0; transform: translateY(-4px) scale(.99); } to { opacity: 1; transform: translateY(0) scale(1); } }
+.ep-settings-preview-name-row strong { font-family: var(--font-display); }
+@media (max-width: 540px) { .ep-font-pill, .ep-font-menu { width: 100%; } .ep-font-menu { top: 74px; } }
 .ep-settings-card-kicker { margin: 9px 3px -6px; color: #858891; font-size: .68rem; font-weight: 800; letter-spacing: .1em; }
 .ep-settings-banner { position: relative; display: flex; width: 100%; min-height: 112px; align-items: center; justify-content: center; overflow: hidden; padding: 12px; border: 1px solid rgba(255,255,255,.12); border-radius: 15px; color: var(--text-muted); background: #101112; font: 500 .8rem var(--font-sans); cursor: pointer; }
 .ep-settings-banner > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
@@ -1482,13 +1504,11 @@ img.square-cover { height: auto !important; aspect-ratio: 1/1 !important; }
     -webkit-line-clamp: 2;
 }
 .ep-settings-preview-name-row > strong {
-    display: -webkit-box;
+    display: block;
     max-width: 100%;
-    overflow: hidden;
     overflow-wrap: anywhere;
-    line-height: 1.16;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
+    line-height: 1.4;
+    padding-block: 2px 4px;
 }
 
 @media (max-width: 760px) {
@@ -1499,4 +1519,3 @@ img.square-cover { height: auto !important; aspect-ratio: 1/1 !important; }
     .ep-settings-links-intro { padding-right: 16px; padding-left: 16px; }
     .ep-settings-social-row { padding-right: 16px; padding-left: 16px; }
 }
-\n
