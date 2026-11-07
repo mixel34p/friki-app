@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import SEO from '../components/SEO'
 import AuthProviderButtons from '../components/AuthProviderButtons'
+import { invitationFromSearch, readInvitation, rememberInvitation, setInvitationFollow } from '../lib/invitations'
 import './Auth.css'
 
 const STEPS = ['Perfil', 'Correo', 'Seguridad']
@@ -19,6 +20,10 @@ export default function Register() {
     const { signUp, signInWithProvider, rememberCurrentAccount } = useAuth()
     const location = useLocation()
     const navigate = useNavigate()
+    const [invitation, setInvitation] = useState(() => {
+        const incoming = invitationFromSearch(location.search)
+        return readInvitation() || (incoming ? rememberInvitation(incoming) : null)
+    })
     const addAccount = new URLSearchParams(location.search).get('addAccount') === '1'
 
     useEffect(() => {
@@ -49,7 +54,7 @@ export default function Register() {
         sessionStorage.setItem('geeksphere.pending-signup-email', email.trim().toLowerCase())
         if (addAccount) sessionStorage.setItem('geeksphere.add-account-pending', '1')
         try {
-            const result = await signUp(email, password, username)
+            const result = await signUp(email, password, username, invitation)
             if (addAccount && result?.session) await rememberCurrentAccount()
             navigate('/confirm-email')
         } catch (err) {
@@ -64,7 +69,7 @@ export default function Register() {
         setError('')
         setProviderLoading(provider)
         try {
-            await signInWithProvider(provider, { addAccount })
+            await signInWithProvider(provider, { addAccount, invitation })
         } catch (err) {
             setError(err.message || `No se pudo continuar con ${provider}`)
             setProviderLoading('')
@@ -93,6 +98,14 @@ export default function Register() {
                         <button type="button" className="auth-back-to-options" onClick={() => { setError(''); setShowEmailForm(false) }}>← Otras opciones</button>
                     </> : null}
                     {error && <div className="auth-error" role="alert">{error}</div>}
+                    {invitation && <div className="register-invitation">
+                        <strong>{invitation.username ? `Te ha invitado @${invitation.username}` : 'Te unes con una invitación'}</strong>
+                        <label><input type="checkbox" checked={invitation.autoFollow} onChange={event => {
+                            const autoFollow = event.target.checked
+                            setInvitationFollow(autoFollow)
+                            setInvitation(previous => ({ ...previous, autoFollow }))
+                        }} /><span>Seguir a quien me ha invitado al completar mi perfil. Podré dejar de seguirle cuando quiera.</span></label>
+                    </div>}
                     {!showEmailForm ? <>
                         <AuthProviderButtons onProvider={handleProvider} loadingProvider={providerLoading} />
                         <div className="auth-divider"><span>o</span></div>

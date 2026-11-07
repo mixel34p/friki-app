@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
+import { invitationFromSearch, readInvitation, rememberInvitation, setInvitationFollow } from '../lib/invitations'
 
 const AuthContext = createContext({})
 const ACCOUNTS_KEY = 'geeksphere.saved-accounts'
@@ -169,7 +170,7 @@ export function AuthProvider({ children }) {
         }
     }
 
-    const signUp = async (email, password, username) => {
+    const signUp = async (email, password, username, invitation = readInvitation() || invitationFromSearch(window.location.search)) => {
         const normalizedEmail = email.trim()
 
         // Check if username is already taken
@@ -187,7 +188,8 @@ export function AuthProvider({ children }) {
             email: normalizedEmail,
             password,
             options: {
-                data: { username }, // Store in metadata
+                data: { username, ...(invitation ? { invitation_code: invitation.code, invitation_auto_follow: invitation.autoFollow !== false } : {}) },
+                // Attribution is persisted by the signup trigger, including cross-browser confirmation.
                 emailRedirectTo: `${window.location.origin}/confirm-email`
             }
         })
@@ -218,11 +220,17 @@ export function AuthProvider({ children }) {
         return data
     }
 
-    const signInWithProvider = async (provider, { addAccount = false } = {}) => {
+    const signInWithProvider = async (provider, { addAccount = false, invitation = readInvitation() || invitationFromSearch(window.location.search) } = {}) => {
         if (addAccount) sessionStorage.setItem('geeksphere.add-account-pending', '1')
+        if (invitation) {
+            rememberInvitation(invitation)
+            setInvitationFollow(invitation.autoFollow)
+            if (!readInvitation()) throw new Error('Tu navegador no permite guardar la invitación. Usa el registro con correo para conservararla o permite el almacenamiento del sitio.')
+        }
         const { data, error } = await supabase.auth.signInWithOAuth({
             provider,
             options: {
+                // Preserve the existing allowlisted callback URL; OAuth returns to this browser.
                 redirectTo: `${window.location.origin}/onboarding`,
                 scopes: provider === 'google' ? 'openid email profile' : undefined
             }

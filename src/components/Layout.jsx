@@ -78,7 +78,7 @@ function MoreMenu({ profile, image, username, accentColor, onSignOut, accounts =
       <Link className="more-menu-link" to="/settings">Ajustes</Link>
       <button className="more-menu-link" type="button" aria-disabled="true">Guardados</button>
       <Link className="more-menu-link" to="/groups">Grupos</Link>
-      <button className="more-menu-link" type="button" aria-disabled="true">Invitar</button>
+      <Link className="more-menu-link" to="/invite">Invitar</Link>
       <a className="more-menu-link more-menu-support" href="https://ko-fi.com/mixel34" target="_blank" rel="noopener noreferrer" aria-label="Apoyar en Ko-fi (se abre en una pestaña nueva)">
         <SiKofi className="more-menu-kofi-icon" aria-hidden="true" />
         <span>Apoyar</span>
@@ -274,7 +274,7 @@ export default function Layout() {
         </>}
       </nav>
 
-      <main className={`main ${['/terms', '/privacy', '/community-guidelines'].includes(location.pathname) ? 'legal-main' : ''} ${location.pathname === '/onboarding' ? 'onboarding-main' : ''} ${isProfilePage ? 'profile-main' : ''} ${isWorkPage ? 'work-main' : ''} ${location.pathname.startsWith('/discover/anime') || location.pathname.startsWith('/discover/games') ? 'discover-works-main' : ''} ${location.pathname === '/discover/spaces' || location.pathname === '/spaces/explore' ? 'spaces-explore-main' : ''} ${location.pathname === '/spaces' ? 'my-spaces-main' : ''} ${/^\/reviews\/[^/]+/.test(location.pathname) ? 'review-detail-main' : ''} ${/^\/posts\/[^/]+$/.test(location.pathname) ? 'post-detail-main' : ''} ${/^\/lists\/[^/]+$/.test(location.pathname) ? 'list-detail-main' : ''} ${location.pathname === '/share' ? 'share-main' : ''}`}><Outlet /></main>
+      <main className={`main ${['/terms', '/privacy', '/community-guidelines'].includes(location.pathname) ? 'legal-main' : ''} ${location.pathname === '/onboarding' ? 'onboarding-main' : ''} ${location.pathname === '/invite' ? 'invite-main' : ''} ${isProfilePage ? 'profile-main' : ''} ${isWorkPage ? 'work-main' : ''} ${location.pathname.startsWith('/discover/anime') || location.pathname.startsWith('/discover/games') ? 'discover-works-main' : ''} ${location.pathname === '/discover/spaces' || location.pathname === '/spaces/explore' ? 'spaces-explore-main' : ''} ${location.pathname === '/spaces' ? 'my-spaces-main' : ''} ${/^\/reviews\/[^/]+/.test(location.pathname) ? 'review-detail-main' : ''} ${/^\/posts\/[^/]+$/.test(location.pathname) ? 'post-detail-main' : ''} ${/^\/lists\/[^/]+$/.test(location.pathname) ? 'list-detail-main' : ''} ${location.pathname === '/share' ? 'share-main' : ''}`}><Outlet /></main>
 
       {listsOpen && <ListsEntryModal onClose={() => setListsOpen(false)} />}
       {moreOpen && isDesktop && createPortal(

@@ -1653,3 +1653,6 @@
         overscroll-behavior: contain;
     }
 }
+
+/* Invitations use the full content height so the card stays centered. */
+.main.invite-main { min-height: 100dvh; padding: 0; overflow: hidden; }

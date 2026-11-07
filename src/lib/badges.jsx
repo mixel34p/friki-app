@@ -1,4 +1,9 @@
+import { FiLink, FiUsers, FiAward } from 'react-icons/fi'
+
 export const BADGES_MAP = {
+    connector: { color: '#2dd4bf', title: 'Conector', description: 'Ha invitado a una persona que confirmó su correo y completó su perfil.', icon: <FiLink size={18} /> },
+    host: { color: '#a78bfa', title: 'Anfitrión', description: 'Ha dado la bienvenida a cinco personas con invitaciones completadas.', icon: <FiUsers size={18} /> },
+    ambassador: { color: '#fbbf24', title: 'Embajador', description: 'Ha hecho crecer la comunidad con diez invitaciones completadas.', icon: <FiAward size={18} /> },
     verified: {
         color: '#1d9bf0',
         title: 'Verificado',

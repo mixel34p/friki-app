@@ -25,6 +25,8 @@ import UserTemplates from './pages/UserTemplates'
 import WorkReviews from './pages/WorkReviews'
 import ReviewDetail from './pages/ReviewDetail'
 import SharePage from './pages/SharePage'
+import ProfileInvitation from './pages/ProfileInvitation'
+import InvitationAttribution from './components/InvitationAttribution'
 import PostDetail from './pages/PostDetail'
 import Search from './pages/Search'
 import DiscoverWorks from './pages/DiscoverWorks'
@@ -48,7 +50,7 @@ function getPageTitle(pathname) {
     '/search': 'Busca tus aficiones', '/search/results': 'Busca tus aficiones',
     '/connections': 'Conexiones', '/templates': 'Plantillas', '/old-library': 'Biblioteca',
     '/onboarding': 'Configura tu perfil', '/lists/new': 'Crear lista', '/groups': 'Grupos', '/groups/new': 'Crear grupo', '/custom-groups': 'Grupos', '/settings': 'Ajustes', '/share': 'Compartir',
-    '/terms': 'Términos de uso', '/privacy': 'Política de privacidad', '/community-guidelines': 'Normas de la comunidad',
+    '/terms': 'Términos de uso', '/privacy': 'Política de privacidad', '/community-guidelines': 'Normas de la comunidad', '/invite': 'Invita a tu esfera',
   }
   if (exact[pathname]) return exact[pathname]
   if (section === 'profile') {
@@ -193,7 +195,9 @@ function App() {
       <ToastProvider>
         <BrowserRouter>
         <RouteTitle />
+        <InvitationAttribution />
         <Routes>
+          <Route path="/invite/:code" element={<ProfileInvitation />} />
           <Route path="/" element={<Navigate to="/home" replace />} />
           {/* Chat Routes */}
           <Route path="/chat" element={<ProtectedRoute><Placeholder title="Chat" /></ProtectedRoute>} />
@@ -223,6 +227,7 @@ function App() {
             <Route path="/groups" element={<ProtectedRoute><CustomItemGroups /></ProtectedRoute>} />
             <Route path="/custom-groups" element={<Navigate to="/groups" replace />} />
             <Route path="/share" element={<ProtectedRoute><SharePage /></ProtectedRoute>} />
+            <Route path="/invite" element={<ProtectedRoute><ProfileInvitation manage /></ProtectedRoute>} />
             <Route path="/posts/:postId" element={<PostDetail />} />
             <Route path="/activity" element={<ProtectedRoute><ActivityPage /></ProtectedRoute>} />
             <Route path="/search" element={<Search />} />

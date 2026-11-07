@@ -2,7 +2,7 @@
 .pwa-install:hover { color: var(--text-primary); background: var(--bg-hover); }
 .pwa-install:focus-visible { outline: 2px solid var(--brand-primary); outline-offset: 3px; }
 .pwa-install svg { flex-shrink: 0; }
-.sidebar-install { margin: 12px auto; max-width: 100%; }
+.sidebar-install { display: none; }
 .pwa-dialog { margin: auto; width: min(420px, calc(100% - 32px)); max-height: calc(100dvh - 48px); overflow: auto; padding: 28px; background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border-strong); border-radius: 20px; box-shadow: var(--shadow-xl); }
 .pwa-dialog::backdrop { background: rgb(0 0 0 / .75); }
 .pwa-dialog h2 { margin: 16px 0; font-family: var(--font-display); font-size: 1.4rem; }

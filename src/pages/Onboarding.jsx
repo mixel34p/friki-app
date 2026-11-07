@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { claimInvitation } from '../lib/invitationService'
+import { clearInvitation, invitationFromSearch, readInvitation } from '../lib/invitations'
 import { supabase } from '../lib/supabase'
 import { createList, incrementTemplateUses } from '../lib/listService'
 import { clearGuestListDraft, readGuestListDraft } from '../lib/guestListDraft'
@@ -414,6 +416,12 @@ export default function Onboarding() {
             if (avatarFile) {
                 let url = await uploadImage(avatarFile, 'avatars')
                 finalAvatarUrl = url ? `${url}?t=${Date.now()}` : null
+            }
+
+            const invitation = readInvitation() || invitationFromSearch(window.location.search)
+            if (invitation) {
+                await claimInvitation(invitation)
+                clearInvitation(invitation.code)
             }
 
             const { error: profileError } = await supabase
