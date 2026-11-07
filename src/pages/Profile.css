@@ -41,8 +41,8 @@
         radial-gradient(ellipse 86% 520px at 50% 0%, color-mix(in srgb, var(--brand-primary) 18%, transparent), transparent 76%),
         var(--bg-primary);
 }
-.profile-page.pwa-visited-profile { animation: pwaProfileEnter .34s cubic-bezier(.22,.8,.24,1) both; }
-.profile-page.pwa-visited-profile.is-closing { animation: pwaProfileExit .28s cubic-bezier(.22,.8,.24,1) both; }
+.profile-page.pwa-visited-profile { animation: pwaProfileEnter .34s cubic-bezier(.22,.8,.24,1); }
+.profile-page.pwa-visited-profile.is-closing { animation: pwaProfileExit .28s cubic-bezier(.22,.8,.24,1); }
 @keyframes pwaProfileEnter { from { transform: translateX(100vw); } to { transform: translateX(0); } }
 @keyframes pwaProfileExit { from { transform: translateX(0); } to { transform: translateX(100vw); } }
 
