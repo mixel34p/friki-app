@@ -59,6 +59,8 @@
   letter-spacing: -.045em;
 }
 
+.share-mobile-back, .share-mobile-post-button { display: none; }
+
 .share-composer {
   position: relative;
   z-index: 1;
@@ -758,20 +760,57 @@
 }
 
 @media (max-width: 620px) {
-  .share-page {
+  body:has(.main.share-main) { overflow: hidden; }
+  .main.share-main {
+    position: fixed;
+    inset: 0;
+    z-index: 1500;
     width: 100%;
-    min-height: calc(100dvh - 164px);
-    padding: 0 0 2rem;
+    height: 100dvh;
+    min-height: 0;
+    margin: 0;
+    padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+    overflow: hidden;
+    overscroll-behavior: contain;
+    background: var(--bg-primary);
+    animation: shareScreenEnter .38s cubic-bezier(.2,.8,.2,1) both;
+  }
+  .share-page {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    padding: 0 0 env(safe-area-inset-bottom);
+    overflow: hidden;
   }
 
-  .share-page-heading { margin-bottom: .9rem; }
-  .share-page-heading h1 { font-size: 1.55rem; }
-  .share-composer { border-radius: 18px; }
+  .share-page::before, .share-page::after, .share-selected-backdrop { position: absolute; }
+  .share-page-heading {
+    z-index: 2;
+    display: grid;
+    min-height: 58px;
+    flex: 0 0 auto;
+    grid-template-columns: 44px 1fr auto;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    padding: 0 16px;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+    background: rgba(8,8,8,.94);
+    animation: none;
+  }
+  .share-page-heading h1 { font-size: 1.08rem; letter-spacing: -.02em; }
+  .share-mobile-back { display: grid; width: 42px; height: 42px; place-items: center; padding: 0; border: 0; border-radius: 50%; color: var(--text-primary); background: rgba(255,255,255,.065); }
+  .share-mobile-back svg, .share-sheet-header button svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .share-mobile-post-button { display: block; min-height: 38px; padding: 0 17px; border: 0; border-radius: 999px; color: var(--share-accent-ink); background: var(--share-accent); font: 700 .8rem var(--font-sans); }
+  .share-mobile-post-button:disabled { opacity: .45; }
+  .share-composer { display: flex; min-height: 0; flex: 1; flex-direction: column; overflow: hidden auto; border: 0; border-radius: 0; background: transparent; box-shadow: none; backdrop-filter: none; animation: none; }
   .share-composer-entry { gap: .75rem; padding: 1rem .9rem .9rem; }
   .share-composer-entry.has-images { padding-bottom: .3rem; }
   .share-composer-avatar { width: 42px; height: 42px; flex-basis: 42px; }
   .share-composer-input textarea { min-height: 100px; font-size: .98rem; }
-  .share-composer-footer { min-height: 68px; gap: .35rem; padding: .65rem .65rem; }
+  .share-composer-footer { position: sticky; z-index: 3; bottom: 0; display: flex; min-height: 68px; flex: 0 0 auto; gap: .35rem; padding: .55rem .55rem calc(.55rem + env(safe-area-inset-bottom)); border-top: 1px solid rgba(255,255,255,.1); background: rgba(13,14,17,.97); backdrop-filter: blur(22px); }
   .share-gif-panel-heading { gap: .45rem; padding: .7rem .65rem .55rem; }
   .share-gif-search { height: 38px; gap: .45rem; padding: 0 .65rem; }
   .share-gif-search input { font-size: .74rem; }
@@ -784,16 +823,59 @@
   .share-image-preview-grid.count-2 .share-image-preview-item,
   .share-image-preview-grid.count-2 .share-image-add-tile { height: auto; aspect-ratio: 1; }
   .share-image-remove { top: 6px; right: 6px; width: 29px; height: 29px; }
-  .share-composer-tools { gap: 0; }
-  .share-tool-button { width: 35px; height: 38px; border-radius: 10px; }
+  .share-composer-tools { min-width: 0; flex: 1; gap: 0; }
+  .share-tool-button { width: clamp(38px, 11vw, 46px); height: 44px; flex: 0 1 46px; border-radius: 12px; }
   .share-tool-button svg { width: 18px; height: 18px; }
   .share-composer-submit { gap: .48rem; }
+  .share-composer-submit > .share-post-button, .share-composer-submit > .share-character-count { display: none; }
+  .share-warning-button { width: 42px; height: 42px; flex-basis: 42px; }
+  .share-composer-submit { margin-left: auto; padding-left: 8px; border-left: 1px solid rgba(255,255,255,.14); }
   .share-composer-submit > span { font-size: .61rem; }
   .share-post-button { min-width: 84px; min-height: 39px; padding: .55rem .92rem; font-size: .76rem; }
   .share-tool-hint { padding: 0 .9rem .85rem 3.75rem; }
+  .share-list-publish-actions { display: none; }
+  .share-template-picker-panel, .share-gif-panel:has(.share-gif-search) {
+    position: fixed;
+    inset: env(safe-area-inset-top) 0 0;
+    z-index: 1550;
+    display: flex;
+    flex-direction: column;
+    overflow: auto;
+    padding-bottom: env(safe-area-inset-bottom);
+    border: 0;
+    border-radius: 22px 22px 0 0;
+    background: #101114;
+    box-shadow: 0 -20px 60px rgba(0,0,0,.42);
+    animation: shareSheetEnter .3s cubic-bezier(.2,.8,.2,1) both;
+  }
+  .share-template-picker-header, .share-sheet-header { position: sticky; top: 0; z-index: 1; display: flex; min-height: 76px; align-items: center; gap: 12px; padding: 12px 18px; border-bottom: 1px solid rgba(255,255,255,.08); background: rgba(16,17,20,.96); backdrop-filter: blur(18px); }
+  .share-template-picker-header h2, .share-sheet-header h2 { color: var(--text-primary); font: 700 1.05rem var(--font-display); }
+  .share-template-picker-header p, .share-sheet-header p { margin-top: 4px; color: var(--text-muted); font-size: .76rem; }
+  .share-list-kind-tabs { flex: 0 0 auto; }
+  .share-template-picker-results { align-content: start; flex: 1; max-height: none; overflow: auto; padding: 16px; }
+  .share-template-picker-search { position: sticky; top: 0; z-index: 1; width: auto; margin: 12px 16px; }
+  .share-review-picker-sheet { position: fixed; inset: env(safe-area-inset-top) 0 0; z-index: 1560; display: flex; flex-direction: column; overflow: hidden; padding-bottom: env(safe-area-inset-bottom); border-radius: 22px 22px 0 0; background: #101114; box-shadow: 0 -20px 60px rgba(0,0,0,.42); animation: shareSheetEnter .3s cubic-bezier(.2,.8,.2,1) both; }
+  .share-sheet-header button { display: grid; width: 42px; height: 42px; flex: 0 0 42px; place-items: center; border: 0; border-radius: 50%; color: var(--text-primary); background: rgba(255,255,255,.07); font-size: 1.6rem; }
+  .share-sheet-header > div { min-width: 0; flex: 1; }
+  .share-review-picker-content { display: flex; min-height: 0; flex: 1; flex-direction: column; padding: 14px 16px; }
+  .share-review-picker-search { display: flex; min-height: 50px; flex: 0 0 auto; align-items: center; gap: 10px; margin: 14px 0; padding: 0 14px; border: 1px solid rgba(255,255,255,.1); border-radius: 15px; background: rgba(255,255,255,.045); }
+  .share-review-picker-search svg { width: 20px; height: 20px; flex: 0 0 20px; fill: none; stroke: var(--text-muted); stroke-width: 1.8; stroke-linecap: round; }
+  .share-review-picker-search input { width: 100%; border: 0; outline: 0; color: var(--text-primary); background: transparent; font: 500 .92rem var(--font-sans); }
+  .share-review-picker-results { min-height: 0; flex: 1; overflow: auto; overscroll-behavior: contain; }
+  .share-review-picker-results > p { padding: 16px 4px; color: var(--text-muted); font-size: .84rem; }
+  .share-review-picker-results > button { display: flex; width: 100%; min-height: 76px; align-items: center; gap: 14px; padding: 10px 4px; border: 0; border-bottom: 1px solid rgba(255,255,255,.07); color: var(--text-primary); background: transparent; text-align: left; }
+  .share-review-picker-results > button img { width: 44px; height: 58px; flex: 0 0 44px; border-radius: 9px; object-fit: cover; }
+  .share-review-picker-results > button span { display: grid; min-width: 0; flex: 1; gap: 5px; }
+  .share-review-picker-results > button strong { overflow: hidden; font-size: .86rem; text-overflow: ellipsis; white-space: nowrap; }
+  .share-review-picker-results > button small { color: var(--text-muted); font-size: .72rem; }
+  .share-review-picker-results > button > svg { width: 20px; height: 20px; flex: 0 0 20px; fill: none; stroke: var(--text-muted); stroke-width: 1.8; }
 }
 
+@keyframes shareScreenEnter { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes shareSheetEnter { from { transform: translateY(35%); opacity: .7; } to { transform: translateY(0); opacity: 1; } }
+
 @media (prefers-reduced-motion: reduce) {
+  .main.share-main, .share-template-picker-panel, .share-review-picker-sheet { animation: none !important; }
   .share-page-heading,
   .share-composer,
   .share-tool-hint { animation: none; }
