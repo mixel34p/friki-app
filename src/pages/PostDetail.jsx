@@ -290,8 +290,9 @@ export default function PostDetail() {
 
   const activeMedia = media[activeMediaIndex] || media[0]
   const activeMediaFailed = Boolean(activeMedia?.url && failedMediaUrls.has(activeMedia.url))
+  const isPwaStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true
 
-  return <main className="review-detail-page post-detail-page" style={{ '--review-page-accent': author.theme_color || 'var(--brand-primary)', '--post-bubble-text': getBubbleTextColor(author.theme_color), '--review-backdrop-image': activeMedia?.url ? `url("${activeMedia.url}")` : 'none' }}>
+  return <main className={`review-detail-page post-detail-page${isPwaStandalone ? ' pwa-post-detail' : ''}`} style={{ '--review-page-accent': author.theme_color || 'var(--brand-primary)', '--post-bubble-text': getBubbleTextColor(author.theme_color), '--review-backdrop-image': activeMedia?.url ? `url("${activeMedia.url}")` : 'none' }}>
     <article className="review-post post-detail-card">
       <div className="post-detail-topbar">
         <button className="review-detail-back" type="button" onClick={() => navigate(-1)}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>Volver</button>
