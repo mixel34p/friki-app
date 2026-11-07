@@ -183,6 +183,10 @@
   .pwa-post-detail .post-detail-gallery { box-sizing: border-box; width: calc(100% - 32px); max-width: none; margin: 0 16px 12px; }
   .pwa-post-detail .post-detail-gallery-image,.pwa-post-detail .post-detail-gallery-image img { display: block; box-sizing: border-box; width: 100%; max-width: none; height: auto; max-height: 68dvh; border-radius: 14px !important; object-fit: cover; }
   .pwa-post-detail .post-detail-gallery-image { aspect-ratio: auto; }
+.pwa-post-detail .post-detail-gallery-image { touch-action: pan-y; }
+.pwa-post-detail .post-detail-gallery-arrow { display: none !important; }
+.pwa-post-detail .post-detail-gallery-image.pwa-swipe-next img { animation: pwaMediaFromRight .24s cubic-bezier(.2,.8,.2,1) both; }
+.pwa-post-detail .post-detail-gallery-image.pwa-swipe-previous img { animation: pwaMediaFromLeft .24s cubic-bezier(.2,.8,.2,1) both; }
   .pwa-post-detail .post-detail-actions { display: flex; align-items: center; gap: 10px; margin: 14px 16px 18px; }
   .pwa-post-detail .post-detail-actions .review-like-btn,.pwa-post-detail .post-detail-actions .review-post-action { position: relative; display: grid; width: 44px; height: 44px; flex: 0 0 44px; place-items: center; justify-content: center; align-items: center; gap: 0; padding: 0; border: 1px solid rgba(255,255,255,.12); border-radius: 50%; color: var(--text-primary); background: rgba(255,255,255,.055); font-size: 0; }
   .pwa-post-detail .post-detail-actions .review-like-btn svg,.pwa-post-detail .post-detail-actions .review-post-action svg { position: absolute; top: 50%; left: 50%; display: block; width: 19px; height: 19px; flex: none; transform: translate(-50%,-50%); }
@@ -193,3 +197,5 @@
   .pwa-post-detail .post-detail-actions .review-like-btn:active { transform: none !important; }
 @keyframes pwaPostEnter { from { transform: translateX(100vw); } to { transform: translateX(0); } }
 @keyframes pwaPostExit { from { transform: translateX(0); } to { transform: translateX(100vw); } }
+@keyframes pwaMediaFromRight { from { opacity: .72; transform: translateX(28px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes pwaMediaFromLeft { from { opacity: .72; transform: translateX(-28px); } to { opacity: 1; transform: translateX(0); } }

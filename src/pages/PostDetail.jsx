@@ -63,6 +63,10 @@ export default function PostDetail() {
   const [isExitingPwa, setIsExitingPwa] = useState(false)
   const [post, setPost] = useState(null)
   const [activeMediaIndex, setActiveMediaIndex] = useState(0)
+  const [swipeDirection, setSwipeDirection] = useState('next')
+  const [hasSwipedMedia, setHasSwipedMedia] = useState(false)
+  const mediaTouchStartX = useRef(null)
+  const mediaWasSwiped = useRef(false)
   const [failedMediaUrls, setFailedMediaUrls] = useState(() => new Set())
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [moreItems, setMoreItems] = useState([])
@@ -303,6 +307,22 @@ export default function PostDetail() {
 
   const activeMedia = media[activeMediaIndex] || media[0]
   const activeMediaFailed = Boolean(activeMedia?.url && failedMediaUrls.has(activeMedia.url))
+  const handleMediaTouchStart = event => { mediaTouchStartX.current = event.touches[0]?.clientX ?? null; mediaWasSwiped.current = false }
+  const handleMediaTouchEnd = event => {
+    if (mediaTouchStartX.current == null || media.length < 2) return
+    const deltaX = event.changedTouches[0].clientX - mediaTouchStartX.current
+    mediaTouchStartX.current = null
+    if (Math.abs(deltaX) < 48) return
+    mediaWasSwiped.current = true
+    setSwipeDirection(deltaX < 0 ? 'next' : 'previous')
+    setHasSwipedMedia(true)
+    setActiveMediaIndex(index => (index + (deltaX < 0 ? 1 : -1) + media.length) % media.length)
+  }
+  const handleGalleryClick = event => {
+    if (mediaWasSwiped.current) { mediaWasSwiped.current = false; event.preventDefault(); return }
+    if (contentHidden) setRevealed(true)
+    else setLightboxOpen(true)
+  }
   const commentComposer = user && currentProfile && <form className={`review-comment-form${isPwaStandalone ? ' pwa-comment-composer' : ''}`} style={{ '--comment-accent': currentProfile.theme_color || 'var(--brand-primary)' }} onSubmit={handleSubmitComment}>
     <Avatar profile={currentProfile} size="small"/><label className="review-comment-input-wrap"><textarea ref={commentInputRef} aria-label="Escribe un comentario" value={commentText} onChange={event => setCommentText(event.target.value)} maxLength={300} rows={1} placeholder="Escribe un comentario…"/></label>
     <button type="submit" disabled={!commentText.trim() || submitting}>{submitting ? 'Enviando…' : 'Comentar'}</button>
@@ -341,8 +361,8 @@ export default function PostDetail() {
       {!!media.length && <div className={`post-detail-gallery${contentHidden ? ' is-obscured' : ''}${activeMediaFailed ? ' has-load-error' : ''}`} aria-label="Imágenes de la publicación">
             {activeMediaFailed && !contentHidden
               ? <div className="post-detail-image-failed" role="img" aria-label="No se pudo cargar la imagen"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/><path d="m4 4 16 16"/></svg><span>No se pudo cargar la imagen</span></div>
-              : <button className={`post-detail-gallery-image${contentHidden ? ' is-obscured' : ''}${activeMediaFailed ? ' is-load-error' : ''}`} type="button" onClick={() => contentHidden ? setRevealed(true) : setLightboxOpen(true)} aria-label={contentHidden ? warningAriaLabel : `Ampliar imagen ${activeMediaIndex + 1} de ${media.length}`}>
-                <img src={activeMedia?.url} alt={contentHidden ? '' : activeMedia?.name || ''} loading="lazy" onError={() => setFailedMediaUrls(current => new Set(current).add(activeMedia?.url))} />
+              : <button className={`post-detail-gallery-image${contentHidden ? ' is-obscured' : ''}${activeMediaFailed ? ' is-load-error' : ''}${isPwaStandalone && hasSwipedMedia ? ` pwa-swipe-${swipeDirection}` : ''}`} type="button" onClick={handleGalleryClick} onTouchStart={isPwaStandalone && media.length > 1 ? handleMediaTouchStart : undefined} onTouchEnd={isPwaStandalone && media.length > 1 ? handleMediaTouchEnd : undefined} aria-label={contentHidden ? warningAriaLabel : `Ampliar imagen ${activeMediaIndex + 1} de ${media.length}`}>
+                <img key={activeMediaIndex} src={activeMedia?.url} alt={contentHidden ? '' : activeMedia?.name || ''} loading="lazy" onError={() => setFailedMediaUrls(current => new Set(current).add(activeMedia?.url))} />
                 {contentHidden && <span className="post-detail-image-warning"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3 21 21"/><path d="M10.6 10.6a2 2 0 0 0 2.8 2.8"/><path d="M9.9 5.2A11.3 11.3 0 0 1 12 5c5.5 0 9.5 4.5 10 7-.2 1.1-1.2 2.6-2.6 3.9"/><path d="M6.6 6.6C3.9 8.2 2.2 10.6 2 12c.5 2.5 4.5 7 10 7 1.2 0 2.3-.2 3.3-.6"/></svg><strong>{warningTitle}</strong><small>Pulsa para ver</small></span>}
               </button>}
             {media.length > 1 && <>
