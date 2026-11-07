@@ -242,6 +242,32 @@ export default function SharePage() {
 
   useEffect(() => { imagesRef.current = images }, [images])
   useEffect(() => {
+    const viewport = window.visualViewport
+    const updateKeyboardInset = () => {
+      const active = document.activeElement
+      const isEditing = active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement || active?.isContentEditable
+      const keyboardInset = isEditing && viewport
+        ? Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop)
+        : 0
+      document.documentElement.style.setProperty('--share-keyboard-offset', `${Math.min(keyboardInset, window.innerHeight * .7)}px`)
+    }
+    const scheduleUpdate = () => requestAnimationFrame(updateKeyboardInset)
+    window.addEventListener('resize', scheduleUpdate)
+    document.addEventListener('focusin', scheduleUpdate)
+    document.addEventListener('focusout', scheduleUpdate)
+    viewport?.addEventListener('resize', scheduleUpdate)
+    viewport?.addEventListener('scroll', scheduleUpdate)
+    updateKeyboardInset()
+    return () => {
+      window.removeEventListener('resize', scheduleUpdate)
+      document.removeEventListener('focusin', scheduleUpdate)
+      document.removeEventListener('focusout', scheduleUpdate)
+      viewport?.removeEventListener('resize', scheduleUpdate)
+      viewport?.removeEventListener('scroll', scheduleUpdate)
+      document.documentElement.style.removeProperty('--share-keyboard-offset')
+    }
+  }, [])
+  useEffect(() => {
     const textarea = textareaRef.current
     if (!selectedReview || !textarea) return
     textarea.style.height = 'auto'
