@@ -31,6 +31,9 @@ function DotsIcon() {
 export default function ViewTemplate() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const isStandalonePwa = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  const [isExitingPwa, setIsExitingPwa] = useState(false);
+  const handleBack = () => { if (!isStandalonePwa) return navigate(-1); setIsExitingPwa(true); window.setTimeout(() => navigate(-1), 280); };
   const { user, loading: authLoading } = useAuth();
   const menuRef = useRef(null);
   const [template, setTemplate] = useState(null);
@@ -139,7 +142,7 @@ export default function ViewTemplate() {
     }
   };
 
-  if (loading) return <main className="review-detail-page template-detail-page"><article className="review-post template-detail-state">Cargando plantilla…</article></main>;
+  if (loading) return isStandalonePwa ? null : <main className="review-detail-page template-detail-page"><article className="review-post template-detail-state">Cargando plantilla…</article></main>;
   if (error || !template) return (
     <main className="review-detail-page template-detail-page">
       <article className="review-post template-detail-state">
@@ -150,10 +153,10 @@ export default function ViewTemplate() {
   );
 
   return (
-    <main className="review-detail-page vl-list-page template-detail-page" style={{ '--review-page-accent': accent, '--vl-more-accent': accent, '--review-backdrop-image': backdrop ? `url("${backdrop}")` : 'none' }}>
+    <main className={`review-detail-page vl-list-page template-detail-page${isStandalonePwa ? ' pwa-detail-screen' : ''}${isExitingPwa ? ' is-exiting' : ''}`} style={{ '--review-page-accent': accent, '--vl-more-accent': accent, '--review-backdrop-image': backdrop ? `url("${backdrop}")` : 'none' }}>
       <article className="review-post template-detail-post">
         <div className="vl-topbar">
-          <button type="button" className="review-detail-back vl-back-inline" onClick={() => navigate(-1)}>
+          <button type="button" className="review-detail-back vl-back-inline" onClick={handleBack}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>Volver
           </button>
           {isAuthor && <div className="vl-menu-wrap" ref={menuRef}>

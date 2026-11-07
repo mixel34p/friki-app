@@ -349,6 +349,9 @@ async function createReviewShareImage({ authorName, username, avatarUrl, accent,
 export default function ReviewDetail() {
   const { reviewId } = useParams()
   const navigate = useNavigate()
+  const isStandalonePwa = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true
+  const [isExitingPwa, setIsExitingPwa] = useState(false)
+  const handleBack = () => { if (!isStandalonePwa) return navigate(-1); setIsExitingPwa(true); window.setTimeout(() => navigate(-1), 280) }
   const { user, profile: currentProfile, updateProfile } = useAuth()
   const [review, setReview] = useState(null)
   const [comments, setComments] = useState([])
@@ -498,7 +501,7 @@ export default function ReviewDetail() {
     }
   }
 
-  if (loading) return <LoadingSpinner />
+  if (loading) return isStandalonePwa ? null : <LoadingSpinner />
   if (error || !review) {
     return <main className="review-detail-page"><div className="review-detail-state"><h1>{error ? 'Error al cargar la review' : 'Review no encontrada'}</h1><Link to="/search">Volver a descubrir</Link></div></main>
   }
@@ -626,9 +629,9 @@ export default function ReviewDetail() {
   }
 
   return (
-    <main className="review-detail-page" style={{ '--review-page-accent': pageAccent, '--review-backdrop-image': reviewBackdrop ? `url("${reviewBackdrop}")` : 'none' }}>
+    <main className={`review-detail-page${isStandalonePwa ? ' pwa-detail-screen' : ''}${isExitingPwa ? ' is-exiting' : ''}`} style={{ '--review-page-accent': pageAccent, '--review-backdrop-image': reviewBackdrop ? `url("${reviewBackdrop}")` : 'none' }}>
       <SEO title={`${authorName}: review de ${workName || 'una obra'}`} description={review.review_text.slice(0, 150)} />
-      <button className="review-detail-back" type="button" onClick={() => navigate(-1)}>
+      <button className="review-detail-back" type="button" onClick={handleBack}>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>Volver
       </button>
 

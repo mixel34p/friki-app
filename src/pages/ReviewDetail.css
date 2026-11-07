@@ -57,6 +57,18 @@
 .review-detail-back:hover { color: var(--review-page-accent, var(--brand-primary)); }
 .review-detail-back svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
+/* Shared full-screen detail treatment used only by standalone PWA routes. */
+.pwa-detail-screen { position: fixed !important; inset: 0; z-index: 10000; display: block !important; width: 100vw; height: 100dvh; min-height: 100dvh; margin: 0 !important; padding: env(safe-area-inset-top) 0 0 !important; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; background: var(--bg-primary); animation: pwaDetailEnter .34s cubic-bezier(.22,.8,.24,1); }
+.pwa-detail-screen::before,.pwa-detail-screen::after { display: none !important; }
+.pwa-detail-screen.is-exiting { animation: pwaDetailExit .28s cubic-bezier(.22,.8,.24,1); }
+.pwa-detail-screen > .review-post,.pwa-detail-screen .template-detail-post { position: relative; min-height: 100%; padding: 0 16px calc(92px + env(safe-area-inset-bottom)); border: 0; border-radius: 0; background: radial-gradient(ellipse 100% 68% at 50% 0%, color-mix(in srgb, var(--review-page-accent) 24%, transparent), transparent 78%), linear-gradient(180deg, color-mix(in srgb, var(--review-page-accent) 10%, var(--bg-primary)) 0%, var(--bg-primary) 100%); box-shadow: none; }
+.pwa-detail-screen .vl-topbar { position: relative; top: auto; z-index: 5; background: transparent; backdrop-filter: none; }
+.pwa-detail-screen > .review-detail-back { position: relative; display: grid; width: 42px; height: 42px; place-items: center; margin: 8px 0; padding: 0; border-radius: 50%; background: rgba(255,255,255,.07); font-size: 0; }
+.pwa-detail-screen .review-comments { min-height: 35dvh; padding-bottom: calc(88px + env(safe-area-inset-bottom)); background: var(--bg-primary); }
+.pwa-detail-screen .review-comment-form { position: fixed; z-index: 10001; right: 0; bottom: 0; left: 0; margin: 0; padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); border-top: 1px solid rgba(255,255,255,.1); border-bottom: 0; background: rgba(15,16,20,.94); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+@keyframes pwaDetailEnter { from { transform: translateX(100vw); } to { transform: translateX(0); } }
+@keyframes pwaDetailExit { from { transform: translateX(0); } to { transform: translateX(100vw); } }
+
 .editor-icon-back { display: grid; width: 42px; height: 42px; flex: 0 0 42px; place-items: center; padding: 0; border: 0; border-radius: 50%; color: var(--text-primary); background: rgba(255,255,255,.065); cursor: pointer; }
 .editor-icon-back svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .editor-icon-back:focus-visible { outline: 2px solid var(--brand-primary); outline-offset: 2px; }
