@@ -509,8 +509,9 @@ export default function SharePage() {
 
   const getPreviewImageStyle = image => {
     if (images.length !== 1 || !imageDimensions[image.id] || !previewLayout.width) return undefined
+    if (isStandaloneMobile) return { width: '100%', height: 'auto', maxHeight: '42dvh', objectFit: 'contain' }
     const { width, height } = imageDimensions[image.id]
-    const maxWidth = Math.max(1, Math.min(320, previewLayout.width - 72))
+    const maxWidth = Math.max(1, Math.min(320, previewLayout.width - (isStandaloneMobile ? 0 : 72)))
     const aspectRatio = width / height
     const isExtremelyTall = height > width * 1.7
     if (!isExtremelyTall) {
@@ -551,6 +552,7 @@ export default function SharePage() {
       setReviewPickerOpen(true)
       setWorkQuery('')
       setWorkType('game')
+      setRegisterCategory('game')
       return
     }
     if (tool.id === 'camera') {
@@ -891,26 +893,21 @@ export default function SharePage() {
             <MentionSuggestions autocomplete={mentions} />
             </div>
             {selectedReview && existingWorkEntry && <button className="share-review-delete-entry" type="button" onClick={() => setDeleteConfirmOpen(true)} disabled={deletingEntry}>Eliminar entrada</button>}
-          </div>
-        </div>
-
-        {!selectedReview && images.length > 0 && (
-          <div ref={imageGridRef} className={`share-image-preview-grid count-${images.length}`} aria-label={`${images.length} imágenes adjuntas`}>
-            {images.map(image => (
-              <figure className="share-image-preview-item" key={image.id}>
-                <img src={image.previewUrl} alt={image.name || ''} style={getPreviewImageStyle(image)} onLoad={event => handlePreviewImageLoad(image.id, event)} />
-                <button className="share-image-remove" type="button" onClick={() => removeImage(image.id)} aria-label={`Quitar ${image.name || 'GIF'}`} title="Quitar imagen">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
-                </button>
-              </figure>
-            ))}
-            {images.length < 3 && (
-              <button className="share-image-add-tile" type="button" onClick={() => fileInputRef.current?.click()} aria-label="Añadir otra imagen">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
-              </button>
+            {!selectedReview && images.length > 0 && (
+              <div ref={imageGridRef} className={`share-image-preview-grid count-${images.length}`} aria-label={`${images.length} imágenes adjuntas`}>
+                {images.map(image => (
+                  <figure className="share-image-preview-item" key={image.id}>
+                    <img src={image.previewUrl} alt={image.name || ''} style={getPreviewImageStyle(image)} onLoad={event => handlePreviewImageLoad(image.id, event)} />
+                    <button className="share-image-remove" type="button" onClick={() => removeImage(image.id)} aria-label={`Quitar ${image.name || 'GIF'}`} title="Quitar imagen">
+                      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                    </button>
+                  </figure>
+                ))}
+                {images.length < 3 && <button className="share-image-add-tile" type="button" onClick={() => fileInputRef.current?.click()} aria-label="Añadir otra imagen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg></button>}
+              </div>
             )}
           </div>
-        )}
+        </div>
 
         {warningsOpen && !selectedReview && <div className="share-warning-row">
           <button className={`share-warning-chip${spoilerEnabled ? ' is-active' : ''}`} type="button" aria-pressed={spoilerEnabled} onClick={() => { setSpoilerEnabled(value => !value); if (spoilerEnabled) setSpoilerWork(null) }}>Spoiler de una obra</button>
@@ -978,7 +975,7 @@ export default function SharePage() {
         </div>
         {gifOpen && renderMobileSheet(
           <section className={`share-gif-panel${isStandaloneMobile ? ' share-gif-mobile-sheet' : ''}`} role={isStandaloneMobile ? 'dialog' : undefined} aria-modal={isStandaloneMobile ? 'true' : undefined} aria-label="Buscar GIFs" style={isStandaloneMobile ? { '--share-accent': accent } : undefined}>
-            {isStandaloneMobile && <header className="share-sheet-header"><button type="button" onClick={() => setGifOpen(false)} aria-label="Volver a compartir"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button><div><h2>Elige un GIF</h2><p>Busca una reacción para tu publicación</p></div><button type="button" onClick={() => setGifOpen(false)} aria-label="Cerrar">×</button></header>}
+            {isStandaloneMobile && <header className="share-sheet-header"><button type="button" onClick={() => setGifOpen(false)} aria-label="Volver a compartir"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button><div><h2>Elige un GIF</h2><p>Busca una reacción para tu publicación</p></div></header>}
             <div className="share-gif-panel-heading">
               <label className="share-gif-search">
                 <span className="share-sr-only">Buscar GIFs</span>
@@ -1040,7 +1037,10 @@ export default function SharePage() {
         </section>)}
         {reviewPickerOpen && renderMobileSheet(<section className="share-review-picker-sheet" role="dialog" aria-modal="true" aria-label="Valorar una obra" style={isStandaloneMobile ? { '--share-accent': accent } : undefined}>
           <header className="share-sheet-header"><button type="button" onClick={() => setReviewPickerOpen(false)} aria-label="Volver a compartir"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button><div><h2>¿Qué vas a valorar?</h2><p>Elige un juego o un anime</p></div><button type="button" onClick={() => setReviewPickerOpen(false)} aria-label="Cerrar">×</button></header>
-          <div className="share-review-picker-content"><div className="share-list-kind-tabs" role="tablist" aria-label="Tipo de obra"><button type="button" role="tab" aria-selected={workType === 'game'} className={workType === 'game' ? 'active' : ''} onClick={() => setWorkType('game')}>Videojuegos</button><button type="button" role="tab" aria-selected={workType === 'anime'} className={workType === 'anime' ? 'active' : ''} onClick={() => setWorkType('anime')}>Anime</button></div><label className="share-review-picker-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="7.3"/><path d="m16.2 16.2 4.3 4.3"/></svg><input autoFocus value={workQuery} onChange={event => setWorkQuery(event.target.value)} placeholder={`Buscar ${workType === 'game' ? 'juego' : 'anime'}…`} /></label><div className="share-review-picker-results" aria-live="polite">{workLoading && <p>Buscando…</p>}{!workLoading && workQuery.trim().length < 2 && <p>Escribe al menos dos letras para buscar.</p>}{!workLoading && workQuery.trim().length >= 2 && workResults.map(work => <button type="button" key={work.id} onClick={() => { setReviewPickerOpen(false); selectWorkForReview({ ...work, title: work.name || work.title, image: work.cover_url || work.image_url, type: workType }) }}><img src={work.cover_url || work.image_url || '/icons/logo.png'} alt=""/><span><strong>{work.name || work.title}</strong><small>{workType === 'game' ? 'Videojuego' : 'Anime'}</small></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>)}</div></div>
+          <div className="share-review-picker-content"><div className="share-list-kind-tabs" role="tablist" aria-label="Tipo de obra"><button type="button" role="tab" aria-selected={workType === 'game'} className={workType === 'game' ? 'active' : ''} onClick={() => { setWorkType('game'); setRegisterCategory('game') }}>Videojuegos</button><button type="button" role="tab" aria-selected={workType === 'anime'} className={workType === 'anime' ? 'active' : ''} onClick={() => { setWorkType('anime'); setRegisterCategory('anime') }}>Anime</button></div><label className="share-review-picker-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="7.3"/><path d="m16.2 16.2 4.3 4.3"/></svg><input value={workQuery} onChange={event => setWorkQuery(event.target.value)} placeholder={`Buscar ${workType === 'game' ? 'juego' : 'anime'}…`} /></label><div className="share-review-picker-results" aria-live="polite">{workQuery.trim().length < 2 ? <>
+            <h3>Más registrados</h3>
+            {recommendedLoading ? <p>Cargando recomendaciones…</p> : recommended.length === 0 ? <p>No hay recomendaciones disponibles.</p> : recommended.map(work => <button type="button" key={work.id} onClick={() => { setReviewPickerOpen(false); selectWorkForReview({ ...work, type: workType }) }}><img src={work.image || '/icons/logo.png'} alt=""/><span><strong>{work.title}</strong><small>{work.count} {work.count === 1 ? 'registro' : 'registros'}</small></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>)}
+          </> : workLoading ? <p>Buscando…</p> : workResults.map(work => <button type="button" key={work.id} onClick={() => { setReviewPickerOpen(false); selectWorkForReview({ ...work, title: work.name || work.title, image: work.cover_url || work.image_url, type: workType }) }}><img src={work.cover_url || work.image_url || '/icons/logo.png'} alt=""/><span><strong>{work.name || work.title}</strong><small>{workType === 'game' ? 'Videojuego' : 'Anime'}</small></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>)}</div></div>
         </section>)}
         {toolHint && <p className="share-tool-hint" role="status">{toolHint}</p>}
         </>}
