@@ -114,6 +114,7 @@ export default function SharePage() {
   const templateTriggerRef = useRef(null)
   const imagesRef = useRef([])
   const [text, setText] = useState('')
+  const [isExitingPwa, setIsExitingPwa] = useState(false)
   const [placeholder] = useState(() => PLACEHOLDERS[Math.floor(Math.random() * PLACEHOLDERS.length)])
   const [selectedTool, setSelectedTool] = useState(null)
   const [selectedTemplate, setSelectedTemplate] = useState(null)
@@ -414,6 +415,11 @@ export default function SharePage() {
   const displayName = profile?.display_name || profile?.username || 'Usuario'
   const avatarBackground = avatar ? `url("${avatar}")` : 'none'
   const isStandaloneMobile = window.matchMedia('(display-mode: standalone) and (max-width: 620px)').matches || (navigator.standalone === true && window.innerWidth <= 620)
+  const handleMobileBack = () => {
+    if (!isStandaloneMobile) return navigate(-1)
+    setIsExitingPwa(true)
+    window.setTimeout(() => navigate(-1), 280)
+  }
   const renderMobileSheet = content => isStandaloneMobile ? createPortal(content, document.body) : content
 
   const handleTextChange = event => {
@@ -804,7 +810,7 @@ export default function SharePage() {
 
   return (
     <section
-      className={`share-page${selectedReview ? ' has-selected-review' : ''}${isListAttachmentFlow ? ' has-list-draft' : ''}`}
+      className={`share-page${selectedReview ? ' has-selected-review' : ''}${isListAttachmentFlow ? ' has-list-draft' : ''}${isExitingPwa ? ' is-exiting' : ''}`}
       style={{
         '--share-accent': accent,
         '--share-accent-ink': getAccentTextColor(accent),
@@ -814,7 +820,7 @@ export default function SharePage() {
     >
       <div key={selectedReview?.id || 'default-share-backdrop'} className={`share-selected-backdrop${selectedReview?.image ? ' is-visible' : ''}`} style={{ backgroundImage: selectedReview?.image ? `url("${selectedReview.image}")` : 'none' }} aria-hidden="true" />
       <header className="share-page-heading">
-        <button className="share-mobile-back" type="button" onClick={() => navigate(-1)} aria-label="Volver"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+        <button className="share-mobile-back" type="button" onClick={handleMobileBack} aria-label="Volver"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
         <h1>Compartir</h1>
         {!selectedReview && <button className="share-mobile-post-button" type="button" onClick={isListPublishingFlow ? handlePublishList : isListSetupComposerFlow ? handleEditSelectedList : handlePost} disabled={isListPublishingFlow ? listPublishing || !listDraft?.payload : isListSetupComposerFlow ? false : postSubmitting || !canPost}>{isListPublishingFlow ? listPublishing ? 'Publicando…' : 'Postear' : isListSetupComposerFlow ? 'Editar lista' : postSubmitting ? 'Publicando…' : 'Postear'}</button>}
       </header>

@@ -59,6 +59,8 @@ export default function PostDetail() {
   const { postId } = useParams()
   const navigate = useNavigate()
   const { user, profile: currentProfile } = useAuth()
+  const isPwaStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true
+  const [isExitingPwa, setIsExitingPwa] = useState(false)
   const [post, setPost] = useState(null)
   const [activeMediaIndex, setActiveMediaIndex] = useState(0)
   const [failedMediaUrls, setFailedMediaUrls] = useState(() => new Set())
@@ -83,6 +85,11 @@ export default function PostDetail() {
   const [liked, setLiked] = useState(false)
   const [likeBusy, setLikeBusy] = useState(false)
   const [shareCopied, setShareCopied] = useState(false)
+  const handleBack = () => {
+    if (!isPwaStandalone) return navigate(-1)
+    setIsExitingPwa(true)
+    window.setTimeout(() => navigate(-1), 280)
+  }
   const [menuOpen, setMenuOpen] = useState(false)
   const [editPostOpen, setEditPostOpen] = useState(false)
   const [editPostBody, setEditPostBody] = useState('')
@@ -270,8 +277,8 @@ export default function PostDetail() {
     finally { setDeletingId(null) }
   }
 
-  if (loading) return <div className="post-detail-state"><LoadingSpinner /></div>
-  if (error || !post) return <main className="review-detail-page post-detail-page"><div className="review-post"><button className="review-detail-back" type="button" onClick={() => navigate(-1)}>← Volver</button><h1>{error || 'Publicación no encontrada'}</h1></div></main>
+  if (loading) return isPwaStandalone ? null : <div className="post-detail-state"><LoadingSpinner /></div>
+  if (error || !post) return <main className={`review-detail-page post-detail-page${isPwaStandalone ? ` pwa-post-detail${isExitingPwa ? ' is-exiting' : ''}` : ''}`}><div className="review-post"><button className="review-detail-back" type="button" onClick={handleBack}>← Volver</button><h1>{error || 'Publicación no encontrada'}</h1></div></main>
 
   const author = post.author || {}
   const displayName = author.display_name || author.username || 'Usuario'
@@ -290,12 +297,10 @@ export default function PostDetail() {
 
   const activeMedia = media[activeMediaIndex] || media[0]
   const activeMediaFailed = Boolean(activeMedia?.url && failedMediaUrls.has(activeMedia.url))
-  const isPwaStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true
-
-  return <main className={`review-detail-page post-detail-page${isPwaStandalone ? ' pwa-post-detail' : ''}`} style={{ '--review-page-accent': author.theme_color || 'var(--brand-primary)', '--post-bubble-text': getBubbleTextColor(author.theme_color), '--review-backdrop-image': activeMedia?.url ? `url("${activeMedia.url}")` : 'none' }}>
+  return <main className={`review-detail-page post-detail-page${isPwaStandalone ? ' pwa-post-detail' : ''}${isExitingPwa ? ' is-exiting' : ''}`} style={{ '--review-page-accent': author.theme_color || 'var(--brand-primary)', '--post-bubble-text': getBubbleTextColor(author.theme_color), '--review-backdrop-image': activeMedia?.url ? `url("${activeMedia.url}")` : 'none' }}>
     <article className="review-post post-detail-card">
       <div className="post-detail-topbar">
-        <button className="review-detail-back" type="button" onClick={() => navigate(-1)}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>Volver</button>
+        <button className="review-detail-back" type="button" onClick={handleBack}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>Volver</button>
         <div className="post-detail-menu-wrap">
           <button className="post-detail-dots" type="button" aria-label="Más opciones" aria-expanded={menuOpen} onClick={() => setMenuOpen(open => !open)}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>

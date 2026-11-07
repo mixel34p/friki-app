@@ -925,6 +925,7 @@
 
 @media (max-width: 620px) and (display-mode: standalone) {
   .share-register { display: none; }
+  .share-page.is-exiting { animation: sharePageExit .28s cubic-bezier(.2,.8,.2,1) both; }
   .share-tool-button.share-tool-camera, .share-tool-button.share-tool-review { display: grid; }
   .main.share-main { padding-bottom: 0; background: transparent; }
   .share-page { padding-bottom: 0; }
@@ -944,6 +945,7 @@
 }
 
 @keyframes shareScreenEnter { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes sharePageExit { from { transform: translateY(0); opacity: 1; } to { transform: translateY(100%); opacity: .88; } }
 @keyframes shareSheetEnter { from { transform: translateY(35%); opacity: .7; } to { transform: translateY(0); opacity: 1; } }
 
 @media (prefers-reduced-motion: reduce) {
