@@ -19,14 +19,10 @@ import CustomItemGroupsPicker from '../../components/CustomItemGroupsPicker';
 import { ListPostPreview, generateListImage } from './ViewList';
 import { requestGuestListRegistration, saveGuestListDraft } from '../../lib/guestListDraft';
 import TierLabelEditor from './TierLabelEditor';
+import '../ReviewDetail.css';
 import './CreateList.css';
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
-const IconBack = () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M19 12H5M12 5l-7 7 7 7" />
-    </svg>
-);
 const IconSearch = () => (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
@@ -774,9 +770,9 @@ export default function CreateList() {
             ══════════════════════════════════════════ */}
             <header className="cl-header">
                 <div className="cl-header-left">
-                    {user ? <Link to="/lists" className="cl-back-btn" title="Volver a listas">
-                        <IconBack />
-                    </Link> : <button type="button" className="cl-back-btn" title="Volver" onClick={() => navigate(-1)}><IconBack /></button>}
+                    {user ? <Link to="/lists" className="editor-icon-back" aria-label="Volver a listas">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
+                    </Link> : <button type="button" className="editor-icon-back" aria-label="Volver" onClick={() => navigate(-1)}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg></button>}
 
                     <div className="cl-title-area">
                         {user && !id && !templateId && !fromListId && !publishDraftKey && !standaloneType && (

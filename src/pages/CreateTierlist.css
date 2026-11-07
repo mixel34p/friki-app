@@ -33,27 +33,6 @@
 }
 
 /* Back button */
-.ctl-back-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 34px;
-    height: 34px;
-    border: 1px solid var(--border-default);
-    background: var(--bg-tertiary);
-    border-radius: var(--radius-lg);
-    color: var(--text-secondary);
-    cursor: pointer;
-    transition: all var(--transition-fast);
-    flex-shrink: 0;
-}
-
-.ctl-back-btn:hover {
-    background: var(--bg-elevated);
-    color: var(--text-primary);
-    border-color: var(--border-strong);
-}
-
 /* Title input — takes remaining space */
 .ctl-title-input {
     flex: 1;

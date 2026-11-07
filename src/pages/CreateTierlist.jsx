@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { searchGames } from '../lib/gameService'
 import { searchAnime } from '../lib/animeService'
+import './ReviewDetail.css'
 import './CreateTierlist.css'
 
 const TEMPLATES = {
@@ -489,10 +490,8 @@ export default function CreateTierlist() {
                 <div className="ctl-editor-inner">
 
                     {/* Back */}
-                    <button className="ctl-back-btn" onClick={() => navigate(-1)} title="Volver">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M19 12H5M12 5l-7 7 7 7" />
-                        </svg>
+                    <button type="button" className="editor-icon-back" aria-label="Volver" onClick={() => navigate(-1)}>
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
                     </button>
 
                     {/* Title input */}
