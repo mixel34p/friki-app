@@ -1,3 +1,4 @@
+import { createPostgresChannel } from '../lib/postgresChannel'
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
@@ -23,8 +24,7 @@ export default function Connections() {
             loadData()
 
             // Subscribe to new requests
-            const channel = supabase
-                .channel(`requests:${user.id}`)
+            const channel = createPostgresChannel(supabase, `requests:${user.id}`)
                 .on(
                     'postgres_changes',
                     {

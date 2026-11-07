@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.geeksphere.app",
+      "sha256_cert_fingerprints": [
+        "FB:14:EB:84:5C:85:DC:CC:F8:BE:5E:74:A1:B8:27:0F:0B:E3:F6:45:A1:AA:61:2E:7F:E7:21:59:41:6C:12:F3"
+      ]
+    }
+  }
+]

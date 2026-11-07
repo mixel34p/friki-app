@@ -3,6 +3,10 @@ import { createPortal } from 'react-dom'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import DefaultAvatar from '../components/DefaultAvatar'
+import MentionSuggestions from '../components/MentionSuggestions'
+import MentionHighlights from '../components/MentionHighlights'
+import MentionText from '../components/MentionText'
+import useMentionAutocomplete from '../hooks/useMentionAutocomplete'
 import { getMoreListsByUser } from '../lib/listService'
 import LoadingSpinner from '../components/LoadingSpinner'
 import MoreContentCards, { normalizeMoreContent } from '../components/MoreContentCards'
@@ -82,6 +86,8 @@ export default function PostDetail() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [editPostOpen, setEditPostOpen] = useState(false)
   const [editPostBody, setEditPostBody] = useState('')
+  const editPostInputRef = useRef(null)
+  const editMentions = useMentionAutocomplete({ inputRef: editPostInputRef, value: editPostBody, onValueChange: setEditPostBody, enabled: editPostOpen, userId: user?.id })
   const [postActionError, setPostActionError] = useState('')
   const [savingPost, setSavingPost] = useState(false)
   const [updatingPostFlags, setUpdatingPostFlags] = useState(false)
@@ -194,7 +200,7 @@ export default function PostDetail() {
     setSavingPost(true); setPostActionError('')
     try {
       const updated = await updatePostBody(postId, user.id, editPostBody)
-      setPost(current => ({ ...current, body: updated.body }))
+      setPost(current => ({ ...current, body: updated.body, mentions: updated.mentions }))
       setEditPostOpen(false)
     } catch (err) {
       console.error('No se pudo editar la publicación:', err)
@@ -313,8 +319,8 @@ export default function PostDetail() {
       {post.body && (contentHidden
         ? <SpoilerNotice text={post.body} label={`${warningLabel} · pulsa para ver`} ariaLabel={warningAriaLabel} onReveal={() => setRevealed(true)} />
         : <>{media.length === 0
-          ? <p className="post-detail-body is-text-only">{post.body}</p>
-          : <p className="post-detail-body">{post.body}</p>}</>)}
+          ? <p className="post-detail-body is-text-only"><MentionText text={post.body} mentions={post.mentions} /></p>
+          : <p className="post-detail-body"><MentionText text={post.body} mentions={post.mentions} /></p>}</>)}
       {post.body && media.length === 0 && !contentHidden && <><time className="post-detail-text-date" dateTime={post.created_at}>{formatPostTimestamp(post.created_at)}</time><div className="post-detail-content-divider" aria-hidden="true" /></>}
       {!!media.length && <div className={`post-detail-gallery${contentHidden ? ' is-obscured' : ''}${activeMediaFailed ? ' has-load-error' : ''}`} aria-label="Imágenes de la publicación">
             {activeMediaFailed && !contentHidden
@@ -385,7 +391,7 @@ export default function PostDetail() {
       <section className="post-action-dialog" role="dialog" aria-modal="true" aria-labelledby="post-edit-title">
         <h2 id="post-edit-title">Editar publicación</h2>
         <form onSubmit={handleSavePost}>
-          <textarea autoFocus value={editPostBody} onChange={event => setEditPostBody(event.target.value)} maxLength={2000} rows={5} aria-label="Texto de la publicación" placeholder="Añade texto a tu publicación…" />
+          <div className="mention-input-wrap"><textarea className="has-mention-highlights" ref={editPostInputRef} autoFocus value={editPostBody} {...editMentions.inputProps} maxLength={2000} rows={5} aria-label="Texto de la publicación" placeholder="Añade texto a tu publicación…" /><MentionHighlights inputRef={editPostInputRef} value={editPostBody} /><MentionSuggestions autocomplete={editMentions} /></div>
           <div className="post-action-dialog-meta"><span>{editPostBody.length}/2000</span>{postActionError && <p role="alert">{postActionError}</p>}</div>
           {!media.length && !editPostBody.trim() && <p className="post-action-error" role="status">Escribe algo para mantener la publicación.</p>}
           <div className="post-action-dialog-buttons"><button type="button" onClick={() => setEditPostOpen(false)} disabled={savingPost}>Cancelar</button><button type="submit" disabled={savingPost || (!media.length && !editPostBody.trim())}>{savingPost ? 'Guardando…' : 'Guardar cambios'}</button></div>

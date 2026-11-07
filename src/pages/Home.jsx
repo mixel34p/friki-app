@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import SpoilerNotice from '../components/reviews/SpoilerNotice'
 import { useAuth } from '../context/AuthContext'
 import DefaultAvatar from '../components/DefaultAvatar'
+import MentionText from '../components/MentionText'
 import { getHomePosts } from '../lib/postService'
 import { getHomeSnapshot, getFollowingUserIds } from '../lib/homeService'
 import { getUsersByCommonWorks } from '../lib/discoverUsersService'
@@ -76,7 +77,7 @@ export function PostCard({ post, hideAvatar = false, hideAuthor = false, useDesk
     const accentText = getAccentTextColor(author.theme_color)
     const postText = post.body && (hasWarning && !revealed
         ? <SpoilerNotice text={post.body} label={`${warning} · pulsa para ver`} ariaLabel={`Mostrar ${warning}`} onReveal={() => setRevealed(true)} />
-        : <Link className="home-post-text-link" to={`/posts/${post.id}`}><p className={media.length ? 'home-post-copy' : 'home-post-bubble'}>{post.body}</p></Link>)
+        : <div className="home-post-text-link"><p className={media.length ? 'home-post-copy' : 'home-post-bubble'}><MentionText text={post.body} mentions={post.mentions} fallbackToPost={`/posts/${post.id}`} /></p></div>)
     return <article className="home-post" style={{ '--home-post-accent': accent, '--home-post-text': accentText }}>
         <header className="home-post-header">
             {!hideAuthor && <Link className="home-post-author" to={profilePath} aria-label={`Ver perfil de ${name}`}>

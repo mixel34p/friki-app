@@ -1,3 +1,4 @@
+import { createPostgresChannel } from './postgresChannel'
 import { supabase } from './supabase'
 
 // ═══════════════════════════════════════════════════════
@@ -834,8 +835,7 @@ export async function compareProfiles(userId1, userId2) {
 // ─────────────────────────────────────────────────────────
 
 export function subscribeToMessages(conversationId, callback) {
-    const channel = supabase
-        .channel(`messages:${conversationId}`)
+    const channel = createPostgresChannel(supabase, `messages:${conversationId}`)
         .on(
             'postgres_changes',
             {
@@ -852,8 +852,7 @@ export function subscribeToMessages(conversationId, callback) {
 }
 
 export function subscribeToConnectionRequests(userId, callback) {
-    const channel = supabase
-        .channel(`requests:${userId}`)
+    const channel = createPostgresChannel(supabase, `requests:${userId}`)
         .on(
             'postgres_changes',
             {

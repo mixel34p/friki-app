@@ -1,3 +1,4 @@
+import { createPostgresChannel } from '../../lib/postgresChannel'
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getSpaces, getUserSpaces, joinSpace } from '../../lib/spaceService';
@@ -99,8 +100,7 @@ export default function MySpaces() {
         setUnreadCounts(Object.fromEntries(counts));
 
         if (spaceIdByChannel.size) {
-          messageSubscription = supabase
-            .channel(`my-spaces-unread-${user.id}`)
+          messageSubscription = createPostgresChannel(supabase, `my-spaces-unread-${user.id}`)
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'space_messages' }, payload => {
               const message = payload.new;
               const spaceId = spaceIdByChannel.get(String(message.channel_id));

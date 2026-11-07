@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#080808" />
+  <title>Sin conexión · GeekSphere</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; padding: 24px; background: #080808; color: #f0f0f0; font-family: system-ui, sans-serif; text-align: center; }
+    main { max-width: 380px; }
+    .brand { color: #14b8a6; font-weight: 700; letter-spacing: .04em; }
+    h1 { font-size: 1.8rem; }
+    p { color: #aaa; line-height: 1.6; }
+    button { margin-top: 16px; padding: 14px 24px; border: 0; border-radius: 12px; background: #14b8a6; color: #080808; font: inherit; font-weight: 700; cursor: pointer; }
+    button:focus-visible { outline: 3px solid white; outline-offset: 4px; }
+  </style>
+</head>
+<body>
+  <main>
+    <span class="brand">GeekSphere</span>
+    <h1>Estás sin conexión</h1>
+    <p>Necesitas internet para ver tu comunidad, tus listas y tus mensajes. Comprueba tu conexión y vuelve a intentarlo.</p>
+    <button type="button" onclick="window.location.reload()">Volver a intentar</button>
+  </main>
+</body>
+</html>

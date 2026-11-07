@@ -1,0 +1,39 @@
+# Upload only the mobile project needed to build the APK.
+/*
+!/mobile
+/mobile/*
+!/mobile/assets
+!/mobile/src
+!/mobile/App.tsx
+!/mobile/index.ts
+!/mobile/app.json
+!/mobile/app.config.js
+!/mobile/babel.config.js
+!/mobile/metro.config.js
+!/mobile/tsconfig.json
+!/mobile/eas.json
+!/mobile/package.json
+!/mobile/package-lock.json
+
+# Previous UI implementations are not part of the WebView app.
+/mobile/src/generated/
+/mobile/src/web-native/
+/mobile/src/screens/
+/mobile/src/components/
+/mobile/src/context/
+/mobile/src/navigation/
+/mobile/src/lib/
+/mobile/src/theme.js
+
+# Never include local credentials, caches, build output, or dependencies.
+**/node_modules/
+**/.expo/
+**/dist*/
+**/.env
+**/.env.*
+**/*.jks
+**/*.keystore
+**/*.pem
+**/*.p12
+**/credentials.json
+**/*.log

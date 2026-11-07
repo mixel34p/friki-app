@@ -1,3 +1,4 @@
+import { createPostgresChannel } from '../lib/postgresChannel'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
@@ -8,6 +9,7 @@ import { getAccentTextColor, getVisibleAccentColor } from '../lib/colorContrast'
 import { hasCustomAvatar } from '../lib/avatar'
 import { ListsEntryModal } from '../pages/lists/ListsEntry'
 import DefaultAvatar from './DefaultAvatar'
+import InstallApp from './InstallApp'
 import './Layout.css'
 
 const Icon = ({ name }) => {
@@ -166,7 +168,7 @@ export default function Layout() {
   useEffect(() => {
     loadUnread()
     if (!user?.id) return undefined
-    const channel = supabase.channel(`sidebar-notifications-${user.id}`).on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, loadUnread).subscribe()
+    const channel = createPostgresChannel(supabase, `sidebar-notifications-${user.id}`).on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, loadUnread).subscribe()
     return () => { supabase.removeChannel(channel) }
   }, [user?.id, loadUnread])
 
@@ -230,6 +232,7 @@ export default function Layout() {
           {moreOpen && !isDesktop && <section className="sidebar-popover more-popover" aria-label="Más opciones">{moreMenu}</section>}
         </div>
         </>}
+        <InstallApp className="sidebar-install" />
       </aside>
 
       <header className="mobile-topbar" ref={mobileTopbarRef}>
@@ -238,6 +241,7 @@ export default function Layout() {
           <span>GeekSphere</span>
         </Link>
         <div className="mobile-topbar-actions">
+          <InstallApp className="topbar-install" />
           {user && <div className="mobile-topbar-anchor">
             <Link className={`mobile-topbar-button ${active('/activity') ? 'active' : ''}`} to="/activity" aria-label="Notificaciones" aria-current={active('/activity') ? 'page' : undefined}>
               <Icon name="activity" />

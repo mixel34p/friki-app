@@ -3,6 +3,9 @@ import { createPortal } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import DefaultAvatar from '../components/DefaultAvatar'
+import MentionSuggestions from '../components/MentionSuggestions'
+import MentionHighlights from '../components/MentionHighlights'
+import useMentionAutocomplete from '../hooks/useMentionAutocomplete'
 import { supabase } from '../lib/supabase'
 import { deleteWorkLog, getUserLibrary, getWorkLog, logWork } from '../lib/libraryService'
 import { getAccentTextColor } from '../lib/colorContrast'
@@ -88,7 +91,7 @@ const TOOLS = [
   { id: 'image', label: 'Añadir imagen', icon: <><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></> },
   { id: 'gif', label: 'Añadir GIF', icon: <><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M10 9.5a2.5 2.5 0 1 0 0 5h1.5v-1.7H10M15 9.5v5M18 9.5h-2v5"/></> },
   { id: 'list', label: 'Añadir lista', icon: <><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></> },
-  { id: 'emoji', label: 'Añadir reacción', icon: <><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></> },
+  { id: 'mention', label: 'Mencionar a alguien', icon: <><circle cx="12" cy="12" r="4"/><path d="M16 8v6a2 2 0 0 0 4 0v-2a8 8 0 1 0-3.3 6.5"/></> },
 ]
 
 export default function SharePage() {
@@ -163,6 +166,11 @@ export default function SharePage() {
   const isStandaloneListComposer = Boolean(selectedStandaloneType) && !isListPublishingFlow && !selectedReview
   const isListSetupComposerFlow = isTemplateComposerFlow || isStandaloneListComposer
   const isListAttachmentFlow = isListPublishingFlow || isListSetupComposerFlow
+  const mentions = useMentionAutocomplete({
+    inputRef: textareaRef, value: text, userId: user?.id, maxLength: INPUT_LIMIT,
+    enabled: !selectedReview && !isListAttachmentFlow,
+    onValueChange: value => handleTextChange({ target: { value } }),
+  })
 
   useEffect(() => {
     if (new URLSearchParams(location.search).get('openList') !== '1') return
@@ -481,6 +489,14 @@ export default function SharePage() {
   }
 
   const chooseTool = tool => {
+    if (tool.id === 'mention') {
+      setGifOpen(false)
+      setTemplatePickerOpen(false)
+      setSelectedTool(null)
+      setToolHint('')
+      mentions.insertMention()
+      return
+    }
     if (tool.id === 'list') {
       const shouldOpen = !templatePickerOpen
       setSelectedTool(shouldOpen ? 'list' : null)
@@ -806,16 +822,21 @@ export default function SharePage() {
               })}
               <strong>{reviewRating > 0 ? reviewRating.toFixed(1) : '—'}</strong>
             </div>}
+            <div className="mention-input-wrap">
+            <MentionHighlights inputRef={textareaRef} value={text} enabled={!selectedReview} />
             <textarea
               ref={textareaRef}
+              className={!selectedReview ? 'has-mention-highlights' : undefined}
               value={text}
-              onChange={handleTextChange}
+              {...mentions.inputProps}
               maxLength={INPUT_LIMIT}
               placeholder={selectedReview ? (loadingExistingReview ? 'Cargando tu reseña…' : `Tu reseña sobre ${selectedReview.title}… (opcional)`) : placeholder}
               rows={3}
               aria-label={selectedReview ? 'Escribe tu reseña' : 'Escribe tu post'}
               aria-describedby="share-character-count"
             />
+            <MentionSuggestions autocomplete={mentions} />
+            </div>
             {selectedReview && existingWorkEntry && <button className="share-review-delete-entry" type="button" onClick={() => setDeleteConfirmOpen(true)} disabled={deletingEntry}>Eliminar entrada</button>}
           </div>
         </div>
@@ -882,6 +903,7 @@ export default function SharePage() {
                 aria-pressed={selectedTool === tool.id}
                 title={tool.label}
                 disabled={['image', 'gif'].includes(tool.id) && images.length >= 3}
+                onMouseDown={tool.id === 'mention' ? event => event.preventDefault() : undefined}
                 onClick={() => chooseTool(tool)}
               >
                 <svg viewBox="0 0 24 24" aria-hidden="true">{tool.icon}</svg>

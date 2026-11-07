@@ -1,5 +1,7 @@
 import { supabase } from './supabase'
 
+const POST_MENTIONS = 'mentions:post_mentions(username, profile:profiles!post_mentions_user_id_fkey(id, username))'
+
 export async function createPost(post) {
   const { data, error } = await supabase
     .from('posts')
@@ -29,7 +31,12 @@ export async function updatePostBody(postId, userId, body) {
     .select('id, body')
     .single()
   if (error) throw error
-  return data
+  // Read references after the update commits so newly created trigger rows are visible.
+  const { data: mentions, error: mentionsError } = await supabase.from('post_mentions')
+    .select('username, profile:profiles!post_mentions_user_id_fkey(id, username)')
+    .eq('post_id', postId)
+  if (mentionsError) throw mentionsError
+  return { ...data, mentions: mentions || [] }
 }
 
 export async function updatePostFlags(postId, userId, flags) {
@@ -55,7 +62,7 @@ export async function deletePost(postId, userId) {
 export async function getPostById(id) {
   const { data, error } = await supabase
     .from('posts')
-    .select('*')
+    .select(`*, ${POST_MENTIONS}`)
     .eq('id', id)
     .maybeSingle()
   if (error) throw error
@@ -73,7 +80,7 @@ export async function getPostById(id) {
 export async function getRecentPosts(limit = 6) {
   const { data, error } = await supabase
     .from('posts')
-    .select('id, user_id, body, media, contains_spoiler, is_sensitive, spoiler_work_title, created_at')
+    .select(`id, user_id, body, media, contains_spoiler, is_sensitive, spoiler_work_title, created_at, ${POST_MENTIONS}`)
     .order('created_at', { ascending: false })
     .limit(limit)
   if (error) throw error
@@ -96,7 +103,7 @@ export async function getHomePosts(limit = 30, authorIds = null, excludedAuthorI
   const recentCutoff = new Date(now - 7 * 24 * 60 * 60 * 1000).toISOString()
   const olderCutoff = new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString()
   let request = supabase.from('posts')
-    .select('id, user_id, body, media, contains_spoiler, is_sensitive, spoiler_work_title, created_at')
+    .select(`id, user_id, body, media, contains_spoiler, is_sensitive, spoiler_work_title, created_at, ${POST_MENTIONS}`)
     .gte('created_at', olderCutoff)
     .order('created_at', { ascending: false })
   if (authorIds) request = request.in('user_id', authorIds)
@@ -130,7 +137,7 @@ export async function getHomePosts(limit = 30, authorIds = null, excludedAuthorI
 export async function getPostsByUser(userId, limit = 30) {
   if (!userId) return []
   const { data, error } = await supabase.from('posts')
-    .select('id, user_id, body, media, contains_spoiler, is_sensitive, spoiler_work_title, created_at')
+    .select(`id, user_id, body, media, contains_spoiler, is_sensitive, spoiler_work_title, created_at, ${POST_MENTIONS}`)
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(limit)

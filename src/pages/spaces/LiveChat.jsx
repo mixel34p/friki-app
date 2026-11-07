@@ -1,3 +1,4 @@
+import { createPostgresChannel } from '../../lib/postgresChannel'
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams, useOutletContext, useNavigate } from 'react-router-dom';
@@ -540,8 +541,7 @@ export default function LiveChat() {
 
         loadMessages();
 
-        const subscription = supabase
-            .channel(`channel_${channel.id}`)
+        const subscription = createPostgresChannel(supabase, `channel_${channel.id}`)
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'space_messages', filter: `channel_id=eq.${channel.id}` }, async payload => {
                 const { data: fullMsg } = await supabase
                     .from('space_messages')

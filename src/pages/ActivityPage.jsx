@@ -1,3 +1,4 @@
+import { createPostgresChannel } from '../lib/postgresChannel'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
@@ -29,6 +30,7 @@ function notificationMessage(item) {
     comment_post: 'ha comentado en tu publicación',
     comment_list: 'ha comentado en tu lista',
     like_post: 'le ha gustado tu publicación',
+    mention_post: 'te ha mencionado en una publicación',
     like: 'ha indicado que le gusta una de tus publicaciones',
     comment: 'ha comentado en una de tus listas',
     connection_request: 'quiere conectar contigo',
@@ -68,7 +70,7 @@ function dayHeading(dateValue) {
 const PAGE_SIZE = 100
 const ACTOR_NOTIFICATION_TYPES = [
   'follow', 'like_list', 'like_tierlist', 'like_review', 'comment_review',
-  'like_post', 'comment_post', 'comment_list', 'like', 'comment', 'connection_request', 'connection_accepted',
+  'like_post', 'comment_post', 'mention_post', 'comment_list', 'like', 'comment', 'connection_request', 'connection_accepted',
 ]
 
 function parseListContent(content) {
@@ -117,6 +119,7 @@ function notificationActors(item) {
 }
 
 function activityIcon(type) {
+  if (type === 'mention_post') return <><circle cx="12" cy="12" r="4"/><path d="M16 8v6a2 2 0 0 0 4 0v-2a8 8 0 1 0-3.3 6.5"/></>
   if (type === 'follow') return <><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M19 8v6M16 11h6"/></>
   if (type?.startsWith('comment_')) return <><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8A8.5 8.5 0 0 1 8.7 3.9a8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8z"/></>
   return <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z" />
@@ -378,8 +381,7 @@ export default function ActivityPage() {
   useEffect(() => {
     loadNotifications()
     if (!user?.id) return undefined
-    const channel = supabase
-      .channel(`activity-page-${user.id}`)
+    const channel = createPostgresChannel(supabase, `activity-page-${user.id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, loadNotifications)
       .subscribe()
     return () => { supabase.removeChannel(channel) }

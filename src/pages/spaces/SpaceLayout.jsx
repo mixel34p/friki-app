@@ -1,3 +1,4 @@
+import { createPostgresChannel } from '../../lib/postgresChannel'
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Outlet, useParams, NavLink, useNavigate, useLocation } from 'react-router-dom';
@@ -197,7 +198,7 @@ export default function SpaceLayout() {
   useEffect(() => {
     loadSpaceData();
 
-    const subscription = supabase.channel(`space_channels_${spaceId}`)
+    const subscription = createPostgresChannel(supabase, `space_channels_${spaceId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'space_channels', filter: `space_id=eq.${spaceId}` }, () => {
         loadSpaceData();
       })
