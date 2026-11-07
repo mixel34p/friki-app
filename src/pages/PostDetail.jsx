@@ -420,7 +420,7 @@ export default function PostDetail() {
       </section>
     </div>, document.body)}
     {lightboxOpen && media.length > 0 && createPortal(
-      <div className="post-image-lightbox" style={{ '--post-lightbox-accent': author.theme_color || 'var(--brand-primary)' }} role="presentation" onClick={() => setLightboxOpen(false)}>
+      <div className={`post-image-lightbox${isPwaStandalone ? ' pwa-prompt-overlay' : ''}`} style={{ '--post-lightbox-accent': author.theme_color || 'var(--brand-primary)' }} role="presentation" onClick={() => setLightboxOpen(false)}>
         <section className="post-image-lightbox-dialog" role="dialog" aria-modal="true" aria-label="Imagen ampliada">
           <header className="post-image-lightbox-topbar">
             {media.length > 1 && <span>{activeMediaIndex + 1} <i>/</i> {media.length}</span>}

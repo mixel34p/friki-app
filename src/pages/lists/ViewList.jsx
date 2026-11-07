@@ -843,7 +843,7 @@ export default function ViewList() {
 
             {/* ── Share dialog ── */}
             {shareOpen && createPortal((
-                <div className="review-share-overlay" onClick={() => setShareOpen(false)}>
+                <div className={`review-share-overlay${isStandalonePwa ? ' pwa-prompt-overlay' : ''}`} onClick={() => setShareOpen(false)}>
                     <section className="review-share-dialog" style={{ '--review-page-accent': pageAccent }} role="dialog" aria-modal="true" aria-labelledby="vl-share-title" onClick={e => e.stopPropagation()}>
                         <header className="review-share-heading">
                             <div>
@@ -913,7 +913,7 @@ export default function ViewList() {
             ), document.body)}
             {/* ── Vista ampliada / Lightbox (lista + título, cerrar fuera) ── */}
             {lightboxOpen && createPortal((
-                <div className="vl-lightbox-overlay" onClick={() => setLightboxOpen(false)}>
+                <div className={`vl-lightbox-overlay${isStandalonePwa ? ' pwa-prompt-overlay' : ''}`} onClick={() => setLightboxOpen(false)}>
                     <button
                         className="vl-lightbox-close"
                         type="button"

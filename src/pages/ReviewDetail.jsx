@@ -744,7 +744,7 @@ export default function ReviewDetail() {
       {pendingDelete && <div className="review-comment-undo-toast" role="status"><span>Comentario borrado</span><button type="button" onClick={handleUndoDelete}>Deshacer</button></div>}
       </article>
       {shareOpen && createPortal((
-        <div className="review-share-overlay" onClick={() => setShareOpen(false)}>
+        <div className={`review-share-overlay${isStandalonePwa ? ' pwa-prompt-overlay' : ''}`} onClick={() => setShareOpen(false)}>
           <section className="review-share-dialog" style={{ '--review-page-accent': pageAccent }} role="dialog" aria-modal="true" aria-labelledby="review-share-title" onClick={event => event.stopPropagation()}>
             <header className="review-share-heading">
               <div><span className="review-share-eyebrow">COMPARTIR REVIEW</span><h2 id="review-share-title">Una opinión que merece compartirse</h2></div>

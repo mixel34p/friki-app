@@ -218,7 +218,7 @@ export default function ViewTemplate() {
       </aside>
 
       {shareOpen && createPortal((
-        <div className="review-share-overlay" onClick={() => setShareOpen(false)}>
+        <div className={`review-share-overlay${isStandalonePwa ? ' pwa-prompt-overlay' : ''}`} onClick={() => setShareOpen(false)}>
           <section className="review-share-dialog" style={{ '--review-page-accent': accent }} role="dialog" aria-modal="true" aria-labelledby="template-share-title" onClick={event => event.stopPropagation()}>
             <header className="review-share-heading">
               <div><span className="review-share-eyebrow">COMPARTIR PLANTILLA</span><h2 id="template-share-title">Que la vean los demás</h2></div>
