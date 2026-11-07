@@ -1490,7 +1490,7 @@
     .profile-no-main-header-on-mobile .main.profile-main { animation: none; }
     .profile-no-main-header-on-mobile .main.profile-main { padding: 0 0 calc(96px + env(safe-area-inset-bottom)); }
     .profile-no-main-header-on-mobile .main > .profile-page { margin-top: 0; }
-    .profile-no-main-header-on-mobile .mobile-bottom-nav { display: flex !important; z-index: 1200; }
+    .pwa-visited-profile-open .mobile-bottom-nav { display: none !important; }
 }
 @media (max-width: 420px) {
     .mobile-bottom-nav { gap: 8px; }

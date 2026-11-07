@@ -274,6 +274,12 @@ export default function Profile() {
     }
 
     useEffect(() => {
+        if (!isStandalonePwa || !isOtherProfile) return undefined
+        document.body.classList.add('pwa-visited-profile-open')
+        return () => document.body.classList.remove('pwa-visited-profile-open')
+    }, [isStandalonePwa, isOtherProfile])
+
+    useEffect(() => {
         if (!selectedBadge) return undefined
 
         const previousOverflow = document.body.style.overflow
@@ -550,7 +556,7 @@ export default function Profile() {
         )
     }
 
-    if (loading) return <div className="profile-loading"><LoadingSpinner /></div>
+    if (loading) return isStandalonePwa && isOtherProfile ? null : <div className="profile-loading"><LoadingSpinner /></div>
 
     if (!profile) return (
         <div className="profile-error">
