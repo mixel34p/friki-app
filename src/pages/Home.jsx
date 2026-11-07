@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import SpoilerNotice from '../components/reviews/SpoilerNotice'
 import { useAuth } from '../context/AuthContext'
 import DefaultAvatar from '../components/DefaultAvatar'
@@ -53,6 +53,7 @@ function getListCoverImages(content) {
 }
 
 export function PostCard({ post, hideAvatar = false, hideAuthor = false, useDesktopMediaSizing = false }) {
+    const navigate = useNavigate()
     const [revealed, setRevealed] = useState(false)
     const [mediaFrameHeight, setMediaFrameHeight] = useState(null)
     const author = post.author || {}
@@ -78,7 +79,17 @@ export function PostCard({ post, hideAvatar = false, hideAuthor = false, useDesk
     const postText = post.body && (hasWarning && !revealed
         ? <SpoilerNotice text={post.body} label={`${warning} · pulsa para ver`} ariaLabel={`Mostrar ${warning}`} onReveal={() => setRevealed(true)} />
         : <div className="home-post-text-link"><p className={media.length ? 'home-post-copy' : 'home-post-bubble'}><MentionText text={post.body} mentions={post.mentions} fallbackToPost={`/posts/${post.id}`} /></p></div>)
-    return <article className="home-post" style={{ '--home-post-accent': accent, '--home-post-text': accentText }}>
+    const openPost = event => {
+        if (event.target.closest('a, button')) return
+        navigate(`/posts/${post.id}`)
+    }
+    const handleCardKeyDown = event => {
+        if ((event.key === 'Enter' || event.key === ' ') && event.target === event.currentTarget) {
+            event.preventDefault()
+            navigate(`/posts/${post.id}`)
+        }
+    }
+    return <article className="home-post" style={{ '--home-post-accent': accent, '--home-post-text': accentText }} onClick={openPost} onKeyDown={handleCardKeyDown} role="link" tabIndex={0} aria-label={`Abrir publicación de ${name}`}>
         <header className="home-post-header">
             {!hideAuthor && <Link className="home-post-author" to={profilePath} aria-label={`Ver perfil de ${name}`}>
                 {!hideAvatar && <span className="home-post-avatar">

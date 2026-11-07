@@ -486,7 +486,8 @@
 .home-feed-title { margin: 0 0 1rem; color: var(--text-primary); font: 750 1.28rem/1.25 var(--font-display); letter-spacing: -.025em; }
 .home-post-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); align-items: start; justify-content: start; gap: 18px; }
 .home-post-column { display: flex; min-width: 0; flex-direction: column; gap: 12px; }
-.home-post { min-width: 0; }
+.home-post { min-width: 0; cursor: pointer; }
+.home-post:focus-visible { outline: 2px solid var(--brand-primary); outline-offset: 3px; border-radius: 12px; }
 .home-post-grid-skeleton { min-height: 32vh; }
 .home-post-skeleton { min-width: 0; }
 .home-post-skeleton-header { display: flex; min-width: 0; align-items: center; gap: 8px; margin-bottom: 10px; }
