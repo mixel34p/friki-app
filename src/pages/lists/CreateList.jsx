@@ -15,6 +15,7 @@ import { searchGames } from '../../lib/gameService';
 import { searchAnime } from '../../lib/animeService';
 import { getDiscoverWorks } from '../../lib/discoverWorksService';
 import { getTierLabelFontSize } from '../../lib/tierLabel';
+import { navigateBackOrHome } from '../../lib/navigation';
 import CustomItemGroupsPicker from '../../components/CustomItemGroupsPicker';
 import { ListPostPreview, generateListImage } from './ViewList';
 import { requestGuestListRegistration, saveGuestListDraft } from '../../lib/guestListDraft';
@@ -772,7 +773,7 @@ export default function CreateList() {
                 <div className="cl-header-left">
                     {user ? <Link to="/lists" className="editor-icon-back" aria-label="Volver a listas">
                         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
-                    </Link> : <button type="button" className="editor-icon-back" aria-label="Volver" onClick={() => navigate(-1)}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg></button>}
+                    </Link> : <button type="button" className="editor-icon-back" aria-label="Volver" onClick={() => navigateBackOrHome(navigate)}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg></button>}
 
                     <div className="cl-title-area">
                         {user && !id && !templateId && !fromListId && !publishDraftKey && !standaloneType && (

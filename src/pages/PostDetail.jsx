@@ -14,6 +14,7 @@ import SpoilerNotice from '../components/reviews/SpoilerNotice'
 import useAutoResizeTextarea from '../hooks/useAutoResizeTextarea'
 import { addPostComment, deletePost, deletePostComment, getMorePostsByUser, getPostById, getPostComments, getPostLikeState, togglePostLike, updatePostBody, updatePostFlags, updatePostComment } from '../lib/postService'
 import { formatRelativeDate } from '../lib/formatRelativeDate'
+import { navigateBackOrHome } from '../lib/navigation'
 import './ReviewDetail.css'
 import './PostDetail.css'
 
@@ -90,9 +91,9 @@ export default function PostDetail() {
   const [likeBusy, setLikeBusy] = useState(false)
   const [shareCopied, setShareCopied] = useState(false)
   const handleBack = () => {
-    if (!isPwaStandalone) return navigate(-1)
+    if (!isPwaStandalone) return navigateBackOrHome(navigate)
     setIsExitingPwa(true)
-    window.setTimeout(() => navigate(-1), 280)
+    window.setTimeout(() => navigateBackOrHome(navigate), 280)
   }
   const [menuOpen, setMenuOpen] = useState(false)
   const [editPostOpen, setEditPostOpen] = useState(false)
@@ -245,7 +246,7 @@ export default function PostDetail() {
     try {
       await deletePost(postId, user.id)
       setDeletePostOpen(false)
-      navigate(-1)
+      navigateBackOrHome(navigate)
     } catch (err) {
       console.error('No se pudo eliminar la publicación:', err)
       setPostActionError(err.message || 'No se pudo eliminar la publicación.')
@@ -323,9 +324,9 @@ export default function PostDetail() {
     if (contentHidden) setRevealed(true)
     else setLightboxOpen(true)
   }
-  const commentComposer = user && currentProfile && <form className={`review-comment-form${isPwaStandalone ? ' pwa-comment-composer' : ''}`} style={{ '--comment-accent': currentProfile.theme_color || 'var(--brand-primary)' }} onSubmit={handleSubmitComment}>
+  const commentComposer = user && currentProfile && <form className={`review-comment-form${isPwaStandalone ? ' pwa-comment-composer' : ''}`} style={{ '--comment-accent': currentProfile.theme_color || 'var(--brand-primary)', '--comment-accent-ink': getBubbleTextColor(currentProfile.theme_color) }} onSubmit={handleSubmitComment}>
     <Avatar profile={currentProfile} size="small"/><label className="review-comment-input-wrap"><textarea ref={commentInputRef} aria-label="Escribe un comentario" value={commentText} onChange={event => setCommentText(event.target.value)} maxLength={300} rows={1} placeholder="Escribe un comentario…"/></label>
-    <button type="submit" disabled={!commentText.trim() || submitting}>{submitting ? 'Enviando…' : 'Comentar'}</button>
+    <button type="submit" disabled={!commentText.trim() || submitting} aria-label={submitting ? 'Enviando comentario' : 'Enviar comentario'}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4Z"/></svg><span>{submitting ? 'Enviando…' : 'Enviar'}</span></button>
   </form>
   return <main className={`review-detail-page post-detail-page${isPwaStandalone ? ' pwa-post-detail' : ''}${isExitingPwa ? ' is-exiting' : ''}`} style={{ '--review-page-accent': author.theme_color || 'var(--brand-primary)', '--post-bubble-text': getBubbleTextColor(author.theme_color), '--review-backdrop-image': activeMedia?.url ? `url("${activeMedia.url}")` : 'none' }}>
     <article className="review-post post-detail-card">

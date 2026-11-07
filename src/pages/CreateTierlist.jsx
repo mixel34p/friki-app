@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { searchGames } from '../lib/gameService'
 import { searchAnime } from '../lib/animeService'
+import { navigateBackOrHome } from '../lib/navigation'
 import './ReviewDetail.css'
 import './CreateTierlist.css'
 
@@ -490,7 +491,7 @@ export default function CreateTierlist() {
                 <div className="ctl-editor-inner">
 
                     {/* Back */}
-                    <button type="button" className="editor-icon-back" aria-label="Volver" onClick={() => navigate(-1)}>
+                    <button type="button" className="editor-icon-back" aria-label="Volver" onClick={() => navigateBackOrHome(navigate)}>
                         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
                     </button>
 

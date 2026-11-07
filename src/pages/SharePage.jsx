@@ -14,6 +14,7 @@ import { searchGames } from '../lib/gameService'
 import { searchAnime } from '../lib/animeService'
 import { createList, getTemplateById, getTemplates, incrementTemplateUses, DEFAULT_TIER_CONFIG } from '../lib/listService'
 import { createPost } from '../lib/postService'
+import { navigateBackOrHome } from '../lib/navigation'
 import { uploadChatImage } from '../lib/socialDiscoveryService'
 import { ListPostPreview } from './lists/ViewList'
 import './SharePage.css'
@@ -421,9 +422,9 @@ export default function SharePage() {
     return () => screen.orientation.unlock?.()
   }, [isStandaloneMobile])
   const handleMobileBack = () => {
-    if (!isStandaloneMobile) return navigate(-1)
+    if (!isStandaloneMobile) return navigateBackOrHome(navigate)
     setIsExitingPwa(true)
-    window.setTimeout(() => navigate(-1), 280)
+    window.setTimeout(() => navigateBackOrHome(navigate), 280)
   }
   const renderMobileSheet = content => isStandaloneMobile ? createPortal(content, document.body) : content
 

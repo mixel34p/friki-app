@@ -13,6 +13,8 @@ import DefaultAvatar, { getDefaultAvatarDataUrl } from '../../components/Default
 import { getTierLabelFontSize } from '../../lib/tierLabel';
 import { formatRelativeDate } from '../../lib/formatRelativeDate';
 import { getMorePostsByUser } from '../../lib/postService';
+import { getAccentTextColor } from '../../lib/colorContrast';
+import { navigateBackOrHome } from '../../lib/navigation';
 import MoreContentCards, { normalizeMoreContent } from '../../components/MoreContentCards';
 import ListLikeButton from '../../components/ListLikeButton';
 import LoadingSpinner from '../../components/LoadingSpinner';
@@ -425,7 +427,7 @@ export default function ViewList() {
     const navigate = useNavigate();
     const isStandalonePwa = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
     const [isExitingPwa, setIsExitingPwa] = useState(false);
-    const handleBack = () => { if (!isStandalonePwa) return navigate(-1); setIsExitingPwa(true); window.setTimeout(() => navigate(-1), 280); };
+    const handleBack = () => { if (!isStandalonePwa) return navigateBackOrHome(navigate); setIsExitingPwa(true); window.setTimeout(() => navigateBackOrHome(navigate), 280); };
     const { user, profile: currentProfile, loading: authLoading } = useAuth();
 
     const [list, setList] = useState(null);
@@ -649,10 +651,10 @@ export default function ViewList() {
             setShareCopied(true); window.setTimeout(() => setShareCopied(false), 1800);
         } catch (err) { console.error(err); }
     };
-    const commentComposer = user && currentProfile && <form className={`review-comment-form${isStandalonePwa ? ' pwa-comment-composer' : ''}`} style={{ '--comment-accent': currentProfile.theme_color || 'var(--brand-primary)' }} onSubmit={handleSubmitComment}>
+    const commentComposer = user && currentProfile && <form className={`review-comment-form${isStandalonePwa ? ' pwa-comment-composer' : ''}`} style={{ '--comment-accent': currentProfile.theme_color || 'var(--brand-primary)', '--comment-accent-ink': getAccentTextColor(currentProfile.theme_color || '#14b8a6') }} onSubmit={handleSubmitComment}>
         <ProfileAvatar profile={currentProfile} size="small" />
         <label className="review-comment-input-wrap"><textarea ref={commentInputRef} aria-label="Escribe un comentario" value={commentText} onChange={event => setCommentText(event.target.value)} maxLength={300} rows={1} placeholder="Escribe un comentario…" /></label>
-        <button type="submit" disabled={!commentText.trim() || submitting}>{submitting ? 'Enviando…' : 'Comentar'}</button>
+        <button type="submit" disabled={!commentText.trim() || submitting} aria-label={submitting ? 'Enviando comentario' : 'Enviar comentario'}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4Z"/></svg><span>{submitting ? 'Enviando…' : 'Enviar'}</span></button>
     </form>;
 
     return (

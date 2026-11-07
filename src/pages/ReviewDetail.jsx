@@ -5,8 +5,9 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import DefaultAvatar from '../components/DefaultAvatar'
 import { supabase } from '../lib/supabase'
-import { getVisibleAccentColor } from '../lib/colorContrast'
+import { getAccentTextColor, getVisibleAccentColor } from '../lib/colorContrast'
 import { formatRelativeDate } from '../lib/formatRelativeDate'
+import { navigateBackOrHome } from '../lib/navigation'
 import { addLibraryReviewComment, deleteLibraryReviewComment, getLibraryReview, getLibraryReviewComments, updateLibraryReviewComment } from '../lib/libraryReviewService'
 import { getWorkLog } from '../lib/libraryService'
 import LoadingSpinner from '../components/LoadingSpinner'
@@ -351,7 +352,7 @@ export default function ReviewDetail() {
   const navigate = useNavigate()
   const isStandalonePwa = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true
   const [isExitingPwa, setIsExitingPwa] = useState(false)
-  const handleBack = () => { if (!isStandalonePwa) return navigate(-1); setIsExitingPwa(true); window.setTimeout(() => navigate(-1), 280) }
+  const handleBack = () => { if (!isStandalonePwa) return navigateBackOrHome(navigate); setIsExitingPwa(true); window.setTimeout(() => navigateBackOrHome(navigate), 280) }
   const { user, profile: currentProfile, updateProfile } = useAuth()
   const [review, setReview] = useState(null)
   const [comments, setComments] = useState([])
@@ -627,10 +628,10 @@ export default function ReviewDetail() {
     setExistingLog(savedLog)
     setShowLogModal(false)
   }
-  const commentComposer = user && currentProfile && <form className={`review-comment-form${isStandalonePwa ? ' pwa-comment-composer' : ''}`} style={{ '--comment-accent': currentProfile.theme_color || 'var(--brand-primary)' }} onSubmit={handleSubmit}>
+  const commentComposer = user && currentProfile && <form className={`review-comment-form${isStandalonePwa ? ' pwa-comment-composer' : ''}`} style={{ '--comment-accent': currentProfile.theme_color || 'var(--brand-primary)', '--comment-accent-ink': getAccentTextColor(currentProfile.theme_color || '#14b8a6') }} onSubmit={handleSubmit}>
     <ProfileAvatar profile={currentProfile} size="small" />
     <label className="review-comment-input-wrap"><textarea ref={commentInputRef} aria-label="Escribe un comentario" value={commentText} onChange={event => setCommentText(event.target.value)} maxLength={300} rows={1} placeholder="Escribe un comentario…" /></label>
-    <button type="submit" disabled={!commentText.trim() || submitting}>{submitting ? 'Enviando…' : 'Comentar'}</button>
+    <button type="submit" disabled={!commentText.trim() || submitting} aria-label={submitting ? 'Enviando comentario' : 'Enviar comentario'}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4Z"/></svg><span>{submitting ? 'Enviando…' : 'Enviar'}</span></button>
   </form>
 
   return (

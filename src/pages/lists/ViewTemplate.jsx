@@ -8,6 +8,7 @@ import { getMorePostsByUser } from '../../lib/postService';
 import { BADGES_MAP } from '../../lib/badges';
 import DefaultAvatar from '../../components/DefaultAvatar';
 import { formatRelativeDate } from '../../lib/formatRelativeDate';
+import { navigateBackOrHome } from '../../lib/navigation';
 import MoreContentCards, { normalizeMoreContent } from '../../components/MoreContentCards';
 import { ListPostPreview } from './ViewList';
 import './ViewList.css';
@@ -33,7 +34,7 @@ export default function ViewTemplate() {
   const navigate = useNavigate();
   const isStandalonePwa = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
   const [isExitingPwa, setIsExitingPwa] = useState(false);
-  const handleBack = () => { if (!isStandalonePwa) return navigate(-1); setIsExitingPwa(true); window.setTimeout(() => navigate(-1), 280); };
+  const handleBack = () => { if (!isStandalonePwa) return navigateBackOrHome(navigate); setIsExitingPwa(true); window.setTimeout(() => navigateBackOrHome(navigate), 280); };
   const { user, loading: authLoading } = useAuth();
   const menuRef = useRef(null);
   const [template, setTemplate] = useState(null);

@@ -16,6 +16,7 @@ import EditProfile from './EditProfile'
 import LibraryGrid from '../components/LibraryGrid'
 import ListLikeButton from '../components/ListLikeButton'
 import { getPostsByUser } from '../lib/postService'
+import { navigateBackOrHome } from '../lib/navigation'
 import { PostCard } from './Home'
 
 import LoadingSpinner from '../components/LoadingSpinner'
@@ -268,9 +269,9 @@ export default function Profile() {
     const isOtherProfile = Boolean(username && username !== myProfile?.username)
     const [isClosingPwaProfile, setIsClosingPwaProfile] = useState(false)
     const handleProfileBack = () => {
-        if (!isStandalonePwa || !isOtherProfile) return navigate(-1)
+        if (!isStandalonePwa || !isOtherProfile) return navigateBackOrHome(navigate)
         setIsClosingPwaProfile(true)
-        window.setTimeout(() => navigate(-1), 280)
+        window.setTimeout(() => navigateBackOrHome(navigate), 280)
     }
 
     useEffect(() => {

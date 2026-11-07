@@ -10,6 +10,7 @@ import {
 } from '../../lib/listService';
 import { searchGames } from '../../lib/gameService';
 import { searchAnime } from '../../lib/animeService';
+import { navigateBackOrHome } from '../../lib/navigation';
 import './CreateTemplate.css';
 
 export default function CreateTemplate() {
@@ -532,7 +533,7 @@ export default function CreateTemplate() {
       </div>
 
       <div className="form-nav-buttons">
-        <button className="btn btn-ghost" onClick={() => step > 1 ? setStep(step - 1) : navigate(-1)}>
+        <button className="btn btn-ghost" onClick={() => step > 1 ? setStep(step - 1) : navigateBackOrHome(navigate)}>
           {step > 1 ? 'Anterior' : 'Cancelar'}
         </button>
         {step < 3 ? (
