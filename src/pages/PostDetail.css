@@ -191,9 +191,5 @@
   .pwa-post-detail .review-comments-empty { min-height: 100%; }
   .pwa-post-detail .post-detail-actions .review-like-btn.liked svg { animation: none !important; }
   .pwa-post-detail .post-detail-actions .review-like-btn:active { transform: none !important; }
-  .pwa-comment-composer { position: fixed; z-index: 10001; right: 0; bottom: 0; left: 0; display: flex; align-items: center; gap: .65rem; margin: 0; padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); border-top: 1px solid rgba(255,255,255,.1); border-bottom: 0; background: rgba(15,16,20,.94); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
-  .pwa-comment-composer > button { display: grid; width: 44px; min-width: 44px; min-height: 44px; flex: 0 0 44px; place-items: center; overflow: visible; padding: 0; border: 0; border-radius: 50%; color: var(--post-bubble-text, #07110f); background: var(--review-page-accent, var(--brand-primary)); box-shadow: 0 4px 14px color-mix(in srgb, var(--review-page-accent, var(--brand-primary)) 30%, transparent); font-size: 0; }
-  .pwa-comment-composer > button::after { content: '➤'; color: inherit; font-size: 17px; line-height: 1; transform: translateX(1px); }
-  .pwa-comment-composer > button:disabled { opacity: .48; }
 @keyframes pwaPostEnter { from { transform: translateX(100vw); } to { transform: translateX(0); } }
 @keyframes pwaPostExit { from { transform: translateX(0); } to { transform: translateX(100vw); } }

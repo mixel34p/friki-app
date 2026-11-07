@@ -649,6 +649,11 @@ export default function ViewList() {
             setShareCopied(true); window.setTimeout(() => setShareCopied(false), 1800);
         } catch (err) { console.error(err); }
     };
+    const commentComposer = user && currentProfile && <form className={`review-comment-form${isStandalonePwa ? ' pwa-comment-composer' : ''}`} style={{ '--comment-accent': currentProfile.theme_color || 'var(--brand-primary)' }} onSubmit={handleSubmitComment}>
+        <ProfileAvatar profile={currentProfile} size="small" />
+        <label className="review-comment-input-wrap"><textarea ref={commentInputRef} aria-label="Escribe un comentario" value={commentText} onChange={event => setCommentText(event.target.value)} maxLength={300} rows={1} placeholder="Escribe un comentario…" /></label>
+        <button type="submit" disabled={!commentText.trim() || submitting}>{submitting ? 'Enviando…' : 'Comentar'}</button>
+    </form>;
 
     return (
         <main
@@ -809,13 +814,7 @@ export default function ViewList() {
                                     <button type="button" onClick={() => setReplyTo(null)}>Cancelar</button>
                                 </div>
                             )}
-                            <form className="review-comment-form" onSubmit={handleSubmitComment}>
-                                <ProfileAvatar profile={currentProfile} size="small" />
-                                <label className="review-comment-input-wrap">
-                                    <textarea ref={commentInputRef} aria-label="Escribe un comentario" value={commentText} onChange={e => setCommentText(e.target.value)} maxLength={300} rows={1} placeholder="Escribe un comentario…" />
-                                </label>
-                                <button type="submit" disabled={!commentText.trim() || submitting}>{submitting ? 'Enviando…' : 'Comentar'}</button>
-                            </form>
+                            {isStandalonePwa ? createPortal(commentComposer, document.body) : commentComposer}
                         </>
                     ) : (
                         <p className="review-comments-signin"><Link to={user ? '/onboarding' : '/register'}>Inicia sesión para comentar</Link></p>

@@ -627,6 +627,11 @@ export default function ReviewDetail() {
     setExistingLog(savedLog)
     setShowLogModal(false)
   }
+  const commentComposer = user && currentProfile && <form className={`review-comment-form${isStandalonePwa ? ' pwa-comment-composer' : ''}`} style={{ '--comment-accent': currentProfile.theme_color || 'var(--brand-primary)' }} onSubmit={handleSubmit}>
+    <ProfileAvatar profile={currentProfile} size="small" />
+    <label className="review-comment-input-wrap"><textarea ref={commentInputRef} aria-label="Escribe un comentario" value={commentText} onChange={event => setCommentText(event.target.value)} maxLength={300} rows={1} placeholder="Escribe un comentario…" /></label>
+    <button type="submit" disabled={!commentText.trim() || submitting}>{submitting ? 'Enviando…' : 'Comentar'}</button>
+  </form>
 
   return (
     <main className={`review-detail-page${isStandalonePwa ? ' pwa-detail-screen' : ''}${isExitingPwa ? ' is-exiting' : ''}`} style={{ '--review-page-accent': pageAccent, '--review-backdrop-image': reviewBackdrop ? `url("${reviewBackdrop}")` : 'none' }}>
@@ -732,13 +737,7 @@ export default function ReviewDetail() {
         {user && currentProfile ? (
           <>
           {replyTo && <div className="review-comment-reply-context">Respondiendo a {replyTo.profile?.display_name || replyTo.profile?.username || 'Usuario'}<button type="button" onClick={() => setReplyTo(null)}>Cancelar</button></div>}
-          <form className="review-comment-form" onSubmit={handleSubmit}>
-            <ProfileAvatar profile={currentProfile} size="small" />
-            <label className="review-comment-input-wrap">
-              <textarea ref={commentInputRef} aria-label="Escribe un comentario" value={commentText} onChange={event => setCommentText(event.target.value)} maxLength={300} rows={1} placeholder="Escribe un comentario…" />
-            </label>
-            <button type="submit" disabled={!commentText.trim() || submitting}>{submitting ? 'Enviando…' : 'Comentar'}</button>
-          </form>
+          {isStandalonePwa ? createPortal(commentComposer, document.body) : commentComposer}
           </>
         ) : <p className="review-comments-signin"><Link to={user ? '/onboarding' : '/register'}>Inicia sesión para comentar</Link></p>}
       </section>

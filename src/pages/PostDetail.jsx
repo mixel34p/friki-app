@@ -303,7 +303,7 @@ export default function PostDetail() {
 
   const activeMedia = media[activeMediaIndex] || media[0]
   const activeMediaFailed = Boolean(activeMedia?.url && failedMediaUrls.has(activeMedia.url))
-  const commentComposer = user && currentProfile && <form className={`review-comment-form${isPwaStandalone ? ' pwa-comment-composer' : ''}`} onSubmit={handleSubmitComment}>
+  const commentComposer = user && currentProfile && <form className={`review-comment-form${isPwaStandalone ? ' pwa-comment-composer' : ''}`} style={{ '--comment-accent': currentProfile.theme_color || 'var(--brand-primary)' }} onSubmit={handleSubmitComment}>
     <Avatar profile={currentProfile} size="small"/><label className="review-comment-input-wrap"><textarea ref={commentInputRef} aria-label="Escribe un comentario" value={commentText} onChange={event => setCommentText(event.target.value)} maxLength={300} rows={1} placeholder="Escribe un comentario…"/></label>
     <button type="submit" disabled={!commentText.trim() || submitting}>{submitting ? 'Enviando…' : 'Comentar'}</button>
   </form>
