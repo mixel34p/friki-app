@@ -350,6 +350,11 @@
   margin: 0 clamp(1rem, 2.3vw, 1.55rem) 1rem calc(clamp(1rem, 2.3vw, 1.55rem) + 48px + 1rem);
 }
 
+.share-composer-input > .share-image-preview-grid {
+  width: 100%;
+  margin: .5rem 0 0;
+}
+
 .share-image-preview-grid.count-2,
 .share-image-preview-grid.count-3 {
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -930,7 +935,7 @@
   .share-composer-entry.has-images { padding-bottom: .3rem; }
   .share-composer-entry .share-composer-input { display: block; }
   .share-composer-input textarea { min-height: 140px; }
-  .share-image-preview-grid { width: 100%; margin: .85rem 0 0; }
+  .share-composer-input > .share-image-preview-grid { width: 100%; margin: .2rem 0 0; }
   .share-image-preview-grid.count-1 .share-image-preview-item { width: 100%; max-width: 100%; }
   .share-image-preview-grid.count-1 .share-image-preview-item > img { width: 100%; max-width: 100%; max-height: 42dvh; object-fit: contain; }
   .share-composer-footer { position: fixed; inset: auto 0 var(--share-keyboard-offset, 0px); z-index: 1510; min-height: 76px; gap: .45rem; padding: .65rem .55rem calc(.65rem + env(safe-area-inset-bottom)); border-top: 1px solid rgba(255,255,255,.12); background: color-mix(in srgb, #111216 88%, transparent); box-shadow: 0 -12px 32px rgba(0,0,0,.22); backdrop-filter: blur(24px) saturate(1.25); transition: bottom .16s ease-out; }
