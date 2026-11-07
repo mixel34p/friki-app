@@ -283,7 +283,7 @@ export default function PostDetail() {
     finally { setDeletingId(null) }
   }
 
-  if (loading) return isPwaStandalone ? <main className="pwa-post-loading" aria-busy="true" /> : <div className="post-detail-state"><LoadingSpinner /></div>
+  if (loading) return isPwaStandalone ? null : <div className="post-detail-state"><LoadingSpinner /></div>
   if (error || !post) return <main className={`review-detail-page post-detail-page${isPwaStandalone ? ` pwa-post-detail${isExitingPwa ? ' is-exiting' : ''}` : ''}`}><div className="review-post"><button className="review-detail-back" type="button" onClick={handleBack}>← Volver</button><h1>{error || 'Publicación no encontrada'}</h1></div></main>
 
   const author = post.author || {}

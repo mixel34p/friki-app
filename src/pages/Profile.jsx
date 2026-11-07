@@ -264,6 +264,14 @@ export default function Profile() {
 
     const navigate = useNavigate()
     const [isScrolled, setIsScrolled] = useState(false)
+    const isStandalonePwa = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true
+    const isOtherProfile = Boolean(username && username !== myProfile?.username)
+    const [isClosingPwaProfile, setIsClosingPwaProfile] = useState(false)
+    const handleProfileBack = () => {
+        if (!isStandalonePwa || !isOtherProfile) return navigate(-1)
+        setIsClosingPwaProfile(true)
+        window.setTimeout(() => navigate(-1), 280)
+    }
 
     useEffect(() => {
         if (!selectedBadge) return undefined
@@ -563,12 +571,12 @@ export default function Profile() {
         }
 
     return (
-        <div className={`profile-page${profile.theme_color || profile.banner_color || bannerColors ? ' profile-themed' : ''}`} style={{ ...profileColors, ...getProfileTypography(profile.name_font, profile.bio_font) }}>
+        <div className={`profile-page${profile.theme_color || profile.banner_color || bannerColors ? ' profile-themed' : ''}${isStandalonePwa && isOtherProfile ? ' pwa-visited-profile' : ''}${isClosingPwaProfile ? ' is-closing' : ''}`} style={{ ...profileColors, ...getProfileTypography(profile.name_font, profile.bio_font) }}>
             <SEO title={`${profile.display_name || profile.username} (@${profile.username})`} description={`Perfil de ${profile.display_name || profile.username} en GeekSphere.`} />
 
             {/* Mobile Topbar */}
             <div className={`profile-mobile-nav ${isScrolled ? 'scrolled' : ''}`}>
-                <button className="profile-mobile-back" onClick={() => navigate(-1)}>
+                <button className="profile-mobile-back" onClick={handleProfileBack}>
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                         <line x1="19" y1="12" x2="5" y2="12" />
                         <polyline points="12 19 5 12 12 5" />
