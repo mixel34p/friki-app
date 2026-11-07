@@ -162,19 +162,21 @@
     min-height: 100dvh;
     margin: 0 !important;
     padding: env(safe-area-inset-top) 0 0 !important;
-    overflow: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
     overscroll-behavior: contain;
     background: var(--bg-primary);
-    animation: pwaPostEnter .32s cubic-bezier(.2,.8,.2,1) both;
+    animation: none;
+    transform: none;
 }
-.pwa-post-detail::before,.pwa-post-detail::after { position: fixed; inset: 0; pointer-events: none; }
-  .pwa-post-detail::after { background: radial-gradient(ellipse 100% 68% at 50% 0%, color-mix(in srgb, var(--review-page-accent) 22%, transparent), transparent 78%), linear-gradient(180deg, color-mix(in srgb, var(--review-page-accent) 9%, var(--bg-primary)) 0%, var(--bg-primary) 72%); }
-  .pwa-post-detail .post-detail-card { min-height: 100%; padding: 0 0 calc(88px + env(safe-area-inset-bottom)); overflow: visible; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
-  .pwa-post-detail .post-detail-topbar { position: sticky; top: 0; z-index: 5; min-height: 58px; margin: 0; padding: 8px 16px; border: 0; background: color-mix(in srgb, var(--bg-primary) 48%, transparent); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
-  .pwa-post-detail .post-detail-topbar .review-detail-back,.pwa-post-detail .post-detail-dots { display: grid; width: 42px; height: 42px; place-items: center; margin: 0; padding: 0; border: 0; border-radius: 50%; color: var(--text-primary); background: rgba(255,255,255,.075); }
-  .pwa-post-detail .post-detail-topbar .review-detail-back { font-size: 0; }
-  .pwa-post-detail .post-detail-topbar .review-detail-back svg,.pwa-post-detail .post-detail-dots svg { width: 21px; height: 21px; }
-  .pwa-post-detail .post-detail-dots svg { fill: currentColor; stroke: none; }
+.pwa-post-detail::before { display: none; }
+.pwa-post-detail::after { display: none; }
+.pwa-post-detail .post-detail-card { position: relative; min-height: 100%; padding: 0 0 calc(88px + env(safe-area-inset-bottom)); overflow: visible; border: 0; border-radius: 0; background: radial-gradient(ellipse 100% 68% at 50% 0%, color-mix(in srgb, var(--review-page-accent) 24%, transparent), transparent 78%), linear-gradient(180deg, color-mix(in srgb, var(--review-page-accent) 10%, var(--bg-primary)) 0%, var(--bg-primary) 100%); box-shadow: none; }
+.pwa-post-detail .post-detail-topbar { position: sticky; top: 0; z-index: 5; min-height: 58px; margin: 0; padding: 8px 16px; border: 0; background: color-mix(in srgb, var(--bg-primary) 35%, transparent); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
+.pwa-post-detail .post-detail-topbar .review-detail-back,.pwa-post-detail .post-detail-dots { display: grid; width: 42px; height: 42px; place-items: center; margin: 0; padding: 0; border: 0; border-radius: 50%; color: var(--text-primary); background: rgba(255,255,255,.075); line-height: 0; }
+.pwa-post-detail .post-detail-topbar .review-detail-back { font-size: 0; }
+.pwa-post-detail .post-detail-topbar .review-detail-back svg,.pwa-post-detail .post-detail-dots svg { display: block; width: 21px; height: 21px; flex: none; }
+.pwa-post-detail .post-detail-dots svg { fill: currentColor; stroke: none; }
   .pwa-post-detail .post-detail-author { margin: 4px 16px 14px; }
   .pwa-post-detail .post-detail-body,.pwa-post-detail .post-detail-text-date,.pwa-post-detail .post-detail-content-divider,.pwa-post-detail .post-detail-flags-error { margin-left: 16px; margin-right: 16px; }
   .pwa-post-detail .post-detail-gallery { width: 100%; max-width: none; margin: 0 0 12px; }
@@ -182,10 +184,9 @@
   .pwa-post-detail .post-detail-gallery-image { aspect-ratio: auto; }
   .pwa-post-detail .post-detail-actions { display: flex; align-items: center; gap: 10px; margin: 14px 16px 18px; }
   .pwa-post-detail .post-detail-actions .review-like-btn,.pwa-post-detail .post-detail-actions .review-post-action { display: grid; width: 44px; height: 44px; flex: 0 0 44px; place-items: center; gap: 0; padding: 0; border: 1px solid rgba(255,255,255,.12); border-radius: 50%; color: var(--text-primary); background: rgba(255,255,255,.055); font-size: 0; }
-  .pwa-post-detail .post-detail-actions .review-like-btn svg,.pwa-post-detail .post-detail-actions .review-post-action svg { width: 19px; height: 19px; }
+  .pwa-post-detail .post-detail-actions .review-like-btn svg,.pwa-post-detail .post-detail-actions .review-post-action svg { display: block; width: 19px; height: 19px; flex: none; }
   .pwa-post-detail .post-detail-actions .review-post-action-spacer { flex: 1; }
-  .pwa-post-detail .review-comments { padding: 16px; border-top: 1px solid rgba(255,255,255,.12); }
+  .pwa-post-detail .review-comments { padding: 16px; border-top: 1px solid rgba(255,255,255,.12); background: var(--bg-primary); }
   .pwa-post-detail .review-comment-form { position: fixed; z-index: 6; right: 0; bottom: 0; left: 0; margin: 0; padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); border-top: 1px solid rgba(255,255,255,.1); border-bottom: 0; background: rgba(15,16,20,.94); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
   .pwa-post-detail .review-comment-form > button { width: 40px; min-height: 40px; overflow: hidden; padding: 0; font-size: 0; }
   .pwa-post-detail .review-comment-form > button::after { content: '➤'; font-size: 16px; }
-@keyframes pwaPostEnter { from { opacity: .8; transform: translateX(-18px); } to { opacity: 1; transform: translateX(0); } }
