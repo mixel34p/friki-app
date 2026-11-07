@@ -631,9 +631,11 @@ export default function ReviewDetail() {
   return (
     <main className={`review-detail-page${isStandalonePwa ? ' pwa-detail-screen' : ''}${isExitingPwa ? ' is-exiting' : ''}`} style={{ '--review-page-accent': pageAccent, '--review-backdrop-image': reviewBackdrop ? `url("${reviewBackdrop}")` : 'none' }}>
       <SEO title={`${authorName}: review de ${workName || 'una obra'}`} description={review.review_text.slice(0, 150)} />
-      <button className="review-detail-back" type="button" onClick={handleBack}>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>Volver
-      </button>
+      <div className="review-pwa-topbar">
+        <button className="review-detail-back" type="button" aria-label="Volver" onClick={handleBack}>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>Volver
+        </button>
+      </div>
 
       <article className="review-post">
         <header className="review-post-header">
