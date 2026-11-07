@@ -152,6 +152,7 @@
 }
 
 /* Standalone PWA: full-screen post reader, isolated from browser-app chrome. */
+.pwa-post-loading { position: fixed; inset: 0; z-index: 10000; background: var(--bg-primary); }
 .pwa-post-detail { 
     position: fixed !important;
     inset: 0;
@@ -192,8 +193,8 @@
   .pwa-post-detail .review-comments-empty { min-height: 100%; }
   .pwa-post-detail .post-detail-actions .review-like-btn.liked svg { animation: none !important; }
   .pwa-post-detail .post-detail-actions .review-like-btn:active { transform: none !important; }
-  .pwa-post-detail .review-comment-form { position: fixed; z-index: 10001; right: 0; bottom: 0; left: 0; margin: 0; padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); border-top: 1px solid rgba(255,255,255,.1); border-bottom: 0; background: rgba(15,16,20,.94); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
-  .pwa-post-detail .review-comment-form > button { width: 40px; min-height: 40px; overflow: hidden; padding: 0; font-size: 0; }
-  .pwa-post-detail .review-comment-form > button::after { content: '➤'; font-size: 16px; }
+  .pwa-comment-composer { position: fixed; z-index: 10001; right: 0; bottom: 0; left: 0; display: flex; align-items: center; gap: .65rem; margin: 0; padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); border-top: 1px solid rgba(255,255,255,.1); border-bottom: 0; background: rgba(15,16,20,.94); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+  .pwa-comment-composer > button { width: 40px; min-height: 40px; overflow: hidden; padding: 0; font-size: 0; }
+  .pwa-comment-composer > button::after { content: '➤'; font-size: 16px; }
 @keyframes pwaPostEnter { from { opacity: .92; clip-path: inset(0 0 0 100%); } to { opacity: 1; clip-path: inset(0); } }
 @keyframes pwaPostExit { from { opacity: 1; clip-path: inset(0); } to { opacity: .92; clip-path: inset(0 0 0 100%); } }

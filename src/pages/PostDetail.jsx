@@ -104,6 +104,12 @@ export default function PostDetail() {
   useAutoResizeTextarea(commentInputRef, commentText)
 
   useEffect(() => {
+    if (!isPwaStandalone || !screen.orientation?.lock) return undefined
+    screen.orientation.lock('portrait').catch(() => {})
+    return () => screen.orientation.unlock?.()
+  }, [isPwaStandalone])
+
+  useEffect(() => {
     let active = true
     setActiveMediaIndex(0)
     setFailedMediaUrls(new Set())
@@ -277,7 +283,7 @@ export default function PostDetail() {
     finally { setDeletingId(null) }
   }
 
-  if (loading) return isPwaStandalone ? null : <div className="post-detail-state"><LoadingSpinner /></div>
+  if (loading) return isPwaStandalone ? <main className="pwa-post-loading" aria-busy="true" /> : <div className="post-detail-state"><LoadingSpinner /></div>
   if (error || !post) return <main className={`review-detail-page post-detail-page${isPwaStandalone ? ` pwa-post-detail${isExitingPwa ? ' is-exiting' : ''}` : ''}`}><div className="review-post"><button className="review-detail-back" type="button" onClick={handleBack}>← Volver</button><h1>{error || 'Publicación no encontrada'}</h1></div></main>
 
   const author = post.author || {}
@@ -297,6 +303,10 @@ export default function PostDetail() {
 
   const activeMedia = media[activeMediaIndex] || media[0]
   const activeMediaFailed = Boolean(activeMedia?.url && failedMediaUrls.has(activeMedia.url))
+  const commentComposer = user && currentProfile && <form className={`review-comment-form${isPwaStandalone ? ' pwa-comment-composer' : ''}`} onSubmit={handleSubmitComment}>
+    <Avatar profile={currentProfile} size="small"/><label className="review-comment-input-wrap"><textarea ref={commentInputRef} aria-label="Escribe un comentario" value={commentText} onChange={event => setCommentText(event.target.value)} maxLength={300} rows={1} placeholder="Escribe un comentario…"/></label>
+    <button type="submit" disabled={!commentText.trim() || submitting}>{submitting ? 'Enviando…' : 'Comentar'}</button>
+  </form>
   return <main className={`review-detail-page post-detail-page${isPwaStandalone ? ' pwa-post-detail' : ''}${isExitingPwa ? ' is-exiting' : ''}`} style={{ '--review-page-accent': author.theme_color || 'var(--brand-primary)', '--post-bubble-text': getBubbleTextColor(author.theme_color), '--review-backdrop-image': activeMedia?.url ? `url("${activeMedia.url}")` : 'none' }}>
     <article className="review-post post-detail-card">
       <div className="post-detail-topbar">
@@ -356,10 +366,7 @@ export default function PostDetail() {
       <section className="review-comments" aria-label="Comentarios">
         {user && currentProfile ? <>
           {replyTo && <div className="review-comment-reply-context">Respondiendo a {replyTo.profile?.display_name || replyTo.profile?.username || 'Usuario'}<button type="button" onClick={() => setReplyTo(null)}>Cancelar</button></div>}
-          <form className="review-comment-form" onSubmit={handleSubmitComment}>
-            <Avatar profile={currentProfile} size="small"/><label className="review-comment-input-wrap"><textarea ref={commentInputRef} aria-label="Escribe un comentario" value={commentText} onChange={event => setCommentText(event.target.value)} maxLength={300} rows={1} placeholder="Escribe un comentario…"/></label>
-            <button type="submit" disabled={!commentText.trim() || submitting}>{submitting ? 'Enviando…' : 'Comentar'}</button>
-          </form>
+          {isPwaStandalone ? createPortal(commentComposer, document.body) : commentComposer}
         </> : <p className="review-comments-signin"><Link to={user ? '/onboarding' : '/register'}>Inicia sesión para comentar</Link></p>}
         {commentsError && <div className="review-comments-error" role="alert">{commentsError}{commentsError.includes('cargar') && <button type="button" onClick={loadComments}>Reintentar</button>}</div>}
         {commentsLoading ? <div className="review-comments-loading">Cargando comentarios…</div>

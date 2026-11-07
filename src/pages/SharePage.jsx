@@ -415,6 +415,11 @@ export default function SharePage() {
   const displayName = profile?.display_name || profile?.username || 'Usuario'
   const avatarBackground = avatar ? `url("${avatar}")` : 'none'
   const isStandaloneMobile = window.matchMedia('(display-mode: standalone) and (max-width: 620px)').matches || (navigator.standalone === true && window.innerWidth <= 620)
+  useEffect(() => {
+    if (!isStandaloneMobile || !screen.orientation?.lock) return undefined
+    screen.orientation.lock('portrait').catch(() => {})
+    return () => screen.orientation.unlock?.()
+  }, [isStandaloneMobile])
   const handleMobileBack = () => {
     if (!isStandaloneMobile) return navigate(-1)
     setIsExitingPwa(true)
