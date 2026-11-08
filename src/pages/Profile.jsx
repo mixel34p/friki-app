@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useParams, Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import DefaultAvatar from '../components/DefaultAvatar'
 import { hasCustomAvatar } from '../lib/avatar'
@@ -145,6 +145,7 @@ function extractBannerPalette(imageUrl) {
 
 export default function Profile() {
     const { username } = useParams()
+    const location = useLocation()
     const { user, profile: myProfile } = useAuth()
     const [searchParams, setSearchParams] = useSearchParams()
 
@@ -267,6 +268,8 @@ export default function Profile() {
     const [isScrolled, setIsScrolled] = useState(false)
     const isStandalonePwa = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true
     const isOtherProfile = Boolean(username && username !== myProfile?.username)
+    const isOwnProfile = !isOtherProfile
+    const isOwnProfileFromNav = isStandalonePwa && isOwnProfile && location.state?.fromBottomNav === true
     const [isClosingPwaProfile, setIsClosingPwaProfile] = useState(false)
     const handleProfileBack = () => {
         if (!isStandalonePwa || !isOtherProfile) return navigateBackOrHome(navigate)
@@ -583,12 +586,12 @@ export default function Profile() {
 
             {/* Mobile Topbar */}
             <div className={`profile-mobile-nav ${isScrolled ? 'scrolled' : ''}`}>
-                <button className="profile-mobile-back" onClick={handleProfileBack}>
+                {!isOwnProfileFromNav && <button className="profile-mobile-back" onClick={handleProfileBack}>
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                         <line x1="19" y1="12" x2="5" y2="12" />
                         <polyline points="12 19 5 12 12 5" />
                     </svg>
-                </button>
+                </button>}
                 <div className={`profile-mobile-mini-info ${isScrolled ? 'visible' : ''}`}>
                     <div className="profile-mobile-name-row">
                         {hasCustomAvatar(profile.avatar_url) ? (

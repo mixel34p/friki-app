@@ -268,7 +268,7 @@ export default function Layout() {
           <Link className={`mobile-nav-item mobile-share-item ${active('/share') ? 'active' : ''}`} to="/share" aria-label="Compartir" aria-current={active('/share') ? 'page' : undefined} onClick={() => setMoreOpen(false)}><Icon name="share"/></Link>
           <Link className={`mobile-nav-item ${active('/spaces') ? 'active' : ''}`} to={spacesPath} aria-label="Espacios" aria-current={active('/spaces') ? 'page' : undefined}><Icon name="spaces"/></Link>
         </div>
-        <Link className={`mobile-profile-link ${isProfilePage ? 'active' : ''}`} to={profilePath} aria-label="Mi perfil" aria-current={isProfilePage ? 'page' : undefined}>
+        <Link className={`mobile-profile-link ${isProfilePage ? 'active' : ''}`} to={profilePath} state={{ fromBottomNav: true }} aria-label="Mi perfil" aria-current={isProfilePage ? 'page' : undefined}>
           {image ? <img className="mobile-nav-avatar" src={image} alt=""/> : <DefaultAvatar className="mobile-nav-avatar" accent={profile?.theme_color} />}
         </Link>
         </>}
