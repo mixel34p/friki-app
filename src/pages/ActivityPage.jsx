@@ -214,6 +214,7 @@ export default function ActivityPage() {
   const [followingBusy, setFollowingBusy] = useState(() => new Set())
   const [isInstalledPwa, setIsInstalledPwa] = useState(() => getInstallState() === 'installed')
   const [pushEnabled, setPushEnabled] = useState(false)
+  const [pushStatusChecked, setPushStatusChecked] = useState(false)
   const [pushBusy, setPushBusy] = useState(false)
   const [pushError, setPushError] = useState('')
   const offsetRef = useRef(0)
@@ -223,17 +224,26 @@ export default function ActivityPage() {
   useEffect(() => {
     let cancelled = false
     const checkPushState = async () => {
-      if (!isInstalledPwa || !user?.id || !('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return
+      setPushStatusChecked(false)
+      if (!isInstalledPwa || !user?.id || !('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+        setPushStatusChecked(true)
+        return
+      }
       try {
         const registration = await navigator.serviceWorker.getRegistration('/')
         const subscription = await registration?.pushManager.getSubscription()
-        if (!subscription) return
+        if (!subscription) {
+          if (!cancelled) setPushEnabled(false)
+          return
+        }
         const { data, error: subscriptionError } = await supabase.from('push_subscriptions')
           .select('endpoint').eq('user_id', user.id).eq('endpoint', subscription.endpoint).maybeSingle()
         if (subscriptionError) throw subscriptionError
         if (!cancelled) setPushEnabled(Boolean(data))
       } catch (subscriptionError) {
         console.error('No se pudo comprobar la suscripción push:', subscriptionError)
+      } finally {
+        if (!cancelled) setPushStatusChecked(true)
       }
     }
     checkPushState()
@@ -570,20 +580,20 @@ export default function ActivityPage() {
         <h1>Actividad</h1>
       </header>
 
-      {isInstalledPwa && <section className="activity-push-settings" aria-label="Notificaciones push">
+      {isInstalledPwa && pushStatusChecked && !pushEnabled && <section className="activity-push-settings" aria-label="Notificaciones push">
         <div className="activity-push-copy">
           <strong>Notificaciones push</strong>
-          <span>{pushEnabled ? 'Recibirás avisos de nueva actividad aunque cierres la app.' : 'Recibe un aviso cuando alguien interactúe contigo.'}</span>
+          <span>Recibe un aviso cuando alguien interactúe contigo.</span>
           {pushError && <span className="activity-push-error" role="alert">{pushError}</span>}
         </div>
         <button
-          className={`activity-push-toggle${pushEnabled ? ' enabled' : ''}`}
+          className="activity-push-toggle"
           type="button"
           role="switch"
           aria-checked={pushEnabled}
           onClick={togglePushNotifications}
           disabled={pushBusy || !('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)}
-        >{pushBusy ? '…' : pushEnabled ? 'Activadas' : 'Activar'}</button>
+        >{pushBusy ? '…' : 'Activar'}</button>
       </section>}
 
       {error && <p className="activity-error" role="alert">{error}</p>}

@@ -52,6 +52,139 @@ CREATE TABLE IF NOT EXISTS private.push_delivery_jobs (
 );
 REVOKE ALL ON private.push_delivery_jobs FROM PUBLIC, anon, authenticated;
 
+CREATE OR REPLACE FUNCTION private.first_preview_image(p_content jsonb)
+RETURNS text
+LANGUAGE sql
+IMMUTABLE
+SET search_path = ''
+AS $$
+    WITH RECURSIVE nodes(value) AS (
+        SELECT p_content
+        UNION ALL
+        SELECT child.value
+        FROM nodes AS node
+        CROSS JOIN LATERAL (
+            SELECT item.value
+            FROM jsonb_array_elements(
+                CASE WHEN jsonb_typeof(node.value) = 'array' THEN node.value ELSE '[]'::jsonb END
+            ) AS item(value)
+            UNION ALL
+            SELECT property.value
+            FROM jsonb_each(
+                CASE WHEN jsonb_typeof(node.value) = 'object' THEN node.value ELSE '{}'::jsonb END
+            ) AS property(key, value)
+        ) AS child
+    )
+    SELECT COALESCE(
+        node.value ->> 'image_url',
+        node.value ->> 'cover_url',
+        node.value -> 'cover' ->> 'url'
+    )
+    FROM nodes AS node
+    WHERE jsonb_typeof(node.value) = 'object'
+      AND COALESCE(node.value ->> 'image_url', node.value ->> 'cover_url', node.value -> 'cover' ->> 'url') IS NOT NULL
+    LIMIT 1;
+$$;
+
+REVOKE ALL ON FUNCTION private.first_preview_image(jsonb) FROM PUBLIC, anon, authenticated;
+
+CREATE OR REPLACE FUNCTION private.activity_preview_image(p_resource_type text, p_resource_id uuid)
+RETURNS text
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+    v_image text;
+BEGIN
+    IF p_resource_id IS NULL THEN
+        RETURN NULL;
+    END IF;
+
+    IF p_resource_type = 'post' THEN
+        SELECT (
+            SELECT media_item.value ->> 'url'
+            FROM jsonb_array_elements(
+                CASE
+                    WHEN jsonb_typeof(post.media) = 'array' THEN post.media
+                    WHEN jsonb_typeof(post.media) = 'object' THEN jsonb_build_array(post.media)
+                    ELSE '[]'::jsonb
+                END
+            ) AS media_item(value)
+            WHERE media_item.value ->> 'url' IS NOT NULL
+            LIMIT 1
+        ) INTO v_image
+        FROM public.posts AS post
+        WHERE post.id = p_resource_id
+          AND NOT COALESCE(post.contains_spoiler, false)
+          AND NOT COALESCE(post.is_sensitive, false);
+        RETURN v_image;
+    ELSIF p_resource_type = 'list' THEN
+        SELECT private.first_preview_image(list.content)
+        INTO v_image
+        FROM public.user_lists AS list
+        WHERE list.id = p_resource_id;
+        RETURN v_image;
+    ELSIF p_resource_type = 'review' THEN
+        SELECT CASE entry.work_type
+            WHEN 'game' THEN game.cover_url
+            WHEN 'anime' THEN anime.image_url
+            ELSE NULL
+        END
+        INTO v_image
+        FROM public.library_entries AS entry
+        LEFT JOIN public.games AS game ON entry.work_type = 'game' AND game.id::text = entry.work_id
+        LEFT JOIN public.anime AS anime ON entry.work_type = 'anime' AND anime.id::text = entry.work_id
+        WHERE entry.id = p_resource_id;
+        RETURN v_image;
+    ELSIF p_resource_type = 'tierlist' AND to_regclass('public.tierlists') IS NOT NULL THEN
+        BEGIN
+            EXECUTE 'SELECT screenshot_url FROM public.tierlists WHERE id = $1'
+                INTO v_image USING p_resource_id;
+        EXCEPTION WHEN undefined_column THEN
+            v_image := NULL;
+        END;
+
+        IF v_image IS NOT NULL THEN
+            RETURN v_image;
+        END IF;
+
+        BEGIN
+            EXECUTE 'SELECT private.first_preview_image(content) FROM public.tierlists WHERE id = $1'
+                INTO v_image USING p_resource_id;
+        EXCEPTION WHEN undefined_column THEN
+            v_image := NULL;
+        END;
+
+        IF v_image IS NOT NULL THEN
+            RETURN v_image;
+        END IF;
+
+        IF to_regclass('public.tierlist_items') IS NOT NULL THEN
+            BEGIN
+                EXECUTE $query$
+                    SELECT COALESCE(anime.image_url, game.cover_url)
+                    FROM public.tierlist_items AS item
+                    JOIN public.tierlists AS tierlist ON tierlist.id = item.tierlist_id
+                    LEFT JOIN public.games AS game ON game.id::text = item.media_id::text AND tierlist.media_type = 'game'
+                    LEFT JOIN public.anime AS anime ON anime.id::text = item.media_id::text AND tierlist.media_type = 'anime'
+                    WHERE item.tierlist_id = $1
+                    ORDER BY item.tier
+                    LIMIT 1
+                $query$ INTO v_image USING p_resource_id;
+            EXCEPTION WHEN undefined_column OR undefined_table THEN
+                v_image := NULL;
+            END;
+        END IF;
+        RETURN v_image;
+    END IF;
+
+    RETURN NULL;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION private.activity_preview_image(text, uuid) FROM PUBLIC, anon, authenticated;
+
 CREATE OR REPLACE FUNCTION public.consume_push_delivery_job(p_job_id uuid, p_token text)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -80,7 +213,9 @@ BEGIN
             'resource_type', notice.resource_type,
             'created_at', notice.created_at,
             'actor_name', COALESCE(actor.display_name, actor.username, 'Alguien'),
-            'actor_username', actor.username
+            'actor_username', actor.username,
+            'actor_avatar_url', actor.avatar_url,
+            'preview_image_url', private.activity_preview_image(notice.resource_type, notice.resource_id)
         ),
         'subscriptions', COALESCE((
             SELECT jsonb_agg(jsonb_build_object(

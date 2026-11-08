@@ -651,10 +651,10 @@ export default function ViewList() {
             setShareCopied(true); window.setTimeout(() => setShareCopied(false), 1800);
         } catch (err) { console.error(err); }
     };
-    const commentComposer = user && currentProfile && <form className={`review-comment-form${isStandalonePwa ? ' pwa-comment-composer' : ''}`} style={{ '--comment-accent': currentProfile.theme_color || 'var(--brand-primary)', '--comment-accent-ink': getAccentTextColor(currentProfile.theme_color || '#14b8a6') }} onSubmit={handleSubmitComment}>
+    const commentComposer = user && currentProfile && <form className={`review-comment-form${isStandalonePwa ? ' pwa-comment-composer' : ''}`} style={isStandalonePwa ? { '--comment-accent': currentProfile.theme_color || 'var(--brand-primary)', '--comment-accent-ink': getAccentTextColor(currentProfile.theme_color || '#14b8a6') } : undefined} onSubmit={handleSubmitComment}>
         <ProfileAvatar profile={currentProfile} size="small" />
         <label className="review-comment-input-wrap"><textarea ref={commentInputRef} aria-label="Escribe un comentario" value={commentText} onChange={event => setCommentText(event.target.value)} maxLength={300} rows={1} placeholder="Escribe un comentario…" /></label>
-        <button type="submit" disabled={!commentText.trim() || submitting} aria-label={submitting ? 'Enviando comentario' : 'Enviar comentario'}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4Z"/></svg><span>{submitting ? 'Enviando…' : 'Enviar'}</span></button>
+        <button type="submit" disabled={!commentText.trim() || submitting} aria-label={isStandalonePwa ? (submitting ? 'Enviando comentario' : 'Enviar comentario') : undefined}>{isStandalonePwa ? <><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4Z"/></svg><span>{submitting ? 'Enviando…' : 'Enviar'}</span></> : submitting ? 'Enviando…' : 'Comentar'}</button>
     </form>;
 
     return (

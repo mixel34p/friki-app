@@ -20,17 +20,34 @@ self.addEventListener('push', event => {
   let payload = {}
   try { payload = event.data?.json() || {} } catch { payload = { body: event.data?.text() || '' } }
   const title = payload.title || 'Nueva actividad en GeekSphere'
+  const notificationUrl = payload.url || '/activity'
+  const toSafeImageUrl = value => {
+    if (typeof value !== 'string' || !value.trim()) return undefined
+    try {
+      const url = new URL(value, self.location.origin)
+      return url.protocol === 'https:' || url.origin === self.location.origin ? url.href : undefined
+    } catch { return undefined }
+  }
   event.waitUntil(self.registration.showNotification(title, {
     body: payload.body || 'Tienes una nueva notificación.',
-    icon: '/icons/pwa-192.png',
-    badge: '/icons/pwa-192.png',
+    icon: toSafeImageUrl(payload.icon) || '/icons/pwa-192.png',
+    badge: '/icons/push-badge.svg',
+    image: toSafeImageUrl(payload.image),
     tag: payload.tag || 'geeksphere-activity',
-    data: { url: payload.url || '/activity' },
+    timestamp: payload.timestamp ? new Date(payload.timestamp).getTime() : Date.now(),
+    dir: 'auto',
+    renotify: false,
+    actions: [
+      { action: 'open', title: 'Abrir' },
+      { action: 'dismiss', title: 'Cerrar' },
+    ],
+    data: { url: notificationUrl },
   }))
 })
 
 self.addEventListener('notificationclick', event => {
   event.notification.close()
+  if (event.action === 'dismiss') return
   const requestedUrl = new URL(event.notification.data?.url || '/activity', self.location.origin)
   const targetUrl = requestedUrl.origin === self.location.origin ? requestedUrl.href : `${self.location.origin}/activity`
   event.waitUntil((async () => {

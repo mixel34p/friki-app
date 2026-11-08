@@ -318,9 +318,9 @@ export default function PostDetail() {
     if (contentHidden) setRevealed(true)
     else setLightboxOpen(true)
   }
-  const commentComposer = user && currentProfile && <form className={`review-comment-form${isPwaStandalone ? ' pwa-comment-composer' : ''}`} style={{ '--comment-accent': currentProfile.theme_color || 'var(--brand-primary)', '--comment-accent-ink': getBubbleTextColor(currentProfile.theme_color) }} onSubmit={handleSubmitComment}>
+  const commentComposer = user && currentProfile && <form className={`review-comment-form${isPwaStandalone ? ' pwa-comment-composer' : ''}`} style={isPwaStandalone ? { '--comment-accent': currentProfile.theme_color || 'var(--brand-primary)', '--comment-accent-ink': getBubbleTextColor(currentProfile.theme_color) } : undefined} onSubmit={handleSubmitComment}>
     <Avatar profile={currentProfile} size="small"/><label className="review-comment-input-wrap"><textarea ref={commentInputRef} aria-label="Escribe un comentario" value={commentText} onChange={event => setCommentText(event.target.value)} maxLength={300} rows={1} placeholder="Escribe un comentario…"/></label>
-    <button type="submit" disabled={!commentText.trim() || submitting} aria-label={submitting ? 'Enviando comentario' : 'Enviar comentario'}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4Z"/></svg><span>{submitting ? 'Enviando…' : 'Enviar'}</span></button>
+    <button type="submit" disabled={!commentText.trim() || submitting} aria-label={isPwaStandalone ? (submitting ? 'Enviando comentario' : 'Enviar comentario') : undefined}>{isPwaStandalone ? <><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4Z"/></svg><span>{submitting ? 'Enviando…' : 'Enviar'}</span></> : submitting ? 'Enviando…' : 'Comentar'}</button>
   </form>
   return <main className={`review-detail-page post-detail-page${isPwaStandalone ? ' pwa-post-detail' : ''}${isExitingPwa ? ' is-exiting' : ''}`} style={{ '--review-page-accent': author.theme_color || 'var(--brand-primary)', '--post-bubble-text': getBubbleTextColor(author.theme_color), '--review-backdrop-image': activeMedia?.url ? `url("${activeMedia.url}")` : 'none' }}>
     <article className="review-post post-detail-card">

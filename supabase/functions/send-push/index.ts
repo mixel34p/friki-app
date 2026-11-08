@@ -142,7 +142,15 @@ Deno.serve(async request => {
     if (!job?.notification) return Response.json({ ok: true, delivered: 0 })
 
     const copy = notificationCopy(job.notification.type, job.notification.actor_name)
-    const payload = JSON.stringify({ ...copy, url: targetFor(job.notification), tag: job.notification.id })
+    const isFollow = job.notification.type === 'follow'
+    const payload = JSON.stringify({
+      ...copy,
+      url: targetFor(job.notification),
+      tag: job.notification.id,
+      timestamp: job.notification.created_at,
+      icon: job.notification.actor_avatar_url || '/icons/pwa-192.png',
+      image: isFollow ? null : job.notification.preview_image_url || null,
+    })
     const keys = {
       publicKey: job.vapid_public_key,
       privateKey: job.vapid_private_key,
