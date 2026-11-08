@@ -5,7 +5,16 @@ import { useAuth } from '../context/AuthContext'
 import DefaultAvatar from '../components/DefaultAvatar'
 import { supabase } from '../lib/supabase'
 import { getAccentTextColor, getVisibleAccentColor } from '../lib/colorContrast'
+import { getInstallState, subscribeInstall } from '../lib/pwa'
 import './ActivityPage.css'
+
+const WEB_PUSH_PUBLIC_KEY = 'BLsU7w4IbNOle_tKobtNckRcPyOtactJChMrEjjds4RyAjRbgv7M05r_xq_pOgJsaeAI9xBLe4dDjaKEqF0QmIU'
+
+function decodeApplicationServerKey(value) {
+  const normalized = value.replace(/-/g, '+').replace(/_/g, '/')
+  const decoded = atob(normalized + '='.repeat((4 - normalized.length % 4) % 4))
+  return Uint8Array.from(decoded, character => character.charCodeAt(0))
+}
 
 function notificationTarget(item) {
   if (item.type === 'follow') return item.actor?.username ? `/profile/${item.actor.username}` : '/discover/users/all'
@@ -203,7 +212,86 @@ export default function ActivityPage() {
   const [followingIds, setFollowingIds] = useState(() => new Set())
   const [followedByIds, setFollowedByIds] = useState(() => new Set())
   const [followingBusy, setFollowingBusy] = useState(() => new Set())
+  const [isInstalledPwa, setIsInstalledPwa] = useState(() => getInstallState() === 'installed')
+  const [pushEnabled, setPushEnabled] = useState(false)
+  const [pushBusy, setPushBusy] = useState(false)
+  const [pushError, setPushError] = useState('')
   const offsetRef = useRef(0)
+
+  useEffect(() => subscribeInstall(() => setIsInstalledPwa(getInstallState() === 'installed')), [])
+
+  useEffect(() => {
+    let cancelled = false
+    const checkPushState = async () => {
+      if (!isInstalledPwa || !user?.id || !('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return
+      try {
+        const registration = await navigator.serviceWorker.getRegistration('/')
+        const subscription = await registration?.pushManager.getSubscription()
+        if (!subscription) return
+        const { data, error: subscriptionError } = await supabase.from('push_subscriptions')
+          .select('endpoint').eq('user_id', user.id).eq('endpoint', subscription.endpoint).maybeSingle()
+        if (subscriptionError) throw subscriptionError
+        if (!cancelled) setPushEnabled(Boolean(data))
+      } catch (subscriptionError) {
+        console.error('No se pudo comprobar la suscripción push:', subscriptionError)
+      }
+    }
+    checkPushState()
+    return () => { cancelled = true }
+  }, [isInstalledPwa, user?.id])
+
+  const togglePushNotifications = async () => {
+    if (!user?.id || pushBusy) return
+    setPushBusy(true)
+    setPushError('')
+    try {
+      if (!pushEnabled) {
+        // Ask before awaiting registration so the permission prompt stays within the tap gesture.
+        const permission = Notification.permission === 'default'
+          ? await Notification.requestPermission()
+          : Notification.permission
+        if (permission !== 'granted') {
+          setPushError(permission === 'denied'
+            ? 'Las notificaciones están bloqueadas en los ajustes del dispositivo o navegador.'
+            : 'Necesitas permitir las notificaciones para activarlas.')
+          return
+        }
+      }
+
+      await navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })
+      const registration = await navigator.serviceWorker.ready
+      let subscription = await registration.pushManager.getSubscription()
+
+      if (pushEnabled && subscription) {
+        const { error: deleteError } = await supabase.from('push_subscriptions').delete()
+          .eq('user_id', user.id).eq('endpoint', subscription.endpoint)
+        if (deleteError) throw deleteError
+        await subscription.unsubscribe()
+        setPushEnabled(false)
+        return
+      }
+
+      subscription ||= await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: decodeApplicationServerKey(WEB_PUSH_PUBLIC_KEY),
+      })
+      const json = subscription.toJSON()
+      const { error: saveError } = await supabase.from('push_subscriptions').upsert({
+        user_id: user.id,
+        endpoint: subscription.endpoint,
+        p256dh: json.keys?.p256dh,
+        auth: json.keys?.auth,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'endpoint' })
+      if (saveError) throw saveError
+      setPushEnabled(true)
+    } catch (subscriptionError) {
+      console.error('No se pudieron activar las notificaciones push:', subscriptionError)
+      setPushError('No se pudieron configurar las notificaciones. Comprueba la conexión y vuelve a intentarlo.')
+    } finally {
+      setPushBusy(false)
+    }
+  }
 
   const enrichRows = useCallback(async rows => {
     const actorIds = [...new Set(rows.map(row => row.actor_id).filter(Boolean))]
@@ -481,6 +569,22 @@ export default function ActivityPage() {
       <header className="activity-page-header">
         <h1>Actividad</h1>
       </header>
+
+      {isInstalledPwa && <section className="activity-push-settings" aria-label="Notificaciones push">
+        <div className="activity-push-copy">
+          <strong>Notificaciones push</strong>
+          <span>{pushEnabled ? 'Recibirás avisos de nueva actividad aunque cierres la app.' : 'Recibe un aviso cuando alguien interactúe contigo.'}</span>
+          {pushError && <span className="activity-push-error" role="alert">{pushError}</span>}
+        </div>
+        <button
+          className={`activity-push-toggle${pushEnabled ? ' enabled' : ''}`}
+          type="button"
+          role="switch"
+          aria-checked={pushEnabled}
+          onClick={togglePushNotifications}
+          disabled={pushBusy || !('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)}
+        >{pushBusy ? '…' : pushEnabled ? 'Activadas' : 'Activar'}</button>
+      </section>}
 
       {error && <p className="activity-error" role="alert">{error}</p>}
       {loading ? <section className="activity-loading" aria-label="Cargando actividad" aria-busy="true">

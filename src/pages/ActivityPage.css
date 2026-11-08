@@ -24,6 +24,35 @@
     letter-spacing: -.045em;
 }
 
+.activity-push-settings {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    margin: -11px 0 26px;
+    padding: 14px 16px;
+    background: color-mix(in srgb, var(--activity-accent-visible, var(--brand-primary)) 5%, rgba(255,255,255,.025));
+    border: 1px solid color-mix(in srgb, var(--activity-accent-visible, var(--brand-primary)) 20%, rgba(255,255,255,.08));
+    border-radius: 14px;
+}
+.activity-push-copy { display: grid; gap: 4px; min-width: 0; }
+.activity-push-copy strong { color: var(--text-primary, #f5f5f7); font-size: .88rem; font-weight: 680; }
+.activity-push-copy > span { color: #aaa7b0; font-size: .75rem; line-height: 1.45; }
+.activity-push-copy > span.activity-push-error { color: #fca5a5; }
+.activity-push-toggle {
+    flex: 0 0 auto;
+    min-width: 98px;
+    padding: 8px 13px;
+    color: var(--activity-accent-text, #000);
+    background: var(--activity-accent, var(--brand-primary));
+    border: 1px solid var(--activity-accent-border, color-mix(in srgb, var(--brand-primary) 72%, white));
+    border-radius: 999px;
+    font: 700 .76rem var(--font-sans);
+    cursor: pointer;
+}
+.activity-push-toggle.enabled { color: var(--activity-accent-visible, var(--brand-primary)); background: color-mix(in srgb, var(--activity-accent-visible, var(--brand-primary)) 9%, var(--bg-tertiary)); }
+.activity-push-toggle:disabled { cursor: wait; opacity: .6; }
+
 .activity-day-group { margin-top: 27px; }
 .activity-day-group:first-of-type { margin-top: 0; }
 .activity-day-group h2 {
@@ -170,6 +199,9 @@
     .activity-page { padding: 14px 0 24px; }
     .activity-page-header { margin-bottom: 23px; padding-bottom: 14px; }
     .activity-page-header h1 { font-size: 1.45rem; }
+    .activity-push-settings { gap: 10px; margin-top: -8px; margin-bottom: 21px; padding: 12px; }
+    .activity-push-copy > span { font-size: .69rem; }
+    .activity-push-toggle { min-width: 84px; padding: 8px 10px; font-size: .7rem; }
     .activity-day-group { margin-top: 22px; }
     .activity-day-group h2 { margin-bottom: 9px; font-size: .69rem; }
     .activity-feed { gap: 0; }
