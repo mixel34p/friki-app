@@ -109,12 +109,6 @@ export default function PostDetail() {
   useAutoResizeTextarea(commentInputRef, commentText)
 
   useEffect(() => {
-    if (!isPwaStandalone || !screen.orientation?.lock) return undefined
-    screen.orientation.lock('portrait').catch(() => {})
-    return () => screen.orientation.unlock?.()
-  }, [isPwaStandalone])
-
-  useEffect(() => {
     let active = true
     setActiveMediaIndex(0)
     setFailedMediaUrls(new Set())

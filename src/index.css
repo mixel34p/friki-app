@@ -612,3 +612,7 @@ button { font-family: var(--font-sans); }
 .ep-empty-slot { appearance: none; outline: none; margin: 0; padding: 0; border-radius: var(--radius-md); aspect-ratio: 2/3; background: var(--bg-secondary); border: 2px dashed var(--border-subtle); display: flex; align-items: center; justify-content: center; color: var(--text-muted); cursor: pointer; transition: all 0.2s; box-sizing: border-box; }
 .ep-empty-slot:hover { border-color: var(--brand-primary); color: var(--brand-primary); background: rgba(20, 184, 166, 0.1); }
 .ep-empty-slot.active { border-color: var(--brand-primary); color: var(--brand-primary); border-style: solid; }
+
+body.pwa-landscape-lock { overflow: hidden !important; }
+body.pwa-landscape-lock::before { position: fixed; z-index: 2147483646; inset: 0; display: block; background: rgba(7,8,12,.98); content: ''; }
+body.pwa-landscape-lock::after { position: fixed; z-index: 2147483647; inset: 0; display: grid; place-items: center; padding: 32px; color: #fff; content: 'Gira el dispositivo para continuar en vertical'; font: 700 1rem/1.45 var(--font-sans); text-align: center; }

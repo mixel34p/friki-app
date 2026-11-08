@@ -111,6 +111,24 @@ export default function Layout() {
   const [moreMenuPosition, setMoreMenuPosition] = useState({ left: 256, bottom: 14 })
   const isDesktop = typeof window !== 'undefined' && window.innerWidth > 960
 
+  useEffect(() => {
+    const standaloneQuery = window.matchMedia('(display-mode: standalone)')
+    const landscapeQuery = window.matchMedia('(orientation: landscape)')
+    const updateOrientationLock = () => {
+      const isInstalledPwa = standaloneQuery.matches || navigator.standalone === true
+      document.body.classList.toggle('pwa-landscape-lock', isInstalledPwa && landscapeQuery.matches)
+      if (isInstalledPwa) screen.orientation?.lock?.('portrait').catch(() => {})
+    }
+    updateOrientationLock()
+    standaloneQuery.addEventListener?.('change', updateOrientationLock)
+    landscapeQuery.addEventListener?.('change', updateOrientationLock)
+    return () => {
+      standaloneQuery.removeEventListener?.('change', updateOrientationLock)
+      landscapeQuery.removeEventListener?.('change', updateOrientationLock)
+      document.body.classList.remove('pwa-landscape-lock')
+    }
+  }, [])
+
   const username = profile?.username
   const profilePath = username ? `/profile/${username}` : (user ? '/onboarding' : '/profile')
   const spacesPath = user && !profile ? '/onboarding' : '/spaces'
