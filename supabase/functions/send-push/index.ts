@@ -70,7 +70,7 @@ async function encryptPayload(subscription: { p256dh: string; auth: string }, pa
   return body
 }
 
-function notificationCopy(type: string, actorName: string) {
+function notificationCopy(type: string, actorName: string, resourceTitle?: string | null) {
   const actions: Record<string, string> = {
     follow: 'ha empezado a seguirte',
     like_post: 'le ha gustado tu publicación',
@@ -84,7 +84,12 @@ function notificationCopy(type: string, actorName: string) {
     connection_request: 'quiere conectar contigo',
     connection_accepted: 'ha aceptado tu solicitud de conexión',
   }
-  return { title: actorName || 'Nueva actividad', body: actions[type] || 'ha interactuado contigo' }
+  const action = actions[type] || 'ha interactuado contigo'
+  const context = resourceTitle?.trim()
+  return {
+    title: actorName || 'Nueva actividad',
+    body: context ? `${action} · ${context.slice(0, 72)}` : action,
+  }
 }
 
 function targetFor(notification: Record<string, unknown>): string {
@@ -141,10 +146,11 @@ Deno.serve(async request => {
     const job = await rpcResponse.json()
     if (!job?.notification) return Response.json({ ok: true, delivered: 0 })
 
-    const copy = notificationCopy(job.notification.type, job.notification.actor_name)
+    const copy = notificationCopy(job.notification.type, job.notification.actor_name, job.notification.resource_title)
     const isFollow = job.notification.type === 'follow'
     const payload = JSON.stringify({
       ...copy,
+      type: job.notification.type,
       url: targetFor(job.notification),
       tag: job.notification.id,
       timestamp: job.notification.created_at,

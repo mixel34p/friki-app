@@ -185,6 +185,42 @@ $$;
 
 REVOKE ALL ON FUNCTION private.activity_preview_image(text, uuid) FROM PUBLIC, anon, authenticated;
 
+CREATE OR REPLACE FUNCTION private.activity_resource_title(p_resource_type text, p_resource_id uuid)
+RETURNS text
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+    v_title text;
+BEGIN
+    IF p_resource_id IS NULL THEN
+        RETURN NULL;
+    END IF;
+
+    IF p_resource_type = 'list' THEN
+        SELECT list.title INTO v_title FROM public.user_lists AS list WHERE list.id = p_resource_id;
+    ELSIF p_resource_type = 'review' THEN
+        SELECT CASE entry.work_type WHEN 'game' THEN game.name WHEN 'anime' THEN anime.title ELSE NULL END
+        INTO v_title
+        FROM public.library_entries AS entry
+        LEFT JOIN public.games AS game ON entry.work_type = 'game' AND game.id::text = entry.work_id
+        LEFT JOIN public.anime AS anime ON entry.work_type = 'anime' AND anime.id::text = entry.work_id
+        WHERE entry.id = p_resource_id;
+    ELSIF p_resource_type = 'tierlist' AND to_regclass('public.tierlists') IS NOT NULL THEN
+        BEGIN
+            EXECUTE 'SELECT title FROM public.tierlists WHERE id = $1' INTO v_title USING p_resource_id;
+        EXCEPTION WHEN undefined_column THEN
+            v_title := NULL;
+        END;
+    END IF;
+
+    RETURN v_title;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION private.activity_resource_title(text, uuid) FROM PUBLIC, anon, authenticated;
+
 CREATE OR REPLACE FUNCTION public.consume_push_delivery_job(p_job_id uuid, p_token text)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -215,7 +251,8 @@ BEGIN
             'actor_name', COALESCE(actor.display_name, actor.username, 'Alguien'),
             'actor_username', actor.username,
             'actor_avatar_url', actor.avatar_url,
-            'preview_image_url', private.activity_preview_image(notice.resource_type, notice.resource_id)
+            'preview_image_url', private.activity_preview_image(notice.resource_type, notice.resource_id),
+            'resource_title', private.activity_resource_title(notice.resource_type, notice.resource_id)
         ),
         'subscriptions', COALESCE((
             SELECT jsonb_agg(jsonb_build_object(
