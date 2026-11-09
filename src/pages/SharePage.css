@@ -931,6 +931,7 @@
 
 @media (max-width: 620px) and (display-mode: standalone), (max-width: 620px) and (display-mode: fullscreen) {
   .share-register { display: none; }
+  .share-page { animation: none !important; }
   .share-composer-submit > .share-post-button { display: none !important; }
   .share-list-publish-actions { display: none !important; }
   .share-tool-button.share-tool-camera, .share-tool-button.share-tool-review { display: grid; }

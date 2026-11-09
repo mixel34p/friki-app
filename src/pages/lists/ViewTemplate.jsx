@@ -10,6 +10,7 @@ import { BADGES_MAP } from '../../lib/badges';
 import DefaultAvatar from '../../components/DefaultAvatar';
 import { formatRelativeDate } from '../../lib/formatRelativeDate';
 import { navigateBackOrHome } from '../../lib/navigation';
+import { signalPwaRouteReady } from '../../lib/pwaRouteTransition';
 import MoreContentCards, { normalizeMoreContent } from '../../components/MoreContentCards';
 import { ListPostPreview } from './ViewList';
 import './ViewList.css';
@@ -39,10 +40,11 @@ export default function ViewTemplate() {
   const { user, loading: authLoading } = useAuth();
   const menuRef = useRef(null);
   const [template, setTemplate] = useState(null);
+  const [loading, setLoading] = useState(true);
   const systemBarColor = useSystemBarColor(template?.profiles?.theme_color)
   const [moreItems, setMoreItems] = useState([]);
   const [morePostsLoading, setMorePostsLoading] = useState(false);
-  const [loading, setLoading] = useState(true);
+  useEffect(() => { if (!loading) signalPwaRouteReady(`/templates/${id}`); }, [loading, id]);
   const [error, setError] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);

@@ -16,6 +16,7 @@ import { formatRelativeDate } from '../../lib/formatRelativeDate';
 import { getMorePostsByUser } from '../../lib/postService';
 import { getAccentTextColor } from '../../lib/colorContrast';
 import { navigateBackOrHome } from '../../lib/navigation';
+import { signalPwaRouteReady } from '../../lib/pwaRouteTransition';
 import MoreContentCards, { normalizeMoreContent } from '../../components/MoreContentCards';
 import ListLikeButton from '../../components/ListLikeButton';
 import LoadingSpinner from '../../components/LoadingSpinner';
@@ -432,10 +433,11 @@ export default function ViewList() {
     const { user, profile: currentProfile, loading: authLoading } = useAuth();
 
     const [list, setList] = useState(null);
+    const [loading, setLoading] = useState(true);
   const systemBarColor = useSystemBarColor(list?.author?.theme_color)
     const [moreItems, setMoreItems] = useState([]);
     const [morePostsLoading, setMorePostsLoading] = useState(false);
-    const [loading, setLoading] = useState(true);
+    useEffect(() => { if (!loading) signalPwaRouteReady(`/lists/${id}`); }, [loading, id]);
     const [error, setError] = useState(null);
 
     const [shareOpen, setShareOpen] = useState(false);

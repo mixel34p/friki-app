@@ -634,3 +634,30 @@ button { font-family: var(--font-sans); }
 body.pwa-landscape-lock { overflow: hidden !important; }
 body.pwa-landscape-lock::before { position: fixed; z-index: 2147483646; inset: 0; display: block; background: rgba(7,8,12,.98); content: ''; }
 body.pwa-landscape-lock::after { position: fixed; z-index: 2147483647; inset: 0; display: grid; place-items: center; padding: 32px; color: #fff; content: 'Gira el dispositivo para continuar en vertical'; font: 700 1rem/1.45 var(--font-sans); text-align: center; }
+@media (display-mode: standalone), (display-mode: fullscreen) {
+  ::view-transition-group(root) { isolation: isolate; animation-duration: 360ms; }
+  ::view-transition-old(root) {
+    z-index: 1;
+    mix-blend-mode: normal;
+    animation: pwa-route-old 360ms cubic-bezier(.22,.8,.24,1) both;
+  }
+  ::view-transition-new(root) {
+    z-index: 2;
+    mix-blend-mode: normal;
+    animation: pwa-route-new 360ms cubic-bezier(.22,.8,.24,1) both;
+  }
+}
+
+@keyframes pwa-route-old {
+  to { transform: translateX(-16%); }
+}
+
+@keyframes pwa-route-new {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) { animation: none !important; }
+}

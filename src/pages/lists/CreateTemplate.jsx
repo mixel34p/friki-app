@@ -11,6 +11,7 @@ import {
 import { searchGames } from '../../lib/gameService';
 import { searchAnime } from '../../lib/animeService';
 import { navigateBackOrHome } from '../../lib/navigation';
+import { navigatePwaRoute } from '../../lib/pwaRouteTransition';
 import './CreateTemplate.css';
 
 export default function CreateTemplate() {
@@ -204,11 +205,11 @@ export default function CreateTemplate() {
       setIsLoading(true);
       if (id) {
         await updateTemplate(id, templateData);
-        navigate(`/templates/${id}`);
+        navigatePwaRoute(navigate, `/templates/${id}`);
       } else {
         const newTemplate = await createTemplate(templateData);
         if(newTemplate && newTemplate.id) {
-           navigate(`/templates/${newTemplate.id}`);
+           navigatePwaRoute(navigate, `/templates/${newTemplate.id}`);
         } else {
            navigate(`/templates`);
         }

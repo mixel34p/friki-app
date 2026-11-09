@@ -7,6 +7,7 @@ import { clearInvitation, invitationFromSearch, readInvitation } from '../lib/in
 import { supabase } from '../lib/supabase'
 import { createList, incrementTemplateUses } from '../lib/listService'
 import { clearGuestListDraft, readGuestListDraft } from '../lib/guestListDraft'
+import { navigatePwaRoute } from '../lib/pwaRouteTransition'
 import LoadingSpinner from '../components/LoadingSpinner'
 import DefaultAvatar from '../components/DefaultAvatar'
 import ImageCropperModal from '../components/ImageCropperModal'
@@ -472,7 +473,8 @@ export default function Onboarding() {
                 if (onboardingDraftStorageKey) window.sessionStorage.removeItem(onboardingDraftStorageKey)
             } catch {}
             await refreshProfile()
-            navigate(publishedGuestListId ? `/lists/${publishedGuestListId}` : `/profile/${username.toLowerCase()}`)
+            if (publishedGuestListId) navigatePwaRoute(navigate, `/lists/${publishedGuestListId}`)
+            else navigate(`/profile/${username.toLowerCase()}`)
             
         } catch (err) {
             console.error('Onboarding Error:', err)

@@ -9,7 +9,7 @@ import { supabase } from '../lib/supabase'
 import { getAccentTextColor, getVisibleAccentColor } from '../lib/colorContrast'
 import { formatRelativeDate } from '../lib/formatRelativeDate'
 import { navigateBackOrHome } from '../lib/navigation'
-import { capturePwaRouteSnapshot } from '../lib/pwaRouteTransition'
+import { navigatePwaRoute, signalPwaRouteReady } from '../lib/pwaRouteTransition'
 import { addLibraryReviewComment, deleteLibraryReviewComment, getLibraryReview, getLibraryReviewComments, updateLibraryReviewComment } from '../lib/libraryReviewService'
 import { getWorkLog } from '../lib/libraryService'
 import LoadingSpinner from '../components/LoadingSpinner'
@@ -357,11 +357,12 @@ export default function ReviewDetail() {
   const handleBack = () => { if (!isStandalonePwa) return navigateBackOrHome(navigate); setIsExitingPwa(true); window.setTimeout(() => navigateBackOrHome(navigate), 280) }
   const { user, profile: currentProfile, updateProfile } = useAuth()
   const [review, setReview] = useState(null)
+  const [loading, setLoading] = useState(true)
   const systemBarColor = useSystemBarColor(getVisibleAccentColor(review?.profile?.theme_color || '#14b8a6'))
   const [comments, setComments] = useState([])
   const [commentText, setCommentText] = useState('')
   const commentInputRef = useRef(null)
-  const [loading, setLoading] = useState(true)
+  useEffect(() => { if (!loading) signalPwaRouteReady(`/reviews/${reviewId}`) }, [loading, reviewId])
   const [commentsLoading, setCommentsLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -619,8 +620,7 @@ export default function ReviewDetail() {
       navigate('/onboarding')
       return
     }
-    capturePwaRouteSnapshot('/share')
-    navigate('/share', { state: { reviewWork: {
+    navigatePwaRoute(navigate, '/share', { state: { reviewWork: {
       id: Number(review.work_id),
       type: review.work_type,
       title: workName || 'Obra',

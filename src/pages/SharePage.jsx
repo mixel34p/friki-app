@@ -16,7 +16,7 @@ import { searchAnime } from '../lib/animeService'
 import { createList, getTemplateById, getTemplates, incrementTemplateUses, DEFAULT_TIER_CONFIG } from '../lib/listService'
 import { createPost } from '../lib/postService'
 import { navigateBackOrHome } from '../lib/navigation'
-import { capturePwaRouteSnapshot } from '../lib/pwaRouteTransition'
+import { navigatePwaRoute, signalPwaRouteReady } from '../lib/pwaRouteTransition'
 import { uploadChatImage } from '../lib/socialDiscoveryService'
 import { ListPostPreview } from './lists/ViewList'
 import './SharePage.css'
@@ -604,8 +604,7 @@ export default function SharePage() {
         setSelectedReview(null); setText(''); setReviewRating(0); setReviewDate(''); setSpoilerEnabled(false)
         if (textareaRef.current) textareaRef.current.style.height = ''
         if (hasReview && savedEntry?.id) {
-          capturePwaRouteSnapshot(`/reviews/${savedEntry.id}`)
-          navigate(`/reviews/${savedEntry.id}`)
+          navigatePwaRoute(navigate, `/reviews/${savedEntry.id}`)
         }
         else navigate(profile?.username ? `/profile/${profile.username}` : '/profile')
       }).catch(error => {
@@ -638,8 +637,7 @@ export default function SharePage() {
         spoiler_work_type: spoilerWork?.type,
         spoiler_work_title: spoilerWork?.title,
       })
-      capturePwaRouteSnapshot(`/posts/${created.id}`)
-      navigate(`/posts/${created.id}`)
+      navigatePwaRoute(navigate, `/posts/${created.id}`)
     } catch (error) {
       console.error('No se pudo publicar el post:', error)
       toast({ title: 'No se pudo publicar', message: error.message || 'Inténtalo de nuevo.', type: 'error' })
@@ -660,8 +658,7 @@ export default function SharePage() {
         catch (error) { console.error('La lista se publicó, pero no se pudo actualizar el contador de usos de la plantilla:', error) }
       }
       if (listDraftToken) sessionStorage.removeItem(`share-list-draft:${listDraftToken}`)
-      capturePwaRouteSnapshot(`/lists/${savedList.id}`)
-      navigate(`/lists/${savedList.id}`, { replace: true })
+      navigatePwaRoute(navigate, `/lists/${savedList.id}`, { replace: true })
     } catch (error) {
       console.error('No se pudo publicar la lista:', error)
       toast({ title: 'No se pudo publicar la lista', message: error.message || 'Inténtalo de nuevo.', type: 'error' })
@@ -766,8 +763,11 @@ export default function SharePage() {
 
   useEffect(() => {
     const work = location.state?.reviewWork
-    if (!work?.id || !work?.type) return
-    selectWorkForReview({ ...work, title: work.title || 'Obra' })
+    if (!work?.id || !work?.type) {
+      signalPwaRouteReady('/share')
+      return
+    }
+    selectWorkForReview({ ...work, title: work.title || 'Obra' }).finally(() => signalPwaRouteReady('/share'))
     navigate(location.pathname, { replace: true, state: null })
   }, [location.key])
 

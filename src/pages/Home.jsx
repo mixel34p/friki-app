@@ -6,6 +6,7 @@ import DefaultAvatar from '../components/DefaultAvatar'
 import MentionText from '../components/MentionText'
 import { getHomePosts } from '../lib/postService'
 import { getHomeSnapshot, getFollowingUserIds } from '../lib/homeService'
+import { navigatePwaRoute } from '../lib/pwaRouteTransition'
 import { getUsersByCommonWorks } from '../lib/discoverUsersService'
 import { formatRelativeDate } from '../lib/formatRelativeDate'
 import { getSpaces } from '../lib/spaceService'
@@ -81,12 +82,12 @@ export function PostCard({ post, hideAvatar = false, hideAuthor = false, useDesk
         : <div className="home-post-text-link"><p className={media.length ? 'home-post-copy' : 'home-post-bubble'}><MentionText text={post.body} mentions={post.mentions} fallbackToPost={`/posts/${post.id}`} /></p></div>)
     const openPost = event => {
         if (event.target.closest('a, button')) return
-        navigate(`/posts/${post.id}`)
+        navigatePwaRoute(navigate, `/posts/${post.id}`)
     }
     const handleCardKeyDown = event => {
         if ((event.key === 'Enter' || event.key === ' ') && event.target === event.currentTarget) {
             event.preventDefault()
-            navigate(`/posts/${post.id}`)
+            navigatePwaRoute(navigate, `/posts/${post.id}`)
         }
     }
     return <article className="home-post" style={{ '--home-post-accent': accent, '--home-post-text': accentText }} onClick={openPost} onKeyDown={handleCardKeyDown} role="link" tabIndex={0} aria-label={`Abrir publicación de ${name}`}>

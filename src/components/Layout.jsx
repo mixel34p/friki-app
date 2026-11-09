@@ -10,7 +10,7 @@ import { hasCustomAvatar } from '../lib/avatar'
 import { ListsEntryModal } from '../pages/lists/ListsEntry'
 import DefaultAvatar from './DefaultAvatar'
 import InstallApp from './InstallApp'
-import { capturePwaRouteSnapshot, clearPwaRouteSnapshot, isPwaSnapshotRoute } from '../lib/pwaRouteTransition'
+import { isPwaTransitionRoute, isStandalonePwa, navigatePwaRoute } from '../lib/pwaRouteTransition'
 import './Layout.css'
 
 const Icon = ({ name }) => {
@@ -113,23 +113,21 @@ export default function Layout() {
   const isDesktop = typeof window !== 'undefined' && window.innerWidth > 960
 
   useEffect(() => {
-    const captureBeforeDetailNavigation = event => {
-      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+    const transitionDetailNavigation = event => {
+      if (!isStandalonePwa() || typeof document.startViewTransition !== 'function' || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
       const anchor = event.target.closest?.('a[href]')
       if (!anchor || anchor.target || anchor.hasAttribute('download')) return
       try {
         const destination = new URL(anchor.href, window.location.href)
-        if (destination.origin === window.location.origin) capturePwaRouteSnapshot(destination.pathname)
+        if (destination.origin !== window.location.origin || !isPwaTransitionRoute(destination.pathname)) return
+        event.preventDefault()
+        navigatePwaRoute(navigate, `${destination.pathname}${destination.search}${destination.hash}`)
       } catch {}
     }
 
-    document.addEventListener('click', captureBeforeDetailNavigation, true)
-    return () => document.removeEventListener('click', captureBeforeDetailNavigation, true)
-  }, [])
-
-  useEffect(() => {
-    if (!isPwaSnapshotRoute(location.pathname)) clearPwaRouteSnapshot()
-  }, [location.pathname])
+    document.addEventListener('click', transitionDetailNavigation, true)
+    return () => document.removeEventListener('click', transitionDetailNavigation, true)
+  }, [navigate])
 
   useEffect(() => {
     const standaloneQuery = window.matchMedia('(display-mode: standalone), (display-mode: fullscreen)')

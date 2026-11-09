@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { getTemplates } from '../../lib/listService';
+import { navigatePwaRoute } from '../../lib/pwaRouteTransition';
 import { useAuth } from '../../context/AuthContext';
 import CreateTemplateModal from './CreateTemplateModal';
 import SEO from '../../components/SEO';
@@ -92,7 +93,7 @@ export default function TemplateGallery() {
 
     const handleModalSuccess = result => {
         setShowModal(false);
-        if (result?.id) navigate(`/templates/${result.id}`);
+        if (result?.id) navigatePwaRoute(navigate, `/templates/${result.id}`);
         else fetchTemplates();
     };
 

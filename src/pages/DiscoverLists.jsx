@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import DefaultAvatar from '../components/DefaultAvatar'
 import { getDiscoverLists, getDiscoverTemplates } from '../lib/listService'
+import { navigatePwaRoute } from '../lib/pwaRouteTransition'
 import ListLikeButton from '../components/ListLikeButton'
 import CreateTemplateModal from './lists/CreateTemplateModal'
 import SEO from '../components/SEO'
@@ -245,7 +246,7 @@ export default function DiscoverLists() {
 
     {showTemplateModal && <CreateTemplateModal onClose={() => setShowTemplateModal(false)} onSuccess={result => {
       setShowTemplateModal(false)
-      if (result?.id) navigate(`/templates/${result.id}`)
+      if (result?.id) navigatePwaRoute(navigate, `/templates/${result.id}`)
       else setRetryToken(value => value + 1)
     }}/>}
   </main>

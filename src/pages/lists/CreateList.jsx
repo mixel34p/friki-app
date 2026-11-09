@@ -16,6 +16,7 @@ import { searchAnime } from '../../lib/animeService';
 import { getDiscoverWorks } from '../../lib/discoverWorksService';
 import { getTierLabelFontSize } from '../../lib/tierLabel';
 import { navigateBackOrHome } from '../../lib/navigation';
+import { navigatePwaRoute } from '../../lib/pwaRouteTransition';
 import CustomItemGroupsPicker from '../../components/CustomItemGroupsPicker';
 import { ListPostPreview, generateListImage } from './ViewList';
 import { requestGuestListRegistration, saveGuestListDraft } from '../../lib/guestListDraft';
@@ -733,7 +734,7 @@ export default function CreateList() {
                     payload,
                 };
                 sessionStorage.setItem(`share-list-draft:${draftKey}`, JSON.stringify(draft));
-                navigate(`/share?listDraft=${encodeURIComponent(draftKey)}`);
+                navigatePwaRoute(navigate, `/share?listDraft=${encodeURIComponent(draftKey)}`);
                 return;
             }
             let savedList;
@@ -743,7 +744,7 @@ export default function CreateList() {
                 savedList = await createList(payload);
                 if (template?.id) await incrementTemplateUses(template.id);
             }
-            navigate(`/lists/${savedList.id}`);
+            navigatePwaRoute(navigate, `/lists/${savedList.id}`);
         } catch (err) {
             alert(err.message);
         } finally {

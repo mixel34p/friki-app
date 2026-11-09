@@ -16,6 +16,7 @@ import useAutoResizeTextarea from '../hooks/useAutoResizeTextarea'
 import { addPostComment, deletePost, deletePostComment, getMorePostsByUser, getPostById, getPostComments, getPostLikeState, togglePostLike, updatePostBody, updatePostFlags, updatePostComment } from '../lib/postService'
 import { formatRelativeDate } from '../lib/formatRelativeDate'
 import { navigateBackOrHome } from '../lib/navigation'
+import { signalPwaRouteReady } from '../lib/pwaRouteTransition'
 import './ReviewDetail.css'
 import './PostDetail.css'
 
@@ -64,6 +65,7 @@ export default function PostDetail() {
   const isPwaStandalone = window.matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches || navigator.standalone === true
   const [isExitingPwa, setIsExitingPwa] = useState(false)
   const [post, setPost] = useState(null)
+  const [loading, setLoading] = useState(true)
   const systemBarColor = useSystemBarColor(post?.author?.theme_color)
   const [activeMediaIndex, setActiveMediaIndex] = useState(0)
   const [swipeDirection, setSwipeDirection] = useState('next')
@@ -74,7 +76,7 @@ export default function PostDetail() {
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [moreItems, setMoreItems] = useState([])
   const [morePostsLoading, setMorePostsLoading] = useState(false)
-  const [loading, setLoading] = useState(true)
+  useEffect(() => { if (!loading) signalPwaRouteReady(`/posts/${postId}`) }, [loading, postId])
   const [error, setError] = useState('')
   const [revealed, setRevealed] = useState(false)
   const [comments, setComments] = useState([])

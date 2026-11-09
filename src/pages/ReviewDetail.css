@@ -58,16 +58,17 @@
 .review-detail-back svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
 /* Shared full-screen detail treatment used only by standalone PWA routes. */
-.pwa-detail-screen { position: fixed !important; inset: 0; z-index: 10000; display: block !important; width: 100vw; height: 100dvh; min-height: 100dvh; margin: 0 !important; padding: env(safe-area-inset-top) 0 0 !important; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; background: var(--bg-primary); animation: pwaDetailEnter .34s cubic-bezier(.22,.8,.24,1) both; }
+.pwa-detail-screen { position: fixed !important; inset: 0; z-index: 10000; display: flex !important; flex-direction: column; width: 100vw; height: 100dvh; min-height: 100dvh; margin: 0 !important; padding: env(safe-area-inset-top) 0 0 !important; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; background: linear-gradient(180deg, var(--pwa-system-bar-color) 0%, color-mix(in srgb, var(--pwa-system-bar-color) 58%, var(--review-page-accent)) 74px, color-mix(in srgb, var(--review-page-accent) 18%, var(--bg-primary)) 164px, var(--bg-primary) 260px), var(--bg-primary); }
 .pwa-prompt-overlay { z-index: 11000 !important; }
 .pwa-detail-screen.is-exiting { animation: pwaDetailExit .28s cubic-bezier(.22,.8,.24,1) both; }
-.pwa-detail-screen > .review-post,.pwa-detail-screen .template-detail-post { position: relative; min-height: 100%; padding: 0 16px calc(92px + env(safe-area-inset-bottom)); border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.pwa-detail-screen:not(.vl-list-page)::after { background: linear-gradient(180deg, var(--pwa-system-bar-color) 0%, color-mix(in srgb, var(--pwa-system-bar-color) 42%, transparent) 82px, transparent 220px), radial-gradient(ellipse 72% 48% at 50% 0%, color-mix(in srgb, var(--review-page-accent) 8%, transparent) 0%, transparent 100%), linear-gradient(180deg, color-mix(in srgb, var(--bg-primary) 62%, transparent) 0%, color-mix(in srgb, var(--bg-primary) 76%, transparent) 72%, var(--bg-primary) 100%); }
+.pwa-detail-screen > .review-post,.pwa-detail-screen .template-detail-post { position: relative; display: flex; flex: 1 0 auto; flex-direction: column; min-height: 100dvh; padding: 0 16px calc(92px + env(safe-area-inset-bottom)); border: 0; border-radius: 0; background: transparent; box-shadow: none; }
 .pwa-detail-screen .vl-topbar { position: relative; top: auto; z-index: 5; box-sizing: border-box; width: 100%; margin: 0; padding: 8px 0; border: 0; background: transparent; backdrop-filter: none; }
 .pwa-detail-screen .vl-topbar,.pwa-detail-screen .post-detail-topbar,.pwa-detail-screen .review-pwa-topbar { box-shadow: none; }
 .pwa-detail-screen .review-pwa-topbar { position: relative; z-index: 5; display: flex; box-sizing: border-box; width: 100%; min-height: 58px; align-items: center; justify-content: space-between; margin: 0; padding: 8px 16px; background: transparent; }
 .pwa-detail-screen .review-pwa-topbar .review-detail-back { position: relative; display: grid; width: 42px; height: 42px; place-items: center; margin: 0; padding: 0; border-radius: 50%; color: var(--text-primary); background: rgba(255,255,255,.075); font-size: 0; line-height: 0; }
 .pwa-detail-screen .review-pwa-topbar .review-detail-back svg { position: absolute; top: 50%; left: 50%; display: block; width: 21px; height: 21px; transform: translate(-50%,-50%); }
-.pwa-detail-screen .review-comments { min-height: 35dvh; padding-bottom: calc(88px + env(safe-area-inset-bottom)); background: var(--bg-primary); }
+.pwa-detail-screen .review-comments { flex: 1 0 auto; min-height: max(35dvh, calc(100dvh - 310px)); margin-top: auto; padding-bottom: calc(88px + env(safe-area-inset-bottom)); background: var(--bg-primary); }
 .pwa-detail-screen .review-comment-form { position: fixed; z-index: 10001; right: 12px; bottom: 0; left: 12px; box-sizing: border-box; margin: 0; padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); border: 0; border-radius: 0; background: transparent; box-shadow: none; isolation: isolate; backdrop-filter: none; -webkit-backdrop-filter: none; }
 .pwa-detail-screen .review-comment-form::before,.pwa-comment-composer::before { position: absolute; z-index: -1; inset: 0 -12px calc(-1 * env(safe-area-inset-bottom)); border-top: 1px solid rgba(255,255,255,.1); background: #0f1014; content: ''; pointer-events: none; }
 .pwa-comment-composer { position: fixed; z-index: 10001; right: 12px; bottom: 0; left: 12px; display: flex; width: auto; max-width: none; min-height: 64px; align-items: center; gap: .65rem; box-sizing: border-box; margin: 0; padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); border: 0; border-radius: 0; background: transparent; box-shadow: none; isolation: isolate; backdrop-filter: none; -webkit-backdrop-filter: none; }
@@ -86,9 +87,7 @@
 .pwa-detail-screen .review-post-actions .review-post-action-spacer { flex: 1; }
 .pwa-detail-screen .vl-topbar .review-detail-back { position: relative; display: grid; width: 42px; height: 42px; place-items: center; margin: 0; padding: 0; border-radius: 50%; background: rgba(255,255,255,.075); font-size: 0; line-height: 0; }
 .pwa-detail-screen .vl-topbar .review-detail-back svg { position: absolute; top: 50%; left: 50%; width: 21px; height: 21px; transform: translate(-50%,-50%); }
-@keyframes pwaDetailEnter { from { opacity: 1; transform: translateX(100vw); } to { opacity: 1; transform: translateX(0); } }
 @keyframes pwaDetailExit { from { transform: translateX(0); } to { transform: translateX(100vw); } }
-@media (prefers-reduced-motion: reduce) { .pwa-detail-screen { animation: none !important; } }
 
 .editor-icon-back { display: grid; width: 42px; height: 42px; flex: 0 0 42px; place-items: center; padding: 0; border: 0; border-radius: 50%; color: var(--text-primary); background: rgba(255,255,255,.065); cursor: pointer; }
 .editor-icon-back svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }

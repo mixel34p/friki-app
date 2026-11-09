@@ -11,6 +11,7 @@ import {
 import { searchGames } from '../../lib/gameService';
 import { searchAnime } from '../../lib/animeService';
 import { getTierLabelFontSize } from '../../lib/tierLabel';
+import { navigatePwaRoute } from '../../lib/pwaRouteTransition';
 import { useAuth } from '../../context/AuthContext';
 import CustomItemGroupsPicker from '../../components/CustomItemGroupsPicker';
 import TierLabelEditor from './TierLabelEditor';
@@ -298,7 +299,7 @@ export default function TemplateBuilder() {
             if (template.list_type === 'grid')     { type_config.cells = gridCells; type_config.columns = gridColumns; }
             const title = titleDraft.trim() || template.title;
             await updateTemplate(id, { title, type_config, default_items: itemsPool, cover_items: coverItems });
-            navigate(`/templates/${id}`);
+            navigatePwaRoute(navigate, `/templates/${id}`);
         } catch (err) {
             console.error(err);
             alert('Error al guardar: ' + err.message);
@@ -455,7 +456,7 @@ export default function TemplateBuilder() {
             {/* ══ HEADER ══════════════════════════════════════════════════════ */}
             <header className="tb-header">
                 <div className="tb-header-left">
-                    <button type="button" className="editor-icon-back" aria-label="Volver" onClick={() => navigate(`/templates/${id}`)}>
+                    <button type="button" className="editor-icon-back" aria-label="Volver" onClick={() => navigatePwaRoute(navigate, `/templates/${id}`)}>
                         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
                     </button>
 
