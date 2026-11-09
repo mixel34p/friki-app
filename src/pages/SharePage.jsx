@@ -417,7 +417,7 @@ export default function SharePage() {
   const avatar = profile?.avatar_url || profile?.profile_picture || ''
   const displayName = profile?.display_name || profile?.username || 'Usuario'
   const avatarBackground = avatar ? `url("${avatar}")` : 'none'
-  const isStandaloneMobile = window.matchMedia('(display-mode: standalone) and (max-width: 620px)').matches || (navigator.standalone === true && window.innerWidth <= 620)
+  const isStandaloneMobile = window.matchMedia('(max-width: 620px) and (display-mode: standalone), (max-width: 620px) and (display-mode: fullscreen)').matches || (navigator.standalone === true && window.innerWidth <= 620)
   const isMobileShareSheet = window.innerWidth <= 620
   const handleMobileBack = () => {
     if (!isStandaloneMobile) return navigateBackOrHome(navigate)

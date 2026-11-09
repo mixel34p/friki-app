@@ -61,7 +61,7 @@ export default function PostDetail() {
   const { postId } = useParams()
   const navigate = useNavigate()
   const { user, profile: currentProfile } = useAuth()
-  const isPwaStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true
+  const isPwaStandalone = window.matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches || navigator.standalone === true
   const [isExitingPwa, setIsExitingPwa] = useState(false)
   const [post, setPost] = useState(null)
   const systemBarColor = useSystemBarColor(post?.author?.theme_color)

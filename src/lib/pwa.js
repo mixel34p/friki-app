@@ -1,6 +1,6 @@
 // Capture the browser's one-use installation event before React mounts.
 let installPrompt = null
-let installed = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true
+let installed = window.matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches || navigator.standalone === true
 const listeners = new Set()
 const notify = () => listeners.forEach(listener => listener())
 
@@ -14,7 +14,7 @@ window.addEventListener('appinstalled', () => {
   installPrompt = null
   notify()
 })
-window.matchMedia('(display-mode: standalone)').addEventListener('change', event => {
+window.matchMedia('(display-mode: standalone), (display-mode: fullscreen)').addEventListener('change', event => {
   installed = event.matches || navigator.standalone === true
   notify()
 })

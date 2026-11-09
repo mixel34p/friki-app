@@ -450,7 +450,7 @@
     min-height: 96px;
 }
 
-@media (display-mode: standalone) {
+@media (display-mode: standalone), (display-mode: fullscreen) {
     .vl-post-visual .cl-tierlist { gap: 0; }
     .vl-post-visual .cl-tier-row { min-height: 80px; }
     .vl-post-visual .cl-tier-label { width: 72px; height: auto; min-height: 80px; flex: 0 0 72px; align-self: stretch; aspect-ratio: auto; }

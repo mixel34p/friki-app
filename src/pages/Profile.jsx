@@ -266,7 +266,7 @@ export default function Profile() {
 
     const navigate = useNavigate()
     const [isScrolled, setIsScrolled] = useState(false)
-    const isStandalonePwa = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true
+    const isStandalonePwa = window.matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches || navigator.standalone === true
     const isOtherProfile = Boolean(username && username !== myProfile?.username)
     const isOwnProfileFromNav = isStandalonePwa && isOwnProfile && location.state?.fromBottomNav === true
     const [isClosingPwaProfile, setIsClosingPwaProfile] = useState(false)

@@ -426,7 +426,7 @@ async function downloadListImage(...args) {
 export default function ViewList() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const isStandalonePwa = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+    const isStandalonePwa = window.matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches || navigator.standalone === true;
     const [isExitingPwa, setIsExitingPwa] = useState(false);
     const handleBack = () => { if (!isStandalonePwa) return navigateBackOrHome(navigate); setIsExitingPwa(true); window.setTimeout(() => navigateBackOrHome(navigate), 280); };
     const { user, profile: currentProfile, loading: authLoading } = useAuth();

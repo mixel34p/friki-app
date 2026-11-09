@@ -927,7 +927,7 @@
   .share-review-picker-results > button strong { font-size: .82rem; }
 }
 
-@media (max-width: 620px) and (display-mode: standalone) {
+@media (max-width: 620px) and (display-mode: standalone), (max-width: 620px) and (display-mode: fullscreen) {
   .share-register { display: none; }
   .share-tool-button.share-tool-camera, .share-tool-button.share-tool-review { display: grid; }
   .main.share-main { padding-bottom: 0; background: transparent; }

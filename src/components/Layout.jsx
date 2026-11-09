@@ -112,7 +112,7 @@ export default function Layout() {
   const isDesktop = typeof window !== 'undefined' && window.innerWidth > 960
 
   useEffect(() => {
-    const standaloneQuery = window.matchMedia('(display-mode: standalone)')
+    const standaloneQuery = window.matchMedia('(display-mode: standalone), (display-mode: fullscreen)')
     const landscapeQuery = window.matchMedia('(orientation: landscape)')
     const updateOrientationLock = () => {
       const isInstalledPwa = standaloneQuery.matches || navigator.standalone === true

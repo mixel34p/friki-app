@@ -5,7 +5,7 @@ import { getSystemBarColor } from '../lib/colorContrast'
 export default function useSystemBarColor(accent, maxWidth = 960) {
   const color = getSystemBarColor(accent)
   useLayoutEffect(() => {
-    const standalone = window.matchMedia('(display-mode: standalone)')
+    const standalone = window.matchMedia('(display-mode: standalone), (display-mode: fullscreen)')
     const mobile = window.matchMedia(`(max-width: ${maxWidth}px)`)
     const meta = document.querySelector('meta[name="theme-color"]')
     if (!meta) return undefined
