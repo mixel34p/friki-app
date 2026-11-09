@@ -900,6 +900,7 @@
   .share-page-heading { display: block; min-height: 0; margin: 0 0 .9rem; padding: 0; border: 0; background: transparent; animation: shareHeadingIn .45s cubic-bezier(.2,.8,.2,1) both; }
   .share-page-heading h1 { font-size: 1.55rem; letter-spacing: -.045em; }
   .share-mobile-back { display: none; }
+  .share-composer-submit > .share-post-button { display: none !important; }
   .share-tool-button.share-tool-camera, .share-tool-button.share-tool-review { display: none; }
   .share-composer { display: block; min-height: 0; flex: initial; overflow: visible; border: 1px solid rgba(255,255,255,.105); border-radius: 18px; background: color-mix(in srgb, var(--bg-card) 70%, rgba(8,9,12,.45)); box-shadow: 0 24px 70px rgba(0,0,0,.3), inset 0 1px rgba(255,255,255,.035); backdrop-filter: blur(20px) saturate(1.15); animation: shareComposerIn .52s cubic-bezier(.2,.8,.2,1) .06s both; }
   .share-composer-footer { position: static; min-height: 68px; flex: initial; padding: .65rem .65rem; border-top: 1px solid rgba(255,255,255,.09); background: rgba(0,0,0,.12); backdrop-filter: none; }
@@ -929,12 +930,14 @@
 
 @media (max-width: 620px) and (display-mode: standalone), (max-width: 620px) and (display-mode: fullscreen) {
   .share-register { display: none; }
+  .share-composer-submit > .share-post-button { display: none !important; }
+  .share-list-publish-actions { display: none !important; }
   .share-tool-button.share-tool-camera, .share-tool-button.share-tool-review { display: grid; }
   .main.share-main { padding-bottom: 0; background: transparent; }
   .share-page { padding-bottom: 0; }
   .share-page::before, .share-page::after, .share-selected-backdrop { position: fixed; inset: 0; }
   .share-page::before { background-position: center 22%; background-size: min(100vw, 720px) auto; opacity: .24; }
-  .share-page-heading { background: var(--share-system-bar-color); backdrop-filter: none; }
+  .share-page-heading { background: color-mix(in srgb, var(--share-system-bar-color) 78%, transparent); backdrop-filter: blur(18px) saturate(1.2); -webkit-backdrop-filter: blur(18px) saturate(1.2); }
   .share-page::after { background: linear-gradient(180deg, var(--share-system-bar-color), transparent 220px), radial-gradient(ellipse 118% 74% at 76% 2%, color-mix(in srgb, var(--share-accent) 34%, transparent), transparent 78%), radial-gradient(ellipse 78% 56% at 5% 52%, rgba(106,61,190,.18), transparent 78%), radial-gradient(ellipse 80% 56% at 96% 80%, rgba(41,111,170,.16), transparent 80%), linear-gradient(180deg, color-mix(in srgb, var(--bg-primary) 12%, transparent), color-mix(in srgb, var(--bg-primary) 44%, transparent) 62%, var(--bg-primary)); }
   .share-composer { position: relative; display: flex; min-height: 0; flex: 1; flex-direction: column; margin: 12px 12px 0; padding: 0 0 82px; overflow: hidden auto; border: 0; border-radius: 0; background: transparent; box-shadow: none; backdrop-filter: none; }
   .share-composer-entry { margin: 12px; padding: 1rem .9rem .9rem; border: 1px solid rgba(255,255,255,.15); border-radius: 20px; background: linear-gradient(145deg, color-mix(in srgb, var(--share-accent) 9%, transparent), transparent 58%), color-mix(in srgb, var(--bg-card) 72%, rgba(8,9,12,.34)); box-shadow: 0 15px 36px rgba(0,0,0,.2), inset 0 1px rgba(255,255,255,.045); backdrop-filter: blur(16px); }

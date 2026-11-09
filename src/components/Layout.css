@@ -1478,7 +1478,7 @@
     .mobile-profile-link:active { transform: scale(.9); }
     .mobile-nav-avatar { display: block; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
     .mobile-nav-avatar-placeholder { display: grid; place-items: center; color: #fff; background: #29232f; font-size: .85rem; font-weight: 750; }
-    .main { width: auto; min-height: 100vh; margin-left: 0; padding: 76px 16px calc(88px + env(safe-area-inset-bottom)); }
+    .main { width: auto; min-height: 100vh; margin-left: 0; padding: 82px 16px calc(88px + env(safe-area-inset-bottom)); }
     .main.legal-main { padding: 106px 16px calc(88px + env(safe-area-inset-bottom)); }
     .main.discover-works-main { padding: 56px 6px calc(88px + env(safe-area-inset-bottom)); }
     .main.work-main { padding: 58px 0 calc(88px + env(safe-area-inset-bottom)); }
