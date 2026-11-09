@@ -53,6 +53,11 @@ function mixColors(first, second, amount) {
     return toHex(first.map((channel, index) => channel * (1 - amount) + second[index] * amount))
 }
 
+// Use an opaque sRGB color for both the page's top surface and Android chrome.
+export function getSystemBarColor(accent) {
+    return mixColors([16, 16, 20], parseRgb(accent) || [20, 184, 166], 0.08)
+}
+
 function contrastRatio(first, second) {
     const luminance = color => parseRgb(color).reduce((total, channel, index) => {
         const value = channel / 255
