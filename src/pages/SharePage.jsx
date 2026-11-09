@@ -766,6 +766,7 @@ export default function SharePage() {
   useEffect(() => {
     if (!calendarOpen) return undefined
     const closeOnOutsidePointer = event => {
+      if (isMobileShareSheet) return
       if (!calendarWrapRef.current?.contains(event.target)) setCalendarOpen(false)
     }
     const closeOnEscape = event => { if (event.key === 'Escape') setCalendarOpen(false) }
@@ -775,7 +776,7 @@ export default function SharePage() {
       document.removeEventListener('pointerdown', closeOnOutsidePointer)
       document.removeEventListener('keydown', closeOnEscape)
     }
-  }, [calendarOpen])
+  }, [calendarOpen, isMobileShareSheet])
 
   useEffect(() => {
     if (!selectedReview || !user?.id) return undefined
@@ -932,7 +933,8 @@ export default function SharePage() {
         <div className="share-composer-footer">
           {selectedReview ? <div className="share-review-date-wrap" ref={calendarWrapRef}><button className="share-review-date-trigger" type="button" onClick={() => setCalendarOpen(value => !value)} aria-expanded={calendarOpen}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>{reviewDate ? formatCalendarDate(reviewDate) : 'Fecha de registro'}<span className="share-review-date-chevron">{calendarOpen ? '−' : '+'}</span>
-          </button>{calendarOpen && <div className="share-calendar-popover">
+          </button>{calendarOpen && renderMobileSheet(<div className={`share-calendar-overlay${isMobileShareSheet ? ' is-mobile' : ''}`} onClick={() => setCalendarOpen(false)}><section className={`share-calendar-popover${isMobileShareSheet ? ' is-mobile' : ''}`} role={isMobileShareSheet ? 'dialog' : undefined} aria-modal={isMobileShareSheet ? 'true' : undefined} aria-label="Elegir fecha" onClick={event => event.stopPropagation()}>
+            {isMobileShareSheet && <header className="share-calendar-sheet-header"><button type="button" onClick={() => setCalendarOpen(false)} aria-label="Volver a la reseña"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button><div><h2>Fecha de registro</h2><p>Elige cuándo empezaste esta obra</p></div></header>}
             <div className="share-calendar-header">
               <div className="share-calendar-nav-group"><button type="button" onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear() - 1, calendarMonth.getMonth(), 1))} aria-label="Año anterior"><svg viewBox="0 0 24 24"><path d="m18 6-6 6 6 6M11 6l-6 6 6 6"/></svg></button><button type="button" onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1))} aria-label="Mes anterior"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button></div>
               <strong>{calendarMonth.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}</strong>
@@ -949,7 +951,7 @@ export default function SharePage() {
               </button>
             })}</div>
             <div className="share-calendar-footer"><span>{reviewDate ? formatCalendarDate(reviewDate) : 'Selecciona un día'}</span>{reviewDate && <button type="button" onClick={() => { setReviewDate(''); setCalendarOpen(false) }}>Quitar fecha</button>}</div>
-          </div>}</div> : <div className="share-composer-tools" aria-label="Opciones del post">
+          </section></div>, true)}</div> : <div className="share-composer-tools" aria-label="Opciones del post">
             <input ref={cameraInputRef} className="share-image-file-input" type="file" accept="image/*" capture="environment" onChange={handleImageSelection} aria-label="Hacer una foto para el post" />
             <input ref={fileInputRef} className="share-image-file-input" type="file" accept="image/*" multiple onChange={handleImageSelection} aria-label="Elegir imágenes para el post" />
             {TOOLS.map(tool => (

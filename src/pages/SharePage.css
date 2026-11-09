@@ -166,6 +166,10 @@
 .share-review-date-trigger > svg { width: 15px; height: 15px; fill: none; stroke: var(--share-accent); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .share-review-date-chevron { color: var(--text-muted); }
 .share-calendar-popover { position: absolute; left: 0; top: calc(100% + 9px); z-index: 50; width: 318px; padding: .8rem; border: 1px solid rgba(255,255,255,.12); border-radius: 15px; color: var(--text-primary); background: color-mix(in srgb, var(--bg-card) 96%, #08090c); box-shadow: 0 16px 42px rgba(0,0,0,.45); animation: shareHintIn .15s ease both; }
+.share-calendar-overlay { position: fixed; inset: 0; z-index: 1600; pointer-events: none; }
+.share-calendar-overlay:not(.is-mobile) { position: static; display: contents; }
+.share-calendar-overlay > .share-calendar-popover { pointer-events: auto; }
+.share-calendar-sheet-header { display: none; }
 .share-calendar-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: .4rem; }
 .share-calendar-nav-group { display: flex; align-items: center; gap: 2px; }
 .share-calendar-header strong { color: var(--text-primary); font-size: .82rem; font-weight: 700; text-transform: capitalize; }
@@ -942,6 +946,28 @@
   .share-image-preview-grid.count-1 .share-image-preview-item > img { width: 100%; max-width: 100%; max-height: 42dvh; object-fit: contain; }
   .share-composer-footer { position: fixed; inset: auto 0 var(--share-keyboard-offset, 0px); z-index: 1510; min-height: 76px; gap: .45rem; padding: .65rem .55rem calc(.65rem + env(safe-area-inset-bottom)); border-top: 1px solid rgba(255,255,255,.12); background: color-mix(in srgb, #111216 88%, transparent); box-shadow: 0 -12px 32px rgba(0,0,0,.22); backdrop-filter: blur(24px) saturate(1.25); transition: bottom .16s ease-out; }
 }
+
+@media (max-width: 620px) {
+  .share-calendar-overlay.is-mobile { display: flex; align-items: stretch; justify-content: center; pointer-events: auto; background: rgba(0,0,0,.62); backdrop-filter: blur(12px); animation: shareCalendarBackdropIn .2s ease both; }
+  .share-calendar-popover.is-mobile { position: fixed; inset: 0; z-index: 1601; display: flex; width: 100%; max-height: none; flex-direction: column; justify-content: center; overflow: auto; padding: max(12px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom)); border: 0; border-radius: 0; background: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--share-accent) 12%, transparent), transparent 55%), color-mix(in srgb, var(--bg-card) 97%, #08090c); box-shadow: none; animation: shareCalendarEnter .34s cubic-bezier(.2,.8,.2,1) both; }
+  .share-calendar-sheet-header { display: flex; width: min(100%, 430px); min-height: 68px; align-items: center; gap: 14px; margin: 0 auto 26px; }
+  .share-calendar-sheet-header button { display: grid; width: 44px; height: 44px; flex: 0 0 44px; place-items: center; border: 1px solid rgba(255,255,255,.1); border-radius: 50%; color: var(--text-primary); background: rgba(255,255,255,.07); }
+  .share-calendar-sheet-header button svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .share-calendar-sheet-header h2 { margin: 0; font: 700 1.05rem var(--font-display); }
+  .share-calendar-sheet-header p { margin: 4px 0 0; color: var(--text-muted); font-size: .76rem; }
+  .share-calendar-popover.is-mobile > :not(.share-calendar-sheet-header) { width: min(100%, 430px); margin-right: auto; margin-left: auto; }
+  .share-calendar-popover.is-mobile .share-calendar-header { margin-bottom: 12px; }
+  .share-calendar-popover.is-mobile .share-calendar-header strong { font-size: 1rem; }
+  .share-calendar-popover.is-mobile .share-calendar-grid { gap: 7px; }
+  .share-calendar-popover.is-mobile .share-calendar-weekdays span { height: 32px; font-size: .75rem; }
+  .share-calendar-popover.is-mobile .share-calendar-day { min-height: clamp(48px, 11vw, 62px); border-radius: 12px; font-size: .85rem; }
+  .share-calendar-popover.is-mobile .share-calendar-empty { min-height: clamp(48px, 11vw, 62px); }
+  .share-calendar-popover.is-mobile .share-calendar-footer { min-height: 42px; margin-top: 14px; font-size: .75rem; }
+  .share-calendar-popover.is-mobile .share-calendar-footer button { font-size: .75rem; }
+}
+
+@keyframes shareCalendarEnter { from { opacity: .65; transform: translateY(18px) scale(.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes shareCalendarBackdropIn { from { opacity: 0; } to { opacity: 1; } }
 
 @keyframes shareScreenEnter { from { transform: translateY(100%); } to { transform: translateY(0); } }
 @keyframes sharePageExit { from { transform: translateY(0); opacity: 1; } to { transform: translateY(100%); opacity: .88; } }
