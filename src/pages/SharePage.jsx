@@ -416,12 +416,13 @@ export default function SharePage() {
   const displayName = profile?.display_name || profile?.username || 'Usuario'
   const avatarBackground = avatar ? `url("${avatar}")` : 'none'
   const isStandaloneMobile = window.matchMedia('(display-mode: standalone) and (max-width: 620px)').matches || (navigator.standalone === true && window.innerWidth <= 620)
+  const isMobileShareSheet = window.innerWidth <= 620
   const handleMobileBack = () => {
     if (!isStandaloneMobile) return navigateBackOrHome(navigate)
     setIsExitingPwa(true)
     window.setTimeout(() => navigateBackOrHome(navigate), 280)
   }
-  const renderMobileSheet = content => isStandaloneMobile ? createPortal(content, document.body) : content
+  const renderMobileSheet = (content, forceMobileOverlay = false) => (isStandaloneMobile || (forceMobileOverlay && isMobileShareSheet)) ? createPortal(content, document.body) : content
 
   const handleTextChange = event => {
     const value = event.target.value.slice(0, INPUT_LIMIT)
@@ -823,7 +824,7 @@ export default function SharePage() {
       <header className="share-page-heading">
         <button className="share-mobile-back" type="button" onClick={handleMobileBack} aria-label="Volver"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
         <h1>Compartir</h1>
-        {!selectedReview && <button className="share-mobile-post-button" type="button" onClick={isListPublishingFlow ? handlePublishList : isListSetupComposerFlow ? handleEditSelectedList : handlePost} disabled={isListPublishingFlow ? listPublishing || !listDraft?.payload : isListSetupComposerFlow ? false : postSubmitting || !canPost}>{isListPublishingFlow ? listPublishing ? 'Publicando…' : 'Postear' : isListSetupComposerFlow ? 'Editar lista' : postSubmitting ? 'Publicando…' : 'Postear'}</button>}
+        <button className="share-mobile-post-button" type="button" onClick={isListPublishingFlow ? handlePublishList : isListSetupComposerFlow ? handleEditSelectedList : handlePost} disabled={selectedReview ? reviewSubmitting || isOverLimit : isListPublishingFlow ? listPublishing || !listDraft?.payload : isListSetupComposerFlow ? false : postSubmitting || !canPost}>{selectedReview ? reviewSubmitting ? 'Guardando…' : 'Reseñar' : isListPublishingFlow ? listPublishing ? 'Publicando…' : 'Postear' : isListSetupComposerFlow ? 'Editar lista' : postSubmitting ? 'Publicando…' : 'Postear'}</button>
       </header>
 
       <article className={`share-composer${isOverLimit ? ' is-over-limit' : ''}${selectedReview ? ' is-review-composer' : ''}${isListAttachmentFlow ? ' is-list-composer' : ''}`} aria-label={isListAttachmentFlow ? 'Publicar una lista' : selectedReview ? 'Escribir reseña' : 'Crear un post'}>
@@ -1042,13 +1043,13 @@ export default function SharePage() {
           </div>
           </>}
         </section>)}
-        {reviewPickerOpen && renderMobileSheet(<section className="share-review-picker-sheet" role="dialog" aria-modal="true" aria-label="Valorar una obra" style={isStandaloneMobile ? { '--share-accent': accent } : undefined}>
+        {reviewPickerOpen && renderMobileSheet(<section className="share-review-picker-sheet" role="dialog" aria-modal="true" aria-label="Valorar una obra" style={isMobileShareSheet ? { '--share-accent': accent } : undefined}>
           <header className="share-sheet-header"><button type="button" onClick={() => setReviewPickerOpen(false)} aria-label="Volver a compartir"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button><div><h2>¿Qué vas a valorar?</h2><p>Elige un juego o un anime</p></div><button type="button" onClick={() => setReviewPickerOpen(false)} aria-label="Cerrar">×</button></header>
           <div className="share-review-picker-content"><div className="share-list-kind-tabs" role="tablist" aria-label="Tipo de obra"><button type="button" role="tab" aria-selected={workType === 'game'} className={workType === 'game' ? 'active' : ''} onClick={() => { setWorkType('game'); setRegisterCategory('game') }}>Videojuegos</button><button type="button" role="tab" aria-selected={workType === 'anime'} className={workType === 'anime' ? 'active' : ''} onClick={() => { setWorkType('anime'); setRegisterCategory('anime') }}>Anime</button></div><label className="share-review-picker-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="7.3"/><path d="m16.2 16.2 4.3 4.3"/></svg><input value={workQuery} onChange={event => setWorkQuery(event.target.value)} placeholder={`Buscar ${workType === 'game' ? 'juego' : 'anime'}…`} /></label><div className="share-review-picker-results" aria-live="polite">{workQuery.trim().length < 2 ? <>
             <h3>Más registrados</h3>
             {recommendedLoading ? <p>Cargando recomendaciones…</p> : recommended.length === 0 ? <p>No hay recomendaciones disponibles.</p> : recommended.map(work => <button type="button" key={work.id} onClick={() => { setReviewPickerOpen(false); selectWorkForReview({ ...work, type: workType }) }}><img src={work.image || '/icons/logo.png'} alt=""/><span><strong>{work.title}</strong><small>{work.count} {work.count === 1 ? 'registro' : 'registros'}</small></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>)}
           </> : workLoading ? <p>Buscando…</p> : workResults.map(work => <button type="button" key={work.id} onClick={() => { setReviewPickerOpen(false); selectWorkForReview({ ...work, title: work.name || work.title, image: work.cover_url || work.image_url, type: workType }) }}><img src={work.cover_url || work.image_url || '/icons/logo.png'} alt=""/><span><strong>{work.name || work.title}</strong><small>{workType === 'game' ? 'Videojuego' : 'Anime'}</small></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>)}</div></div>
-        </section>)}
+        </section>, true)}
         {toolHint && <p className="share-tool-hint" role="status">{toolHint}</p>}
         </>}
       </article>

@@ -895,7 +895,7 @@
   .share-page::before, .share-page::after, .share-selected-backdrop { position: fixed; }
   .share-page-heading { display: block; min-height: 0; margin: 0 0 .9rem; padding: 0; border: 0; background: transparent; animation: shareHeadingIn .45s cubic-bezier(.2,.8,.2,1) both; }
   .share-page-heading h1 { font-size: 1.55rem; letter-spacing: -.045em; }
-  .share-mobile-back, .share-mobile-post-button { display: none; }
+  .share-mobile-back { display: none; }
   .share-tool-button.share-tool-camera, .share-tool-button.share-tool-review { display: none; }
   .share-composer { display: block; min-height: 0; flex: initial; overflow: visible; border: 1px solid rgba(255,255,255,.105); border-radius: 18px; background: color-mix(in srgb, var(--bg-card) 70%, rgba(8,9,12,.45)); box-shadow: 0 24px 70px rgba(0,0,0,.3), inset 0 1px rgba(255,255,255,.035); backdrop-filter: blur(20px) saturate(1.15); animation: shareComposerIn .52s cubic-bezier(.2,.8,.2,1) .06s both; }
   .share-composer-footer { position: static; min-height: 68px; flex: initial; padding: .65rem .65rem; border-top: 1px solid rgba(255,255,255,.09); background: rgba(0,0,0,.12); backdrop-filter: none; }
@@ -912,15 +912,15 @@
   .share-template-picker-header p { margin: 0; font-size: inherit; }
   .share-template-picker-results { display: grid; flex: initial; max-height: 270px; overflow-y: auto; padding: .15rem clamp(.8rem, 2.3vw, 1.55rem) 1rem; }
   .share-template-picker-search { position: static; width: auto; margin: .85rem clamp(.8rem, 2.3vw, 1.55rem); }
-  .share-review-picker-sheet { position: static; inset: auto; z-index: auto; display: block; overflow: visible; padding-bottom: 0; border: 0; border-top: 1px solid rgba(255,255,255,.09); border-radius: 0; background: transparent; box-shadow: none; animation: shareHintIn .2s ease both; }
-  .share-sheet-header { display: none; }
-  .share-review-picker-content { display: block; min-height: 0; padding: .85rem; }
-  .share-review-picker-search { min-height: 40px; margin: .65rem 0; padding: 0 .8rem; border-radius: 12px; }
-  .share-review-picker-search input { font-size: .78rem; }
-  .share-review-picker-results { max-height: 270px; overflow-y: auto; }
-  .share-review-picker-results > button { min-height: 56px; gap: 9px; padding: 6px 4px; }
-  .share-review-picker-results > button img { width: 32px; height: 42px; flex-basis: 32px; }
-  .share-review-picker-results > button strong { font-size: .76rem; }
+  .share-review-picker-sheet { position: fixed; inset: env(safe-area-inset-top) 0 0; z-index: 1560; display: flex; flex-direction: column; overflow: hidden; padding-bottom: env(safe-area-inset-bottom); border: 1px solid rgba(255,255,255,.09); border-bottom: 0; border-radius: 22px 22px 0 0; background: color-mix(in srgb, var(--bg-card) 94%, #101114); box-shadow: 0 -20px 60px rgba(0,0,0,.48), 0 0 80px color-mix(in srgb, var(--share-accent) 12%, transparent); backdrop-filter: blur(24px) saturate(1.25); animation: shareSheetEnter .34s cubic-bezier(.2,.8,.2,1) both; }
+  .share-review-picker-sheet .share-sheet-header { flex: 0 0 auto; }
+  .share-review-picker-content { display: flex; min-height: 0; flex: 1; flex-direction: column; padding: 12px 16px; }
+  .share-review-picker-search { min-height: 46px; margin: 12px 0; padding: 0 12px; border-radius: 14px; }
+  .share-review-picker-search input { font-size: .85rem; }
+  .share-review-picker-results { max-height: none; flex: 1; overflow-y: auto; }
+  .share-review-picker-results > button { min-height: 68px; gap: 12px; padding: 8px 4px; }
+  .share-review-picker-results > button img { width: 40px; height: 52px; flex-basis: 40px; }
+  .share-review-picker-results > button strong { font-size: .82rem; }
 }
 
 @media (max-width: 620px) and (display-mode: standalone) {
