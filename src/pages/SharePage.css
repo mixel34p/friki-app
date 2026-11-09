@@ -60,6 +60,7 @@
 }
 
 .share-mobile-back, .share-mobile-post-button { display: none; }
+.share-mobile-post-button.is-review-publish { display: block; }
 .share-tool-button.share-tool-camera, .share-tool-button.share-tool-review { display: none; }
 
 .share-composer {
@@ -165,7 +166,10 @@
 .share-review-date-trigger:hover, .share-review-date-trigger[aria-expanded="true"] { border-color: color-mix(in srgb, var(--share-accent) 48%, transparent); color: var(--text-primary); background: color-mix(in srgb, var(--share-accent) 7%, transparent); }
 .share-review-date-trigger > svg { width: 15px; height: 15px; fill: none; stroke: var(--share-accent); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .share-review-date-chevron { color: var(--text-muted); }
-.share-calendar-popover { position: absolute; left: 0; top: calc(100% + 9px); z-index: 50; width: 318px; padding: .8rem; border: 1px solid rgba(255,255,255,.12); border-radius: 15px; color: var(--text-primary); background: color-mix(in srgb, var(--bg-card) 96%, #08090c); box-shadow: 0 16px 42px rgba(0,0,0,.45); animation: shareHintIn .15s ease both; }
+.share-calendar-overlay { position: fixed; inset: 0; z-index: 100000; display: grid; place-items: center; padding: max(20px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-bottom)); background: rgba(5,6,9,.68); backdrop-filter: blur(12px) saturate(1.15); -webkit-backdrop-filter: blur(12px) saturate(1.15); animation: shareCalendarOverlayIn .2s ease both; }
+.share-calendar-popover { width: min(100%, 360px); padding: 1rem; border: 1px solid color-mix(in srgb, var(--share-accent) 28%, rgba(255,255,255,.14)); border-radius: 22px; color: var(--text-primary); background: radial-gradient(ellipse at 100% 0%, color-mix(in srgb, var(--share-accent) 14%, transparent), transparent 62%), color-mix(in srgb, var(--bg-card) 96%, #08090c); box-shadow: 0 28px 90px rgba(0,0,0,.62), inset 0 1px rgba(255,255,255,.07); animation: shareCalendarCardIn .32s cubic-bezier(.18,.82,.25,1) both; }
+@keyframes shareCalendarOverlayIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes shareCalendarCardIn { from { opacity: 0; transform: translateY(22px) scale(.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
 .share-calendar-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: .4rem; }
 .share-calendar-nav-group { display: flex; align-items: center; gap: 2px; }
 .share-calendar-header strong { color: var(--text-primary); font-size: .82rem; font-weight: 700; text-transform: capitalize; }

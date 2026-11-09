@@ -823,7 +823,7 @@ export default function SharePage() {
       <header className="share-page-heading">
         <button className="share-mobile-back" type="button" onClick={handleMobileBack} aria-label="Volver"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
         <h1>Compartir</h1>
-        {!selectedReview && <button className="share-mobile-post-button" type="button" onClick={isListPublishingFlow ? handlePublishList : isListSetupComposerFlow ? handleEditSelectedList : handlePost} disabled={isListPublishingFlow ? listPublishing || !listDraft?.payload : isListSetupComposerFlow ? false : postSubmitting || !canPost}>{isListPublishingFlow ? listPublishing ? 'Publicando…' : 'Postear' : isListSetupComposerFlow ? 'Editar lista' : postSubmitting ? 'Publicando…' : 'Postear'}</button>}
+        <button className={`share-mobile-post-button${selectedReview ? ' is-review-publish' : ''}`} type="button" onClick={isListPublishingFlow ? handlePublishList : isListSetupComposerFlow ? handleEditSelectedList : handlePost} disabled={selectedReview ? reviewSubmitting || isOverLimit : isListPublishingFlow ? listPublishing || !listDraft?.payload : isListSetupComposerFlow ? false : postSubmitting || !canPost}>{selectedReview ? reviewSubmitting ? 'Guardando…' : 'Publicar' : isListPublishingFlow ? listPublishing ? 'Publicando…' : 'Postear' : isListSetupComposerFlow ? 'Editar lista' : postSubmitting ? 'Publicando…' : 'Postear'}</button>
       </header>
 
       <article className={`share-composer${isOverLimit ? ' is-over-limit' : ''}${selectedReview ? ' is-review-composer' : ''}${isListAttachmentFlow ? ' is-list-composer' : ''}`} aria-label={isListAttachmentFlow ? 'Publicar una lista' : selectedReview ? 'Escribir reseña' : 'Crear un post'}>
@@ -929,9 +929,9 @@ export default function SharePage() {
         </div>}
 
         <div className="share-composer-footer">
-          {selectedReview ? <div className="share-review-date-wrap" ref={calendarWrapRef}><button className="share-review-date-trigger" type="button" onClick={() => setCalendarOpen(value => !value)} aria-expanded={calendarOpen}>
+          {selectedReview ? <div className="share-review-date-wrap"><button className="share-review-date-trigger" type="button" onClick={() => setCalendarOpen(value => !value)} aria-expanded={calendarOpen}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>{reviewDate ? formatCalendarDate(reviewDate) : 'Fecha de registro'}<span className="share-review-date-chevron">{calendarOpen ? '−' : '+'}</span>
-          </button>{calendarOpen && <div className="share-calendar-popover">
+          </button>{calendarOpen && createPortal(<div className="share-calendar-overlay" onClick={() => setCalendarOpen(false)}><div className="share-calendar-popover" ref={calendarWrapRef} role="dialog" aria-modal="true" aria-label="Selecciona una fecha de registro" onClick={event => event.stopPropagation()}>
             <div className="share-calendar-header">
               <div className="share-calendar-nav-group"><button type="button" onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear() - 1, calendarMonth.getMonth(), 1))} aria-label="Año anterior"><svg viewBox="0 0 24 24"><path d="m18 6-6 6 6 6M11 6l-6 6 6 6"/></svg></button><button type="button" onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1))} aria-label="Mes anterior"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button></div>
               <strong>{calendarMonth.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}</strong>
@@ -948,7 +948,7 @@ export default function SharePage() {
               </button>
             })}</div>
             <div className="share-calendar-footer"><span>{reviewDate ? formatCalendarDate(reviewDate) : 'Selecciona un día'}</span>{reviewDate && <button type="button" onClick={() => { setReviewDate(''); setCalendarOpen(false) }}>Quitar fecha</button>}</div>
-          </div>}</div> : <div className="share-composer-tools" aria-label="Opciones del post">
+          </div>, document.body)}</div> : <div className="share-composer-tools" aria-label="Opciones del post">
             <input ref={cameraInputRef} className="share-image-file-input" type="file" accept="image/*" capture="environment" onChange={handleImageSelection} aria-label="Hacer una foto para el post" />
             <input ref={fileInputRef} className="share-image-file-input" type="file" accept="image/*" multiple onChange={handleImageSelection} aria-label="Elegir imágenes para el post" />
             {TOOLS.map(tool => (
