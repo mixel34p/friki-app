@@ -964,7 +964,7 @@
 @keyframes shareCalendarEnter { from { opacity: .65; transform: translateY(18px) scale(.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
 @keyframes shareCalendarBackdropIn { from { opacity: 0; } to { opacity: 1; } }
 
-@keyframes shareScreenEnter { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes shareScreenEnter { from { opacity: .72; transform: translateY(100%); } to { opacity: 1; transform: translateY(0); } }
 @keyframes sharePageExit { from { transform: translateY(0); opacity: 1; } to { transform: translateY(100%); opacity: .88; } }
 .share-page.is-exiting { animation: sharePageExit .28s cubic-bezier(.2,.8,.2,1) both; }
 @keyframes shareSheetEnter { from { transform: translateY(35%); opacity: .7; } to { transform: translateY(0); opacity: 1; } }

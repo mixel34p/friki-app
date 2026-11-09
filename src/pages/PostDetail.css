@@ -195,7 +195,7 @@
   .pwa-post-detail .review-comments-empty { min-height: 100%; }
   .pwa-post-detail .post-detail-actions .review-like-btn.liked svg { animation: none !important; }
   .pwa-post-detail .post-detail-actions .review-like-btn:active { transform: none !important; }
-@keyframes pwaPostEnter { from { transform: translateX(100vw); } to { transform: translateX(0); } }
+@keyframes pwaPostEnter { from { opacity: .68; transform: translateX(100vw); } to { opacity: 1; transform: translateX(0); } }
 @keyframes pwaPostExit { from { transform: translateX(0); } to { transform: translateX(100vw); } }
 @keyframes pwaMediaFromRight { from { opacity: .72; transform: translateX(28px); } to { opacity: 1; transform: translateX(0); } }
 @keyframes pwaMediaFromLeft { from { opacity: .72; transform: translateX(-28px); } to { opacity: 1; transform: translateX(0); } }
