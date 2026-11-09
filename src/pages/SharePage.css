@@ -948,14 +948,9 @@
 }
 
 @media (max-width: 620px) {
-  .share-calendar-overlay.is-mobile { display: flex; align-items: stretch; justify-content: center; pointer-events: auto; background: rgba(0,0,0,.62); backdrop-filter: blur(12px); animation: shareCalendarBackdropIn .2s ease both; }
-  .share-calendar-popover.is-mobile { position: fixed; inset: 0; z-index: 1601; display: flex; width: 100%; max-height: none; flex-direction: column; justify-content: center; overflow: auto; padding: max(12px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom)); border: 0; border-radius: 0; background: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--share-accent) 12%, transparent), transparent 55%), color-mix(in srgb, var(--bg-card) 97%, #08090c); box-shadow: none; animation: shareCalendarEnter .34s cubic-bezier(.2,.8,.2,1) both; }
-  .share-calendar-sheet-header { display: flex; width: min(100%, 430px); min-height: 68px; align-items: center; gap: 14px; margin: 0 auto 26px; }
-  .share-calendar-sheet-header button { display: grid; width: 44px; height: 44px; flex: 0 0 44px; place-items: center; border: 1px solid rgba(255,255,255,.1); border-radius: 50%; color: var(--text-primary); background: rgba(255,255,255,.07); }
-  .share-calendar-sheet-header button svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-  .share-calendar-sheet-header h2 { margin: 0; font: 700 1.05rem var(--font-display); }
-  .share-calendar-sheet-header p { margin: 4px 0 0; color: var(--text-muted); font-size: .76rem; }
-  .share-calendar-popover.is-mobile > :not(.share-calendar-sheet-header) { width: min(100%, 430px); margin-right: auto; margin-left: auto; }
+  .share-calendar-overlay.is-mobile { display: flex; align-items: center; justify-content: center; padding: max(20px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-bottom)); pointer-events: auto; background: rgba(0,0,0,.66); backdrop-filter: blur(12px); animation: shareCalendarBackdropIn .2s ease both; }
+  .share-calendar-popover.is-mobile { position: relative; inset: auto; z-index: 1601; display: block; width: min(100%, 430px); max-height: min(82dvh, 680px); overflow: auto; padding: 1.15rem; border: 1px solid rgba(255,255,255,.12); border-radius: 24px; background: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--share-accent) 14%, transparent), transparent 55%), color-mix(in srgb, var(--bg-card) 97%, #08090c); box-shadow: 0 28px 90px rgba(0,0,0,.62), 0 0 60px color-mix(in srgb, var(--share-accent) 10%, transparent); animation: shareCalendarEnter .34s cubic-bezier(.2,.8,.2,1) both; }
+  .share-calendar-popover.is-mobile > :not(.share-calendar-sheet-header) { width: 100%; margin-right: auto; margin-left: auto; }
   .share-calendar-popover.is-mobile .share-calendar-header { margin-bottom: 12px; }
   .share-calendar-popover.is-mobile .share-calendar-header strong { font-size: 1rem; }
   .share-calendar-popover.is-mobile .share-calendar-grid { gap: 7px; }
