@@ -609,7 +609,9 @@ export default function ViewList() {
         finally { setSavingCommentEdit(false); }
     };
 
-    if (loading) return isStandalonePwa ? null : <LoadingSpinner />;
+    if (loading) return isStandalonePwa
+        ? <main className="review-detail-page vl-list-page pwa-detail-screen pwa-detail-loading" style={{ '--pwa-system-bar-color': systemBarColor, '--review-page-accent': 'var(--brand-primary)' }} aria-busy="true"><span className="pwa-detail-loading-label">Cargando lista…</span></main>
+        : <LoadingSpinner />;
 
     if (error || !list) return (
         <main className="review-detail-page">

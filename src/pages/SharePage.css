@@ -783,7 +783,7 @@
     overflow: hidden;
     overscroll-behavior: contain;
     background: var(--bg-primary);
-    animation: shareScreenEnter .38s cubic-bezier(.2,.8,.2,1) both;
+    animation: none;
   }
   .share-page {
     display: flex;
@@ -794,6 +794,7 @@
     padding: 0 0 env(safe-area-inset-bottom);
     overflow: hidden;
   }
+  .share-page { animation: shareScreenEnter .38s cubic-bezier(.2,.8,.2,1) both; }
 
   .share-page::before, .share-page::after, .share-selected-backdrop { position: absolute; }
   .share-page-heading {
@@ -967,13 +968,13 @@
 @keyframes shareCalendarEnter { from { opacity: .65; transform: translateY(18px) scale(.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
 @keyframes shareCalendarBackdropIn { from { opacity: 0; } to { opacity: 1; } }
 
-@keyframes shareScreenEnter { from { opacity: .72; transform: translateY(100%); } to { opacity: 1; transform: translateY(0); } }
+@keyframes shareScreenEnter { from { opacity: .86; transform: translateY(100%); } to { opacity: 1; transform: translateY(0); } }
 @keyframes sharePageExit { from { transform: translateY(0); opacity: 1; } to { transform: translateY(100%); opacity: .88; } }
 .share-page.is-exiting { animation: sharePageExit .28s cubic-bezier(.2,.8,.2,1) both; }
 @keyframes shareSheetEnter { from { transform: translateY(35%); opacity: .7; } to { transform: translateY(0); opacity: 1; } }
 
 @media (prefers-reduced-motion: reduce) {
-  .main.share-main, .share-template-picker-panel, .share-review-picker-sheet { animation: none !important; }
+  .main.share-main, .share-page, .share-template-picker-panel, .share-review-picker-sheet { animation: none !important; }
   .share-page-heading,
   .share-composer,
   .share-tool-hint { animation: none; }

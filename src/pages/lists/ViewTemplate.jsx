@@ -145,7 +145,9 @@ export default function ViewTemplate() {
     }
   };
 
-  if (loading) return isStandalonePwa ? null : <main className="review-detail-page template-detail-page"><article className="review-post template-detail-state">Cargando plantilla…</article></main>;
+  if (loading) return isStandalonePwa
+    ? <main className="review-detail-page vl-list-page template-detail-page pwa-detail-screen pwa-detail-loading" style={{ '--pwa-system-bar-color': systemBarColor, '--review-page-accent': 'var(--brand-primary)' }} aria-busy="true"><span className="pwa-detail-loading-label">Cargando plantilla…</span></main>
+    : <main className="review-detail-page template-detail-page"><article className="review-post template-detail-state">Cargando plantilla…</article></main>;
   if (error || !template) return (
     <main className="review-detail-page template-detail-page">
       <article className="review-post template-detail-state">

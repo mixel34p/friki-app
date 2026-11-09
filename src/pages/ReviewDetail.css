@@ -58,10 +58,13 @@
 .review-detail-back svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
 /* Shared full-screen detail treatment used only by standalone PWA routes. */
-.pwa-detail-screen { position: fixed !important; inset: 0; z-index: 10000; display: block !important; width: 100vw; height: 100dvh; min-height: 100dvh; margin: 0 !important; padding: env(safe-area-inset-top) 0 0 !important; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; background: linear-gradient(180deg, var(--pwa-system-bar-color), transparent 180px), radial-gradient(ellipse 100% 68% at 50% 0%, color-mix(in srgb, var(--review-page-accent) 24%, transparent), transparent 78%), linear-gradient(180deg, color-mix(in srgb, var(--review-page-accent) 10%, var(--bg-primary)) 0%, var(--bg-primary) 100%); animation: pwaDetailEnter .34s cubic-bezier(.22,.8,.24,1); }
+.pwa-detail-screen { position: fixed !important; inset: 0; z-index: 10000; display: block !important; width: 100vw; height: 100dvh; min-height: 100dvh; margin: 0 !important; padding: env(safe-area-inset-top) 0 0 !important; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; background: linear-gradient(180deg, var(--pwa-system-bar-color), transparent 180px), radial-gradient(ellipse 100% 68% at 50% 0%, color-mix(in srgb, var(--review-page-accent) 24%, transparent), transparent 78%), linear-gradient(180deg, color-mix(in srgb, var(--review-page-accent) 10%, var(--bg-primary)) 0%, var(--bg-primary) 100%); }
 .pwa-detail-screen::before,.pwa-detail-screen::after { display: none !important; }
 .pwa-prompt-overlay { z-index: 11000 !important; }
-.pwa-detail-screen.is-exiting { animation: pwaDetailExit .28s cubic-bezier(.22,.8,.24,1); }
+.pwa-detail-screen > .review-post,.pwa-detail-screen .template-detail-post { animation: pwaDetailEnter .34s cubic-bezier(.22,.8,.24,1) both; }
+.pwa-detail-screen.is-exiting > .review-post,.pwa-detail-screen.is-exiting .template-detail-post { animation: pwaDetailExit .28s cubic-bezier(.22,.8,.24,1) both; }
+.pwa-detail-loading { display: grid !important; place-items: center; }
+.pwa-detail-loading-label { color: var(--text-muted); font: 500 .85rem var(--font-sans); }
 .pwa-detail-screen > .review-post,.pwa-detail-screen .template-detail-post { position: relative; min-height: 100%; padding: 0 16px calc(92px + env(safe-area-inset-bottom)); border: 0; border-radius: 0; background: transparent; box-shadow: none; }
 .pwa-detail-screen .vl-topbar { position: relative; top: auto; z-index: 5; box-sizing: border-box; width: 100%; margin: 0; padding: 8px 0; border: 0; background: transparent; backdrop-filter: none; }
 .pwa-detail-screen .vl-topbar,.pwa-detail-screen .post-detail-topbar,.pwa-detail-screen .review-pwa-topbar { box-shadow: none; }
@@ -87,7 +90,7 @@
 .pwa-detail-screen .review-post-actions .review-post-action-spacer { flex: 1; }
 .pwa-detail-screen .vl-topbar .review-detail-back { position: relative; display: grid; width: 42px; height: 42px; place-items: center; margin: 0; padding: 0; border-radius: 50%; background: rgba(255,255,255,.075); font-size: 0; line-height: 0; }
 .pwa-detail-screen .vl-topbar .review-detail-back svg { position: absolute; top: 50%; left: 50%; width: 21px; height: 21px; transform: translate(-50%,-50%); }
-@keyframes pwaDetailEnter { from { opacity: .68; transform: translateX(100vw); } to { opacity: 1; transform: translateX(0); } }
+@keyframes pwaDetailEnter { from { opacity: .82; transform: translateX(100vw); } to { opacity: 1; transform: translateX(0); } }
 @keyframes pwaDetailExit { from { transform: translateX(0); } to { transform: translateX(100vw); } }
 
 .editor-icon-back { display: grid; width: 42px; height: 42px; flex: 0 0 42px; place-items: center; padding: 0; border: 0; border-radius: 50%; color: var(--text-primary); background: rgba(255,255,255,.065); cursor: pointer; }
