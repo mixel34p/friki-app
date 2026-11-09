@@ -165,13 +165,13 @@
     overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior: contain;
-    background: var(--bg-primary);
+    background: var(--pwa-system-bar-color);
     animation: pwaPostEnter .34s cubic-bezier(.22,.8,.24,1) both;
 }
 .pwa-post-detail::before { display: none; }
 .pwa-post-detail::after { display: none; }
 .pwa-post-detail.is-exiting { animation: pwaPostExit .28s cubic-bezier(.22,.8,.24,1) both; }
-.pwa-post-detail .post-detail-card { position: relative; display: flex; min-height: 100%; flex-direction: column; padding: 0 0 calc(88px + env(safe-area-inset-bottom)); overflow: visible; border: 0; border-radius: 0; background: radial-gradient(ellipse 100% 68% at 50% 0%, color-mix(in srgb, var(--review-page-accent) 24%, transparent), transparent 78%), linear-gradient(180deg, color-mix(in srgb, var(--review-page-accent) 10%, var(--bg-primary)) 0%, var(--bg-primary) 100%); box-shadow: none; }
+.pwa-post-detail .post-detail-card { position: relative; display: flex; min-height: 100%; flex-direction: column; padding: 0 0 calc(88px + env(safe-area-inset-bottom)); overflow: visible; border: 0; border-radius: 0; background: linear-gradient(180deg, var(--pwa-system-bar-color), transparent 180px), radial-gradient(ellipse 100% 68% at 50% 0%, color-mix(in srgb, var(--review-page-accent) 24%, transparent), transparent 78%), linear-gradient(180deg, color-mix(in srgb, var(--review-page-accent) 10%, var(--bg-primary)) 0%, var(--bg-primary) 100%); box-shadow: none; }
 .pwa-post-detail .post-detail-topbar { position: relative; z-index: 5; min-height: 58px; margin: 0; padding: 8px 16px; border: 0; background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; }
 .pwa-post-detail .post-detail-topbar .review-detail-back,.pwa-post-detail .post-detail-dots { display: grid; width: 42px; height: 42px; place-items: center; margin: 0; padding: 0; border: 0; border-radius: 50%; color: var(--text-primary); background: rgba(255,255,255,.075); line-height: 0; }
 .pwa-post-detail .post-detail-topbar .review-detail-back { font-size: 0; }

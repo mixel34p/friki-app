@@ -1,3 +1,4 @@
+import useSystemBarColor from '../hooks/useSystemBarColor'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { FaFacebookF, FaRedditAlien, FaTelegram, FaWhatsapp, FaXTwitter } from 'react-icons/fa6'
@@ -355,6 +356,7 @@ export default function ReviewDetail() {
   const handleBack = () => { if (!isStandalonePwa) return navigateBackOrHome(navigate); setIsExitingPwa(true); window.setTimeout(() => navigateBackOrHome(navigate), 280) }
   const { user, profile: currentProfile, updateProfile } = useAuth()
   const [review, setReview] = useState(null)
+  const systemBarColor = useSystemBarColor(getVisibleAccentColor(review?.profile?.theme_color || '#14b8a6'))
   const [comments, setComments] = useState([])
   const [commentText, setCommentText] = useState('')
   const commentInputRef = useRef(null)
@@ -635,7 +637,7 @@ export default function ReviewDetail() {
   </form>
 
   return (
-    <main className={`review-detail-page${isStandalonePwa ? ' pwa-detail-screen' : ''}${isExitingPwa ? ' is-exiting' : ''}`} style={{ '--review-page-accent': pageAccent, '--review-backdrop-image': reviewBackdrop ? `url("${reviewBackdrop}")` : 'none' }}>
+    <main className={`review-detail-page${isStandalonePwa ? ' pwa-detail-screen' : ''}${isExitingPwa ? ' is-exiting' : ''}`} style={{ '--pwa-system-bar-color': systemBarColor, '--review-page-accent': pageAccent, '--review-backdrop-image': reviewBackdrop ? `url("${reviewBackdrop}")` : 'none' }}>
       <SEO title={`${authorName}: review de ${workName || 'una obra'}`} description={review.review_text.slice(0, 150)} />
       <div className="review-pwa-topbar">
         <button className="review-detail-back" type="button" aria-label="Volver" onClick={handleBack}>

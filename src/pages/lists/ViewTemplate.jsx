@@ -1,3 +1,4 @@
+import useSystemBarColor from '../../hooks/useSystemBarColor'
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { FaFacebookF, FaRedditAlien, FaTelegram, FaWhatsapp, FaXTwitter } from 'react-icons/fa6';
@@ -38,6 +39,7 @@ export default function ViewTemplate() {
   const { user, loading: authLoading } = useAuth();
   const menuRef = useRef(null);
   const [template, setTemplate] = useState(null);
+  const systemBarColor = useSystemBarColor(template?.profiles?.theme_color)
   const [moreItems, setMoreItems] = useState([]);
   const [morePostsLoading, setMorePostsLoading] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -154,7 +156,7 @@ export default function ViewTemplate() {
   );
 
   return (
-    <main className={`review-detail-page vl-list-page template-detail-page${isStandalonePwa ? ' pwa-detail-screen' : ''}${isExitingPwa ? ' is-exiting' : ''}`} style={{ '--review-page-accent': accent, '--vl-more-accent': accent, '--review-backdrop-image': backdrop ? `url("${backdrop}")` : 'none' }}>
+    <main className={`review-detail-page vl-list-page template-detail-page${isStandalonePwa ? ' pwa-detail-screen' : ''}${isExitingPwa ? ' is-exiting' : ''}`} style={{ '--pwa-system-bar-color': systemBarColor, '--review-page-accent': accent, '--vl-more-accent': accent, '--review-backdrop-image': backdrop ? `url("${backdrop}")` : 'none' }}>
       <article className="review-post template-detail-post">
         <div className="vl-topbar">
           <button type="button" className="review-detail-back vl-back-inline" onClick={handleBack}>

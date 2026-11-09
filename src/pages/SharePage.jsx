@@ -1,14 +1,15 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import DefaultAvatar from '../components/DefaultAvatar'
 import MentionSuggestions from '../components/MentionSuggestions'
 import MentionHighlights from '../components/MentionHighlights'
+import useSystemBarColor from '../hooks/useSystemBarColor'
 import useMentionAutocomplete from '../hooks/useMentionAutocomplete'
 import { supabase } from '../lib/supabase'
 import { deleteWorkLog, getUserLibrary, getWorkLog, logWork } from '../lib/libraryService'
-import { getAccentTextColor, getSystemBarColor } from '../lib/colorContrast'
+import { getAccentTextColor } from '../lib/colorContrast'
 import { useToast } from '../components/Toast'
 import { searchGames } from '../lib/gameService'
 import { searchAnime } from '../lib/animeService'
@@ -412,27 +413,7 @@ export default function SharePage() {
   }, [registerCategory, registerQuery])
 
   const accent = profile?.theme_color || '#14b8a6'
-  const systemBarColor = getSystemBarColor(accent)
-  useLayoutEffect(() => {
-    const query = window.matchMedia('(max-width: 620px) and (display-mode: standalone)')
-    const meta = document.querySelector('meta[name="theme-color"]')
-    if (!meta) return undefined
-    const previousColor = meta.getAttribute('content')
-    const previousBackground = document.documentElement.style.backgroundColor
-    const update = () => {
-      const active = query.matches || (navigator.standalone === true && window.innerWidth <= 620)
-      meta.setAttribute('content', active ? systemBarColor : previousColor || '#070709')
-      document.documentElement.style.backgroundColor = active ? systemBarColor : previousBackground
-    }
-    update()
-    query.addEventListener('change', update)
-    return () => {
-      query.removeEventListener('change', update)
-      if (previousColor === null) meta.removeAttribute('content')
-      else meta.setAttribute('content', previousColor)
-      document.documentElement.style.backgroundColor = previousBackground
-    }
-  }, [systemBarColor])
+  const systemBarColor = useSystemBarColor(accent, 620)
   const avatar = profile?.avatar_url || profile?.profile_picture || ''
   const displayName = profile?.display_name || profile?.username || 'Usuario'
   const avatarBackground = avatar ? `url("${avatar}")` : 'none'

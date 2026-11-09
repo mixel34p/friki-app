@@ -1,3 +1,4 @@
+import useSystemBarColor from '../hooks/useSystemBarColor'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -63,6 +64,7 @@ export default function PostDetail() {
   const isPwaStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true
   const [isExitingPwa, setIsExitingPwa] = useState(false)
   const [post, setPost] = useState(null)
+  const systemBarColor = useSystemBarColor(post?.author?.theme_color)
   const [activeMediaIndex, setActiveMediaIndex] = useState(0)
   const [swipeDirection, setSwipeDirection] = useState('next')
   const [hasSwipedMedia, setHasSwipedMedia] = useState(false)
@@ -322,7 +324,7 @@ export default function PostDetail() {
     <Avatar profile={currentProfile} size="small"/><label className="review-comment-input-wrap"><textarea ref={commentInputRef} aria-label="Escribe un comentario" value={commentText} onChange={event => setCommentText(event.target.value)} maxLength={300} rows={1} placeholder="Escribe un comentario…"/></label>
     <button type="submit" disabled={!commentText.trim() || submitting} aria-label={isPwaStandalone ? (submitting ? 'Enviando comentario' : 'Enviar comentario') : undefined}>{isPwaStandalone ? <><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4Z"/></svg><span>{submitting ? 'Enviando…' : 'Enviar'}</span></> : submitting ? 'Enviando…' : 'Comentar'}</button>
   </form>
-  return <main className={`review-detail-page post-detail-page${isPwaStandalone ? ' pwa-post-detail' : ''}${isExitingPwa ? ' is-exiting' : ''}`} style={{ '--review-page-accent': author.theme_color || 'var(--brand-primary)', '--post-bubble-text': getBubbleTextColor(author.theme_color), '--review-backdrop-image': activeMedia?.url ? `url("${activeMedia.url}")` : 'none' }}>
+  return <main className={`review-detail-page post-detail-page${isPwaStandalone ? ' pwa-post-detail' : ''}${isExitingPwa ? ' is-exiting' : ''}`} style={{ '--pwa-system-bar-color': systemBarColor, '--review-page-accent': author.theme_color || 'var(--brand-primary)', '--post-bubble-text': getBubbleTextColor(author.theme_color), '--review-backdrop-image': activeMedia?.url ? `url("${activeMedia.url}")` : 'none' }}>
     <article className="review-post post-detail-card">
       <div className="post-detail-topbar">
         <button className="review-detail-back" type="button" onClick={handleBack}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>Volver</button>

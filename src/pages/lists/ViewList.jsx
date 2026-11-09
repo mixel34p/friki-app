@@ -1,3 +1,4 @@
+import useSystemBarColor from '../../hooks/useSystemBarColor'
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { FaFacebookF, FaRedditAlien, FaTelegram, FaWhatsapp, FaXTwitter } from 'react-icons/fa6';
@@ -431,6 +432,7 @@ export default function ViewList() {
     const { user, profile: currentProfile, loading: authLoading } = useAuth();
 
     const [list, setList] = useState(null);
+  const systemBarColor = useSystemBarColor(list?.author?.theme_color)
     const [moreItems, setMoreItems] = useState([]);
     const [morePostsLoading, setMorePostsLoading] = useState(false);
     const [loading, setLoading] = useState(true);
@@ -661,7 +663,7 @@ export default function ViewList() {
         <main
             className={`review-detail-page vl-list-page${isStandalonePwa ? ' pwa-detail-screen' : ''}${isExitingPwa ? ' is-exiting' : ''}`}
             style={{
-                '--review-page-accent': pageAccent,
+                '--pwa-system-bar-color': systemBarColor, '--review-page-accent': pageAccent,
                 '--review-backdrop-image': sharePreviewImages[0] ? `url("${sharePreviewImages[0]}")` : 'none',
             }}
         >
