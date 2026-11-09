@@ -505,7 +505,7 @@ export default function ReviewDetail() {
   }
 
   if (loading) return isStandalonePwa
-    ? <main className="review-detail-page pwa-detail-screen pwa-detail-loading" style={{ '--pwa-system-bar-color': systemBarColor, '--review-page-accent': '#14b8a6' }} aria-busy="true"><span className="pwa-detail-loading-label">Cargando review…</span></main>
+    ? <main className="review-detail-page pwa-detail-screen pwa-detail-loading" style={{ '--pwa-system-bar-color': systemBarColor, '--review-page-accent': '#14b8a6' }} aria-busy="true" />
     : <LoadingSpinner />
   if (error || !review) {
     return <main className="review-detail-page"><div className="review-detail-state"><h1>{error ? 'Error al cargar la review' : 'Review no encontrada'}</h1><Link to="/search">Volver a descubrir</Link></div></main>

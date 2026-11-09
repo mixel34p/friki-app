@@ -610,7 +610,7 @@ export default function ViewList() {
     };
 
     if (loading) return isStandalonePwa
-        ? <main className="review-detail-page vl-list-page pwa-detail-screen pwa-detail-loading" style={{ '--pwa-system-bar-color': systemBarColor, '--review-page-accent': 'var(--brand-primary)' }} aria-busy="true"><span className="pwa-detail-loading-label">Cargando lista…</span></main>
+        ? <main className="review-detail-page vl-list-page pwa-detail-screen pwa-detail-loading" style={{ '--pwa-system-bar-color': systemBarColor, '--review-page-accent': 'var(--brand-primary)' }} aria-busy="true" />
         : <LoadingSpinner />;
 
     if (error || !list) return (

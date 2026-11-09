@@ -63,8 +63,7 @@
 .pwa-prompt-overlay { z-index: 11000 !important; }
 .pwa-detail-screen > .review-post,.pwa-detail-screen .template-detail-post { animation: pwaDetailEnter .34s cubic-bezier(.22,.8,.24,1) both; }
 .pwa-detail-screen.is-exiting > .review-post,.pwa-detail-screen.is-exiting .template-detail-post { animation: pwaDetailExit .28s cubic-bezier(.22,.8,.24,1) both; }
-.pwa-detail-loading { display: grid !important; place-items: center; }
-.pwa-detail-loading-label { color: var(--text-muted); font: 500 .85rem var(--font-sans); }
+.pwa-detail-screen.pwa-detail-loading { display: grid !important; place-items: center; }
 .pwa-detail-screen > .review-post,.pwa-detail-screen .template-detail-post { position: relative; min-height: 100%; padding: 0 16px calc(92px + env(safe-area-inset-bottom)); border: 0; border-radius: 0; background: transparent; box-shadow: none; }
 .pwa-detail-screen .vl-topbar { position: relative; top: auto; z-index: 5; box-sizing: border-box; width: 100%; margin: 0; padding: 8px 0; border: 0; background: transparent; backdrop-filter: none; }
 .pwa-detail-screen .vl-topbar,.pwa-detail-screen .post-detail-topbar,.pwa-detail-screen .review-pwa-topbar { box-shadow: none; }
