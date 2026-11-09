@@ -145,11 +145,9 @@ export default function ViewTemplate() {
     }
   };
 
-  if (loading) return isStandalonePwa
-    ? <main className="review-detail-page vl-list-page template-detail-page pwa-detail-screen pwa-detail-loading" style={{ '--pwa-system-bar-color': systemBarColor, '--review-page-accent': 'var(--brand-primary)' }} aria-busy="true" />
-    : <main className="review-detail-page template-detail-page"><article className="review-post template-detail-state">Cargando plantilla…</article></main>;
+  if (loading) return isStandalonePwa ? null : <main className="review-detail-page template-detail-page"><article className="review-post template-detail-state">Cargando plantilla…</article></main>;
   if (error || !template) return (
-    <main className="review-detail-page template-detail-page">
+    <main className={`review-detail-page template-detail-page${isStandalonePwa ? ' vl-list-page pwa-detail-screen' : ''}`} style={{ '--pwa-system-bar-color': systemBarColor, '--review-page-accent': 'var(--brand-primary)' }}>
       <article className="review-post template-detail-state">
         <p>{error || 'No se encontró esta plantilla.'}</p>
         <Link to="/templates" className="review-detail-back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6M9 12h12"/></svg>Volver a plantillas</Link>

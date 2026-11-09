@@ -609,12 +609,10 @@ export default function ViewList() {
         finally { setSavingCommentEdit(false); }
     };
 
-    if (loading) return isStandalonePwa
-        ? <main className="review-detail-page vl-list-page pwa-detail-screen pwa-detail-loading" style={{ '--pwa-system-bar-color': systemBarColor, '--review-page-accent': 'var(--brand-primary)' }} aria-busy="true" />
-        : <LoadingSpinner />;
+    if (loading) return isStandalonePwa ? null : <LoadingSpinner />;
 
     if (error || !list) return (
-        <main className="review-detail-page">
+        <main className={`review-detail-page${isStandalonePwa ? ' vl-list-page pwa-detail-screen' : ''}`} style={{ '--pwa-system-bar-color': systemBarColor, '--review-page-accent': 'var(--brand-primary)' }}>
             <div className="review-detail-state">
                 <h1>{error ? 'Error al cargar la lista' : 'Lista no encontrada'}</h1>
                 <Link to="/search">Volver a descubrir</Link>

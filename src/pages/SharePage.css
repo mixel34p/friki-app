@@ -900,8 +900,8 @@
   .share-page::before, .share-page::after, .share-selected-backdrop { position: fixed; }
   .share-page-heading { display: block; min-height: 0; margin: 0 0 .9rem; padding: 0; border: 0; background: transparent; animation: shareHeadingIn .45s cubic-bezier(.2,.8,.2,1) both; }
   .share-page-heading h1 { font-size: 1.55rem; letter-spacing: -.045em; }
-  .share-mobile-back { display: none; }
-  .share-composer-submit > .share-post-button { display: none !important; }
+  .share-mobile-back, .share-mobile-post-button { display: none !important; }
+  .share-composer-submit > .share-post-button, .share-composer-submit > .share-character-count { display: initial !important; }
   .share-tool-button.share-tool-camera, .share-tool-button.share-tool-review { display: none; }
   .share-composer { display: block; min-height: 0; flex: initial; overflow: visible; border: 1px solid rgba(255,255,255,.105); border-radius: 18px; background: color-mix(in srgb, var(--bg-card) 70%, rgba(8,9,12,.45)); box-shadow: 0 24px 70px rgba(0,0,0,.3), inset 0 1px rgba(255,255,255,.035); backdrop-filter: blur(20px) saturate(1.15); animation: shareComposerIn .52s cubic-bezier(.2,.8,.2,1) .06s both; }
   .share-composer-footer { position: static; min-height: 68px; flex: initial; padding: .65rem .65rem; border-top: 1px solid rgba(255,255,255,.09); background: rgba(0,0,0,.12); backdrop-filter: none; }

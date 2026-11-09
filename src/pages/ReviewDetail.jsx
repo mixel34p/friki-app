@@ -9,6 +9,7 @@ import { supabase } from '../lib/supabase'
 import { getAccentTextColor, getVisibleAccentColor } from '../lib/colorContrast'
 import { formatRelativeDate } from '../lib/formatRelativeDate'
 import { navigateBackOrHome } from '../lib/navigation'
+import { capturePwaRouteSnapshot } from '../lib/pwaRouteTransition'
 import { addLibraryReviewComment, deleteLibraryReviewComment, getLibraryReview, getLibraryReviewComments, updateLibraryReviewComment } from '../lib/libraryReviewService'
 import { getWorkLog } from '../lib/libraryService'
 import LoadingSpinner from '../components/LoadingSpinner'
@@ -504,11 +505,9 @@ export default function ReviewDetail() {
     }
   }
 
-  if (loading) return isStandalonePwa
-    ? <main className="review-detail-page pwa-detail-screen pwa-detail-loading" style={{ '--pwa-system-bar-color': systemBarColor, '--review-page-accent': '#14b8a6' }} aria-busy="true" />
-    : <LoadingSpinner />
+  if (loading) return isStandalonePwa ? null : <LoadingSpinner />
   if (error || !review) {
-    return <main className="review-detail-page"><div className="review-detail-state"><h1>{error ? 'Error al cargar la review' : 'Review no encontrada'}</h1><Link to="/search">Volver a descubrir</Link></div></main>
+    return <main className={`review-detail-page${isStandalonePwa ? ' pwa-detail-screen' : ''}`} style={{ '--pwa-system-bar-color': systemBarColor, '--review-page-accent': '#14b8a6' }}><div className="review-detail-state"><h1>{error ? 'Error al cargar la review' : 'Review no encontrada'}</h1><Link to="/search">Volver a descubrir</Link></div></main>
   }
 
   const author = review.profile
@@ -620,6 +619,7 @@ export default function ReviewDetail() {
       navigate('/onboarding')
       return
     }
+    capturePwaRouteSnapshot('/share')
     navigate('/share', { state: { reviewWork: {
       id: Number(review.work_id),
       type: review.work_type,
