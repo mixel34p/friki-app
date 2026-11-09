@@ -350,6 +350,26 @@
     -webkit-backdrop-filter: blur(12px);
 }
 
+.pwa-detail-screen.vl-list-page > .review-post {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    padding: 0 16px calc(92px + env(safe-area-inset-bottom));
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
+.pwa-detail-screen.vl-list-page .vl-topbar {
+    box-sizing: border-box;
+    width: calc(100% + 32px);
+    margin: 0 -16px .5rem;
+    padding: 8px 16px;
+}
+
 .main.list-detail-main { animation: none; transform: none; }
 .vl-more-author { display: none; }
 
