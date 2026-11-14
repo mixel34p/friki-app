@@ -1,49 +1,33 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import DefaultAvatar from '../components/DefaultAvatar'
 import { getDiscoverLists, getDiscoverTemplates } from '../lib/listService'
-import { navigatePwaRoute } from '../lib/pwaRouteTransition'
+import { isStandalonePwa, navigatePwaRoute, navigateWorkBack, signalPwaRouteReady } from '../lib/pwaRouteTransition'
 import ListLikeButton from '../components/ListLikeButton'
 import CreateTemplateModal from './lists/CreateTemplateModal'
+import CatalogPicker from '../components/CatalogPicker'
+import { collectListPreviewImages, templatePreviewImages } from '../lib/discoverListPreview'
 import SEO from '../components/SEO'
 import '../components/LibraryGrid.css'
 import './DiscoverWorks.css'
 import './Search.css'
 import './DiscoverLists.css'
+import './DiscoverCatalog.css'
+import './DiscoverListCatalog.css'
 
 const PAGE_SIZE = 24
 const TYPES = [
-  { value: '', label: 'Todas' },
+  { value: '', label: 'Todos los formatos' },
   { value: 'tierlist', label: 'Tierlist' },
   { value: 'ranking', label: 'Ranking' },
   { value: 'grid', label: 'Grid' },
 ]
 const MEDIA = [
-  { value: '', label: 'Todo' },
+  { value: '', label: 'Todo el contenido' },
   { value: 'anime', label: 'Anime' },
   { value: 'game', label: 'Juegos' },
 ]
-
-function collectImages(content) {
-  const images = []
-  const add = item => {
-    const src = item?.image_url || item?.cover_url || item?.cover?.url
-    if (src && !images.includes(src)) images.push(src)
-  }
-  const priorities = ['S', '#1', 'Top', 'God Tier', 'A', '#2', 'B', '#3', 'C', '#4', 'D', '#5', 'E', 'F']
-  const groups = Array.isArray(content) ? [content] : [
-    ...priorities.filter(key => content?.[key] != null).map(key => content[key]),
-    ...Object.keys(content || {}).filter(key => !priorities.includes(key)).map(key => content[key]),
-  ]
-  for (const group of groups) {
-    for (const item of Array.isArray(group) ? group : [group]) {
-      add(item)
-      if (images.length === 4) return images
-    }
-  }
-  return images
-}
 
 function listTypeName(type) {
   return type === 'ranking' ? 'Ranking' : type === 'grid' ? 'Grid' : 'Tierlist'
@@ -55,108 +39,58 @@ function ListTypeIcon({ type }) {
   return <svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
 }
 
-function collectTemplateImages(template) {
-  return collectImages(template.cover_items?.length ? template.cover_items : template.default_items || [])
-}
-
-function TypePicker({ value, onChange, options = TYPES }) {
-  const [open, setOpen] = useState(false)
-  const [activeIndex, setActiveIndex] = useState(() => Math.max(0, options.findIndex(option => option.value === value)))
-  const rootRef = useRef(null)
-  const triggerRef = useRef(null)
-  const optionRefs = useRef([])
-  const selectedIndex = Math.max(0, options.findIndex(option => option.value === value))
-
-  useEffect(() => {
-    if (!open) return undefined
-    const onPointerDown = event => { if (!rootRef.current?.contains(event.target)) setOpen(false) }
-    document.addEventListener('pointerdown', onPointerDown)
-    optionRefs.current[activeIndex]?.focus()
-    return () => document.removeEventListener('pointerdown', onPointerDown)
-  }, [open, activeIndex])
-
-  const choose = index => {
-    onChange(options[index].value)
-    setActiveIndex(index)
-    setOpen(false)
-    triggerRef.current?.focus()
-  }
-
-  const onTriggerKeyDown = event => {
-    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-      event.preventDefault()
-      setActiveIndex(selectedIndex)
-      setOpen(true)
-    }
-  }
-  const onOptionsKeyDown = event => {
-    if (event.key === 'Escape') {
-      event.preventDefault()
-      setOpen(false)
-      triggerRef.current?.focus()
-    } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-      event.preventDefault()
-      setActiveIndex(index => (index + (event.key === 'ArrowDown' ? 1 : -1) + options.length) % options.length)
-    } else if (event.key === 'Home' || event.key === 'End') {
-      event.preventDefault()
-      setActiveIndex(event.key === 'Home' ? 0 : options.length - 1)
-    } else if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault()
-      choose(activeIndex)
-    }
-  }
-
-  return <div className="discover-sort-picker discover-list-type-picker" ref={rootRef}>
-    <button ref={triggerRef} type="button" className="discover-sort-trigger" aria-label="Filtrar por formato" aria-haspopup="listbox" aria-expanded={open} aria-controls="discover-list-type-options" onClick={() => { setActiveIndex(selectedIndex); setOpen(current => !current) }} onKeyDown={onTriggerKeyDown}>
-      {options[selectedIndex]?.label}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>
-    </button>
-    {open && <div id="discover-list-type-options" className="discover-sort-options" role="listbox" aria-label="Formato de lista" onKeyDown={onOptionsKeyDown}>{options.map((option, index) => <div key={option.value || 'all'} ref={node => { optionRefs.current[index] = node }} className={`discover-sort-option${value === option.value ? ' active' : ''}`} role="option" aria-selected={value === option.value} tabIndex={index === activeIndex ? 0 : -1} onFocus={() => setActiveIndex(index)} onClick={() => choose(index)}>{option.label}</div>)}</div>}
-  </div>
-}
-
-function Author({ profile, fallback = 'Anónimo' }) {
+function Author({ profile }) {
+  const [failed, setFailed] = useState(false)
   const username = profile?.username
-  return <span className="discover-list-author">
-    <span className="discover-list-author-avatar">{profile?.avatar_url ? <img src={profile.avatar_url} alt="" loading="lazy"/> : <DefaultAvatar accent={profile?.theme_color} />}</span>
-    <span>{username ? `@${username}` : fallback}</span>
+  const Wrapper = username ? Link : 'span'
+  return <Wrapper className="discover-list-author" {...(username ? { to: '/profile/' + username } : {})}>
+    <span className="discover-list-author-avatar" style={{ borderColor: profile?.theme_color || 'var(--brand-primary)' }}>{profile?.avatar_url && !failed ? <img src={profile.avatar_url} alt="" loading="lazy" onError={() => setFailed(true)} /> : <DefaultAvatar accent={profile?.theme_color} />}</span>
+    <span>{username ? '@' + username : 'Anónimo'}</span>
+  </Wrapper>
+}
+
+function ListArtwork({ images, type }) {
+  const [failed, setFailed] = useState([])
+  const visible = images.filter(image => !failed.includes(image))
+  return <span className="discover-list-artwork" data-count={visible.length} style={visible.length === 1 ? { '--list-single-cover': 'url(' + JSON.stringify(visible[0]) + ')' } : undefined} aria-hidden="true">
+    {visible.length ? visible.map(image => <img key={image} src={image} alt="" loading="lazy" decoding="async" onError={() => setFailed(previous => previous.includes(image) ? previous : [...previous, image])} />) : <span className="discover-list-artwork-empty"><ListTypeIcon type={type} /></span>}
   </span>
 }
 
 function ListCard({ item, template = false }) {
-  const images = template ? collectTemplateImages(item) : collectImages(item.content)
-  const label = listTypeName(item.list_type)
-  const href = template ? `/templates/${item.id}` : `/lists/${item.id}`
+  const images = template ? templatePreviewImages(item) : collectListPreviewImages(item.content)
   const profile = template ? item.profiles : item.author
   return <article className="discover-list-card">
-    <Link to={href} className="discover-list-card-link">
-      <span className={`search-list-poster discover-list-poster${images.length === 3 ? ' count-three' : images.length === 2 ? ' count-two' : ''}`} aria-hidden="true">
-        {images.length ? images.map((image, index) => <img key={`${image}-${index}`} src={image} alt="" loading="lazy"/>) : <span className="discover-list-poster-fallback"><ListTypeIcon type={item.list_type}/></span>}
-      </span>
+    <Link to={(template ? '/templates/' : '/lists/') + item.id} className="discover-list-card-link">
+      <ListArtwork images={images} type={item.list_type} />
       <span className="discover-list-card-copy">
-        <strong>{item.title || 'Lista sin título'}</strong>
-        <Author profile={profile}/>
-        <span className="search-list-tags">
-          <span className={`search-list-tag type-${item.list_type || 'tierlist'}`}>{label}</span>
-          {item.list_type !== 'ranking' && item.media_type && <span className={`search-list-tag media-${item.media_type}`}>{item.media_type === 'game' ? 'Videojuegos' : item.media_type === 'anime' ? 'Anime' : item.media_type}</span>}
-        </span>
-        {template && <small className="discover-list-uses">{item.uses_count || 0} usos</small>}
+        <strong>{item.title || (template ? 'Plantilla sin título' : 'Lista sin título')}</strong>
+        <span className="discover-list-card-tags"><span>{listTypeName(item.list_type)}</span>{item.media_type && <><span aria-hidden="true">·</span><span>{item.media_type === 'game' ? 'Juegos' : item.media_type === 'anime' ? 'Anime' : item.media_type}</span></>}</span>
       </span>
     </Link>
-    {!template && <div className="discover-list-like"><ListLikeButton listId={item.id} compact/></div>}
+    <footer className="discover-list-card-footer">
+      <Author key={profile?.id || 'anonymous'} profile={profile} />
+      {template ? <span className="discover-list-uses">{Number(item.uses_count || 0).toLocaleString('es-ES')} {Number(item.uses_count) === 1 ? 'uso' : 'usos'}</span> : <div className="discover-list-like"><ListLikeButton listId={item.id} compact /></div>}
+    </footer>
   </article>
 }
 
 function ListSkeletons() {
-  return <div className="discover-list-grid" aria-label="Cargando listas">{Array.from({ length: 8 }, (_, index) => <div className="discover-list-skeleton" key={index}><span/><i/><b/><em/></div>)}</div>
+  return <div className="discover-list-grid" aria-label="Cargando catálogo">{Array.from({ length: 6 }, (_, index) => <div className="discover-list-skeleton" key={index}><span /><i /><b /><em /></div>)}</div>
 }
+
+const catalogCache = new Map()
 
 export default function DiscoverLists() {
   const [params, setParams] = useSearchParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const { user } = useAuth()
+  const surfaceRef = useRef(null)
+  const [isPwa, setIsPwa] = useState(isStandalonePwa)
+  const [managedMotion] = useState(() => Boolean(document.documentElement.dataset.pwaWorkDirection))
   const [showTemplateModal, setShowTemplateModal] = useState(false)
   const [retryToken, setRetryToken] = useState(0)
-  const [catalog, setCatalog] = useState({ key: '', items: [], total: 0, loading: true, error: '' })
   const mode = params.get('tab') === 'templates' ? 'templates' : 'lists'
   const requestedType = TYPES.some(option => option.value === params.get('type')) ? params.get('type') : ''
   const type = mode === 'templates' && requestedType === 'ranking' ? '' : requestedType
@@ -164,90 +98,84 @@ export default function DiscoverLists() {
   const media = MEDIA.some(option => option.value === params.get('media')) ? params.get('media') : ''
   const query = params.get('q') || ''
   const page = Math.max(1, Number.parseInt(params.get('page') || '1', 10) || 1)
-  const requestKey = `${mode}:${type}:${media}:${query}:${page}:${retryToken}`
-  const loading = catalog.key !== requestKey || catalog.loading
+  const cacheKey = JSON.stringify([user?.id || 'guest', mode, type, media, query, page])
+  const requestKey = cacheKey + ':' + retryToken
+  const [catalog, setCatalog] = useState({ key: '', items: [], total: 0, loading: true, error: '' })
+  const result = useMemo(() => catalog.key === requestKey ? catalog : catalogCache.get(cacheKey) || { items: [], total: 0, loading: true, error: '' }, [catalog, cacheKey, requestKey])
+  const loading = result.loading
 
+  useLayoutEffect(() => { signalPwaRouteReady(location.pathname) }, [location.pathname])
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(display-mode: standalone), (display-mode: fullscreen)')
+    const update = () => setIsPwa(isStandalonePwa())
+    mediaQuery.addEventListener('change', update)
+    return () => mediaQuery.removeEventListener('change', update)
+  }, [])
   useEffect(() => {
     let cancelled = false
     const controller = new AbortController()
     const timer = window.setTimeout(() => {
-      setCatalog(current => ({ ...current, key: requestKey, loading: true, error: '' }))
       const fetchCatalog = mode === 'templates' ? getDiscoverTemplates : getDiscoverLists
       fetchCatalog({ type: type || null, mediaType: media || null, query, page, pageSize: PAGE_SIZE, signal: controller.signal })
-        .then(result => { if (!cancelled) setCatalog({ key: requestKey, items: result.items, total: result.total, loading: false, error: '' }) })
+        .then(data => {
+          if (cancelled) return
+          const next = { key: requestKey, items: data.items, total: data.total, loading: false, error: '' }
+          catalogCache.set(cacheKey, next)
+          if (catalogCache.size > 20) catalogCache.delete(catalogCache.keys().next().value)
+          setCatalog(next)
+        })
         .catch(error => { if (!cancelled && error?.name !== 'AbortError') setCatalog({ key: requestKey, items: [], total: 0, loading: false, error: 'No se pudo cargar el catálogo. Inténtalo de nuevo.' }) })
     }, query ? 220 : 0)
     return () => { cancelled = true; window.clearTimeout(timer); controller.abort() }
-  }, [requestKey, mode, type, media, query, page])
+  }, [requestKey, cacheKey, mode, type, media, query, page])
 
-  const totalPages = Math.max(1, Math.ceil((catalog.key === requestKey ? catalog.total : 0) / PAGE_SIZE))
-  const visibleItems = useMemo(() => catalog.key === requestKey ? catalog.items : [], [catalog, requestKey])
-
+  const totalPages = Math.max(1, Math.ceil(result.total / PAGE_SIZE))
+  const hasFilters = Boolean(type || media || query)
+  const scrollToTop = () => {
+    const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth'
+    if (isPwa) surfaceRef.current?.scrollTo({ top: 0, behavior })
+    else window.scrollTo({ top: 0, behavior })
+  }
   const updateParams = updates => {
     const next = new URLSearchParams(params)
     Object.entries(updates).forEach(([key, value]) => value ? next.set(key, value) : next.delete(key))
     if (!Object.hasOwn(updates, 'page')) next.delete('page')
-    setParams(next)
+    setParams(next, { replace: true })
+    if (!Object.hasOwn(updates, 'q')) scrollToTop()
   }
-  const selectMode = nextMode => updateParams({ tab: nextMode === 'lists' ? '' : nextMode })
-  const setPage = nextPage => {
-    const next = new URLSearchParams(params)
-    next.set('page', String(nextPage))
-    setParams(next)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
+  const selectMode = nextMode => updateParams({ tab: nextMode === 'lists' ? '' : nextMode, type: nextMode === 'templates' && requestedType === 'ranking' ? '' : type })
   const create = () => {
     if (!user) return navigate('/register')
     if (mode === 'templates') setShowTemplateModal(true)
-    else navigate('/share?openList=1')
+    else navigatePwaRoute(navigate, '/share?openList=1')
   }
+  const retry = () => {
+    catalogCache.delete(cacheKey)
+    setCatalog({ key: '', items: [], total: 0, loading: true, error: '' })
+    setRetryToken(value => value + 1)
+  }
+  const title = mode === 'templates' ? 'Plantillas' : 'Listas'
 
-  return <main className="discover-works-page discover-lists-page">
-    <SEO title={mode === 'templates' ? 'Explorar plantillas' : 'Explorar listas'} description="Descubre listas y plantillas creadas por la comunidad de GeekSphere."/>
-    <header className="discover-works-header discover-lists-header">
-      <div className="discover-title-group">
-        <button type="button" className="discover-back-button" onClick={() => navigate('/discover')} aria-label="Volver">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-        </button>
-        <h1>Listas</h1>
-      </div>
-    </header>
-
-    <div className="discover-list-controls">
-      <div className={`discover-list-mode${mode === 'templates' ? ' templates-selected' : ''}`} role="group" aria-label="Tipo de catálogo">
-        <span aria-hidden="true"/>
-        <button type="button" className={mode === 'lists' ? 'active' : ''} aria-pressed={mode === 'lists'} onClick={() => selectMode('lists')}>Creaciones</button>
-        <button type="button" className={mode === 'templates' ? 'active' : ''} aria-pressed={mode === 'templates'} onClick={() => selectMode('templates')}>Plantillas</button>
-      </div>
-
-      <div className="discover-list-filter-row">
-        <TypePicker value={typeOptions.some(option => option.value === type) ? type : ''} options={typeOptions} onChange={value => updateParams({ type: value })}/>
-        <div className="discover-genre-list media" role="group" aria-label="Filtrar por medio">{MEDIA.map(option => <button key={option.value || 'all'} type="button" className={`discover-chip${media === option.value ? ' active' : ''}`} aria-pressed={media === option.value} onClick={() => updateParams({ media: option.value })}>{option.label}</button>)}</div>
-        <div className="discover-list-filter-actions">
-          <label className="discover-list-search">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="7.3"/><path d="m16.2 16.2 4.3 4.3"/></svg>
-            <input type="search" value={query} placeholder="Buscar listas..." aria-label="Buscar listas" onChange={event => updateParams({ q: event.target.value })}/>
-            {query && <button type="button" onClick={() => updateParams({ q: '' })} aria-label="Borrar búsqueda">×</button>}
-          </label>
-          <button type="button" className="discover-list-create" onClick={create} aria-label={mode === 'templates' ? 'Crear plantilla' : 'Crear lista'} title={mode === 'templates' ? 'Crear plantilla' : 'Crear lista'}>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-          </button>
+  return <section ref={surfaceRef} className={'discover-works-page discover-lists-page discover-catalog-page discover-list-catalog' + (isPwa ? ' discover-detail-pwa' + (managedMotion ? '' : ' discover-screen-enter') : '')} aria-label="Explorar listas">
+    <SEO title={'Explorar ' + title.toLocaleLowerCase()} description="Descubre listas y plantillas creadas por la comunidad de GeekSphere." />
+    <div className="discover-catalog-inner">
+      <header className="discover-works-header discover-lists-header">
+        <div className="discover-title-group"><button type="button" className="discover-back-button" onClick={() => navigateWorkBack(navigate, '/search')} aria-label="Volver"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg></button><h1>Explorar listas</h1></div>
+        <button type="button" className="discover-list-create" onClick={create} aria-label={mode === 'templates' ? 'Crear plantilla' : 'Crear lista'}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg><span>Crear</span></button>
+      </header>
+      <div className="discover-list-controls">
+        <div className={'discover-list-mode' + (mode === 'templates' ? ' templates-selected' : '')} role="group" aria-label="Tipo de catálogo"><span aria-hidden="true" /><button type="button" className={mode === 'lists' ? 'active' : ''} aria-pressed={mode === 'lists'} onClick={() => selectMode('lists')}>Listas</button><button type="button" className={mode === 'templates' ? 'active' : ''} aria-pressed={mode === 'templates'} onClick={() => selectMode('templates')}>Plantillas</button></div>
+        <div className="discover-list-filter-row">
+          <label className="discover-list-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="7.3" /><path d="m16.2 16.2 4.3 4.3" /></svg><input type="search" value={query} placeholder={mode === 'templates' ? 'Buscar plantillas…' : 'Buscar listas…'} aria-label={mode === 'templates' ? 'Buscar plantillas' : 'Buscar listas'} onChange={event => updateParams({ q: event.target.value })} />{query && <button type="button" onClick={() => updateParams({ q: '' })} aria-label="Borrar búsqueda">×</button>}</label>
+          <div className="discover-list-filter-pickers"><CatalogPicker pill value={type} options={typeOptions} label="Formato" onChange={value => updateParams({ type: value })} /><CatalogPicker pill value={media} options={MEDIA} label="Contenido" onChange={value => updateParams({ media: value })} /></div>
         </div>
       </div>
+      <section className="discover-list-results" aria-busy={loading}>
+        <div className="discover-grid-toolbar"><h2>{title}</h2><p role="status">{loading ? 'Cargando…' : result.error ? 'Catálogo no disponible' : result.total.toLocaleString('es-ES') + (mode === 'templates' ? result.total === 1 ? ' plantilla' : ' plantillas' : result.total === 1 ? ' lista' : ' listas')}</p></div>
+        {loading ? <ListSkeletons /> : result.error ? <div className="discover-empty" role="alert"><span>!</span><h2>No pudimos cargar el catálogo</h2><p>{result.error}</p><button type="button" onClick={retry}>Reintentar</button></div> : result.items.length ? <div className="discover-list-grid">{result.items.map(item => <ListCard key={mode + ':' + item.id} item={item} template={mode === 'templates'} />)}</div> : <div className="discover-empty"><span aria-hidden="true"><ListTypeIcon type={type} /></span><h2>{hasFilters ? 'No hay coincidencias' : 'Todavía no hay ' + title.toLocaleLowerCase()}</h2><p>{hasFilters ? 'Prueba otra búsqueda o quita los filtros.' : 'Sé el primero en compartir una con la comunidad.'}</p>{hasFilters ? <button type="button" onClick={() => updateParams({ q: '', type: '', media: '' })}>Limpiar filtros</button> : page > 1 ? <button type="button" onClick={() => updateParams({ page: '1' })}>Volver al principio</button> : <button type="button" onClick={create}>{mode === 'templates' ? 'Crear plantilla' : 'Crear lista'}</button>}</div>}
+        {!loading && !result.error && totalPages > 1 && <nav className="discover-pagination" aria-label="Paginación"><button type="button" onClick={() => updateParams({ page: String(page - 1) })} disabled={page <= 1}>Anterior</button><span>Página {page} de {totalPages}</span><button type="button" onClick={() => updateParams({ page: String(page + 1) })} disabled={page >= totalPages}>Siguiente</button></nav>}
+      </section>
     </div>
-
-    <section className="discover-list-results" aria-live="polite">
-      <div className="discover-grid-toolbar"><p>{mode === 'templates' ? 'Plantillas en Geeksphere' : 'Listas en Geeksphere'}</p></div>
-      {loading ? <ListSkeletons/> : catalog.error ? <div className="discover-empty" role="alert"><span>!</span><h2>Error al cargar</h2><p>{catalog.error}</p><button type="button" onClick={() => setRetryToken(value => value + 1)}>Reintentar</button></div>
-        : visibleItems.length ? <div className="discover-list-grid">{visibleItems.map(item => <ListCard key={item.id} item={item} template={mode === 'templates'}/>)}</div>
-          : <div className="discover-empty discover-list-no-results"><p>{mode === 'templates' ? 'Sin plantillas' : 'Sin listas'}</p></div>}
-      {!loading && !catalog.error && totalPages > 1 && <nav className="discover-pagination" aria-label="Paginación"><button type="button" onClick={() => setPage(page - 1)} disabled={page <= 1}>Anterior</button><span>Página {page} de {totalPages}</span><button type="button" onClick={() => setPage(page + 1)} disabled={page >= totalPages}>Siguiente</button></nav>}
-    </section>
-
-    {showTemplateModal && <CreateTemplateModal onClose={() => setShowTemplateModal(false)} onSuccess={result => {
-      setShowTemplateModal(false)
-      if (result?.id) navigatePwaRoute(navigate, `/templates/${result.id}`)
-      else setRetryToken(value => value + 1)
-    }}/>}
-  </main>
+    {showTemplateModal && <CreateTemplateModal onClose={() => setShowTemplateModal(false)} onSuccess={data => { setShowTemplateModal(false); if (data?.id) navigatePwaRoute(navigate, '/templates/' + data.id); else retry() }} />}
+  </section>
 }

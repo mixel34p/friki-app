@@ -1,8 +1,7 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { Link, useLocation, useNavigationType } from 'react-router-dom'
 import { getWorkRatings, getWorkReviews } from '../lib/libraryService'
 import { formatRelativeDate } from '../lib/formatRelativeDate'
-import { restorePwaScroll } from '../lib/pwaRouteTransition'
 import { BADGES_MAP } from '../lib/badges'
 import DefaultAvatar from './DefaultAvatar'
 import ReviewLikeButton from './ReviewLikeButton'
@@ -117,7 +116,6 @@ export default function WorkCommunity({ workId, mediaType, stats, viewerKey }) {
     return () => { active = false }
   }, [workId, mediaType, kind, rating, page, retry, filterKey, queryId])
 
-  useLayoutEffect(() => { restorePwaScroll() }, [feed])
 
   useEffect(() => {
     if (!filterOpen) return undefined

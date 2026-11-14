@@ -1,7 +1,7 @@
 import { createPostgresChannel } from '../lib/postgresChannel'
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Link, Outlet, useLocation, useNavigate, useNavigationType } from 'react-router-dom'
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { SiKofi } from 'react-icons/si'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -10,7 +10,7 @@ import { hasCustomAvatar } from '../lib/avatar'
 import { ListsEntryModal } from '../pages/lists/ListsEntry'
 import DefaultAvatar from './DefaultAvatar'
 import InstallApp from './InstallApp'
-import { completePwaNavigation, isPwaTransitionRoute, isStandalonePwa, navigatePwaRoute } from '../lib/pwaRouteTransition'
+import { isPwaTransitionRoute, isStandalonePwa, navigatePwaRoute } from '../lib/pwaRouteTransition'
 import './Layout.css'
 
 const Icon = ({ name }) => {
@@ -100,8 +100,6 @@ export default function Layout() {
   const { user, profile, signOut, accounts, rememberCurrentAccount, switchAccount } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
-  const navigationType = useNavigationType()
-  useLayoutEffect(() => { completePwaNavigation(location.key, location.pathname, navigationType) }, [location.key, location.pathname, navigationType])
   const [moreOpen, setMoreOpen] = useState(false)
   const [switchingAccountId, setSwitchingAccountId] = useState(null)
   const [unreadCount, setUnreadCount] = useState(0)
@@ -312,7 +310,7 @@ export default function Layout() {
         </>}
       </nav>
 
-      <main className={`main ${['/terms', '/privacy', '/community-guidelines'].includes(location.pathname) ? 'legal-main' : ''} ${location.pathname === '/onboarding' ? 'onboarding-main' : ''} ${location.pathname === '/invite' ? 'invite-main' : ''} ${isProfilePage ? 'profile-main' : ''} ${isWorkPage ? 'work-main' : ''} ${location.pathname.startsWith('/discover/anime') || location.pathname.startsWith('/discover/games') ? 'discover-works-main' : ''} ${location.pathname === '/discover/spaces' || location.pathname === '/spaces/explore' ? 'spaces-explore-main' : ''} ${location.pathname === '/spaces' ? 'my-spaces-main' : ''} ${/^\/reviews\/[^/]+/.test(location.pathname) ? 'review-detail-main' : ''} ${/^\/posts\/[^/]+$/.test(location.pathname) ? 'post-detail-main' : ''} ${/^\/lists\/[^/]+$/.test(location.pathname) ? 'list-detail-main' : ''} ${location.pathname === '/share' ? 'share-main' : ''}`}><Outlet /></main>
+      <main className={`main ${['/terms', '/privacy', '/community-guidelines'].includes(location.pathname) ? 'legal-main' : ''} ${location.pathname === '/onboarding' ? 'onboarding-main' : ''} ${location.pathname === '/invite' ? 'invite-main' : ''} ${isProfilePage ? 'profile-main' : ''} ${isWorkPage ? 'work-main' : ''} ${['/discover/anime', '/discover/games', '/discover/lists'].includes(location.pathname) ? 'discover-works-main' : ''} ${location.pathname === '/discover/spaces' || location.pathname === '/spaces/explore' ? 'spaces-explore-main' : ''} ${location.pathname === '/spaces' ? 'my-spaces-main' : ''} ${/^\/reviews\/[^/]+/.test(location.pathname) ? 'review-detail-main' : ''} ${/^\/posts\/[^/]+$/.test(location.pathname) ? 'post-detail-main' : ''} ${/^\/lists\/[^/]+$/.test(location.pathname) ? 'list-detail-main' : ''} ${location.pathname === '/share' ? 'share-main' : ''}`}><Outlet /></main>
 
       {listsOpen && <ListsEntryModal onClose={() => setListsOpen(false)} />}
       {moreOpen && isDesktop && createPortal(

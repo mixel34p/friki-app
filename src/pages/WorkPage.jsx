@@ -6,7 +6,7 @@ import { getWorkById, getSimilarWorks, getWorkStats } from '../lib/workPageServi
 import { getWorkLog, logWork } from '../lib/libraryService'
 import { getSpacesByWork } from '../lib/spaceService'
 import { plainTextSynopsis } from '../lib/plainTextSynopsis'
-import { isStandalonePwa, navigatePwaRoute, navigateWorkBack, restorePwaScroll, signalPwaRouteReady } from '../lib/pwaRouteTransition'
+import { isStandalonePwa, navigatePwaRoute, navigateWorkBack, signalPwaRouteReady } from '../lib/pwaRouteTransition'
 import useSystemBarColor from '../hooks/useSystemBarColor'
 import { useToast } from '../components/Toast'
 import WorkRatings, { WorkMembers, WorkStars } from '../components/WorkRatings'
@@ -84,7 +84,6 @@ function WorkDetails({ mediaType, workId }) {
   useLayoutEffect(() => { ownerRef.current = userId }, [userId])
   useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false } }, [])
   useLayoutEffect(() => { signalPwaRouteReady(route) }, [route])
-  useLayoutEffect(() => { restorePwaScroll() }, [work, stats, similarWorks, spaces])
   useEffect(() => {
     if (!work || location.hash !== '#reviews') return undefined
     const entry = `${route}:${location.key}`

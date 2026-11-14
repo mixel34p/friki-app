@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { ToastProvider } from './components/Toast'
 import Layout from './components/Layout'
+import PwaNavigation from './components/PwaNavigation'
 import LoadingSpinner from './components/LoadingSpinner'
 import SEO from './components/SEO'
 import Login from './pages/Login'
@@ -284,6 +285,7 @@ function App() {
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        <PwaNavigation />
         </BrowserRouter>
       </ToastProvider>
     </AuthProvider>

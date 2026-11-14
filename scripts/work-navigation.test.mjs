@@ -10,15 +10,16 @@ const tick = () => new Promise(resolve => setTimeout(resolve, 15))
 function environment({ standalone = true, transitions = true, index = 1, pathname = '/game/7' } = {}) {
   class PopEvent extends Event { constructor(type, { state }) { super(type); this.state = state } }
   const window = Object.assign(new EventTarget(), {
-    location: new URL('https://example.test' + pathname), history: { state: { idx: index, key: 'work' } },
+    location: new URL('https://example.test' + pathname), history: { state: { idx: index, key: 'work' }, scrollRestoration: 'auto' },
     matchMedia: query => ({ matches: query.includes('display-mode') && standalone }),
     scrollY: 0, innerHeight: 800, setTimeout, clearTimeout,
-    scrollTo(x, y) { this.scrollY = y },
+    scrollTo(position, y) { this.scrollY = typeof position === 'object' ? position.top : y },
   })
   let visibleRoute = pathname
   let routerCalls = 0
   const snapshots = []
-  const document = { documentElement: { dataset: {}, scrollHeight: 3000 }, body: {}, querySelector: () => null }
+  const surfaces = Array.from({ length: 3 }, () => ({ scrollTop: 0, scrollTo(position) { this.scrollTop = position.top } }))
+  const document = { documentElement: { dataset: {}, scrollHeight: 3000 }, body: {}, querySelector: () => null, querySelectorAll: () => surfaces }
   if (transitions) document.startViewTransition = callback => {
     snapshots.push({ route: visibleRoute, direction: document.documentElement.dataset.pwaWorkDirection })
     const updateCallbackDone = Promise.resolve().then(callback)
@@ -36,9 +37,9 @@ function environment({ standalone = true, transitions = true, index = 1, pathnam
   window.addEventListener('popstate', event => {
     routerCalls++
     visibleRoute = window.location.pathname
-    controller.completePwaNavigation(event.state.key, visibleRoute, 'POP')
+    controller.completePwaNavigation(visibleRoute)
   })
-  return { controller, window, document, snapshots, cleanup, calls: () => routerCalls, pop(pathname, idx, key) {
+  return { controller, window, document, surfaces, snapshots, cleanup, calls: () => routerCalls, pop(pathname, idx, key) {
     window.location.pathname = pathname
     window.history.state = { idx, key }
     window.dispatchEvent(new PopEvent('popstate', { state: window.history.state }))
@@ -47,8 +48,8 @@ function environment({ standalone = true, transitions = true, index = 1, pathnam
 
 test('work details join the existing transition routes without capturing unrelated subpages', () => {
   const env = environment()
-  for (const route of ['/game/7', '/anime/10', '/posts/post-1', '/reviews/review-1', '/share', '/discover/anime', '/discover/games?order=rated']) assert.ok(env.controller.isPwaTransitionRoute(route))
-  for (const route of ['/game/7/reviews', '/game/7/edit', '/search', '/lists/new', '/discover/users', '/discover/games/extra']) assert.equal(env.controller.isPwaTransitionRoute(route), false)
+  for (const route of ['/game/7', '/anime/10', '/posts/post-1', '/reviews/review-1', '/share', '/discover/anime', '/discover/games?order=rated', '/discover/lists?tab=templates']) assert.ok(env.controller.isPwaTransitionRoute(route))
+  for (const route of ['/game/7/reviews', '/game/7/edit', '/search', '/lists/new', '/discover/users', '/discover/games/extra', '/discover/lists/extra']) assert.equal(env.controller.isPwaTransitionRoute(route), false)
   env.cleanup()
 })
 
@@ -96,11 +97,52 @@ test('direct-entry back falls home even without view-transition support', async 
   const calls = []
   env.controller.navigateWorkBack((to, options) => {
     calls.push({ to, options })
-    env.controller.completePwaNavigation('home', '/home', 'REPLACE')
+    env.controller.completePwaNavigation('/home')
   })
   await tick()
   assert.equal(calls[0].to, '/home')
   assert.equal(calls[0].options.replace, true)
   assert.equal(env.document.documentElement.dataset.pwaWorkDirection, undefined)
   env.cleanup()
+})
+
+test('PWA page changes reset window and standalone surfaces, including native back and forward', async () => {
+  const env = environment({ pathname: '/discover/lists' })
+  assert.equal(env.window.history.scrollRestoration, 'manual')
+  env.controller.completePwaNavigation('/discover/lists')
+  env.window.scrollY = 700
+  env.surfaces.forEach(surface => { surface.scrollTop = 500 })
+  env.controller.completePwaNavigation('/lists/1')
+  assert.equal(env.window.scrollY, 0)
+  assert.ok(env.surfaces.every(surface => surface.scrollTop === 0))
+  env.window.scrollY = 800
+  env.surfaces.forEach(surface => { surface.scrollTop = 600 })
+  env.pop('/discover/lists', 0, 'catalog')
+  await tick(); await tick()
+  assert.equal(env.window.scrollY, 0)
+  assert.ok(env.surfaces.every(surface => surface.scrollTop === 0))
+  env.surfaces[0].scrollTop = 450
+  env.pop('/lists/1', 1, 'list')
+  await tick(); await tick()
+  assert.equal(env.surfaces[0].scrollTop, 0)
+  env.cleanup()
+  assert.equal(env.window.history.scrollRestoration, 'auto')
+})
+
+test('same-page filter changes and ordinary browser scrolling remain untouched', () => {
+  for (const standalone of [true, false]) {
+    const env = environment({ standalone, pathname: '/discover/games' })
+    env.controller.completePwaNavigation('/discover/games')
+    env.window.scrollY = 500
+    env.surfaces[0].scrollTop = 400
+    env.controller.completePwaNavigation('/discover/games')
+    assert.equal(env.window.scrollY, 500)
+    assert.equal(env.surfaces[0].scrollTop, 400)
+    if (!standalone) {
+      env.controller.completePwaNavigation('/search')
+      assert.equal(env.window.scrollY, 500)
+      assert.equal(env.window.history.scrollRestoration, 'auto')
+    }
+    env.cleanup()
+  }
 })

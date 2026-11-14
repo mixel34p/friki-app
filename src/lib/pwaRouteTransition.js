@@ -1,80 +1,42 @@
 import { navigateBackOrHome } from './navigation'
 
-const SCREEN_ROUTE = /^\/(?:game|anime)\/[^/?#]+\/?$|^\/discover\/(?:anime|games)\/?$/
-const TRANSITION_ROUTE = /^\/share(?:[?#].*)?$|^\/(?:posts|reviews)\/[^/?#]+(?:[?#].*)?$|^\/(?:game|anime)\/[^/?#]+\/?(?:[?#].*)?$|^\/discover\/(?:anime|games)\/?(?:[?#].*)?$|^\/(?:lists|templates)\/(?!new(?:[/?#]|$))[^/?#]+(?:[?#].*)?$/
+const SCREEN_ROUTE = /^\/(?:game|anime)\/[^/?#]+\/?$|^\/discover\/(?:anime|games|lists)\/?$/
+const TRANSITION_ROUTE = /^\/share(?:[?#].*)?$|^\/(?:posts|reviews)\/[^/?#]+(?:[?#].*)?$|^\/(?:game|anime)\/[^/?#]+\/?(?:[?#].*)?$|^\/discover\/(?:anime|games|lists)\/?(?:[?#].*)?$|^\/(?:lists|templates)\/(?!new(?:[/?#]|$))[^/?#]+(?:[?#].*)?$/
 let pendingRoute = null
 let pendingHistory = null
 let currentPath = null
-let currentKey = null
 let currentIndex = 0
-const scrollPositions = new Map()
 const replayedEvents = new WeakSet()
-let pendingScroll = null
-let scrollObserver = null
-let scrollTimer = null
+let hasCommitted = false
 
 export function isStandalonePwa() {
   return window.matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches || navigator.standalone === true
 }
 
 function reducedMotion() { return window.matchMedia('(prefers-reduced-motion: reduce)').matches }
-function historyKey() { return window.history.state?.key || 'default' }
 function getPathname(to) {
   if (typeof to === 'string') return new URL(to, window.location.href).pathname
   return to?.pathname || window.location.pathname
 }
 
-function rememberScroll() {
-  const surface = document.querySelector('.work-detail-pwa, .discover-detail-pwa')
-  scrollPositions.set(currentKey || historyKey(), { windowY: window.scrollY, workY: surface?.scrollTop || 0 })
-  if (scrollPositions.size > 40) scrollPositions.delete(scrollPositions.keys().next().value)
-}
-
-function clearScrollRestore() {
-  pendingScroll = null
-  scrollObserver?.disconnect()
-  scrollObserver = null
-  window.clearTimeout(scrollTimer)
-}
-
-export function restorePwaScroll(force = false) {
-  if (!pendingScroll) return
-  const surface = document.querySelector('.work-detail-pwa, .discover-detail-pwa')
-  const top = surface ? pendingScroll.workY : pendingScroll.windowY
-  const available = surface ? surface.scrollHeight - surface.clientHeight : document.documentElement.scrollHeight - window.innerHeight
-  if (!force && available + 1 < top) return
-  window.scrollTo(0, pendingScroll.windowY)
-  if (surface) surface.scrollTop = top
-  clearScrollRestore()
-}
-
-export function completePwaNavigation(key, pathname, navigationType) {
+export function completePwaNavigation(pathname) {
+  const changedPage = !hasCommitted || currentPath !== pathname
   currentPath = pathname
-  currentKey = key
+  hasCommitted = true
   currentIndex = window.history.state?.idx ?? 0
-  if (isStandalonePwa() && navigationType === 'POP') {
-    clearScrollRestore()
-    const saved = scrollPositions.get(key)
-    if (saved) {
-      pendingScroll = saved
-      restorePwaScroll()
-      if (pendingScroll) {
-        scrollObserver = new MutationObserver(() => restorePwaScroll())
-        scrollObserver.observe(document.querySelector('.main') || document.body, { childList: true, subtree: true })
-        scrollTimer = window.setTimeout(() => restorePwaScroll(true), 3000)
-      }
-    }
-  } else clearScrollRestore()
+  if (changedPage && isStandalonePwa()) {
+    const position = { top: 0, left: 0, behavior: 'instant' }
+    window.scrollTo(position)
+    for (const surface of document.querySelectorAll('.work-detail-pwa, .discover-detail-pwa, .pwa-detail-screen')) surface.scrollTo(position)
+  }
   pendingHistory?.resolve()
 }
 
 export function navigatePwaRoute(navigate, to, options) {
   const pathname = getPathname(to)
   if (pathname === window.location.pathname || !isStandalonePwa() || !TRANSITION_ROUTE.test(pathname) || typeof document.startViewTransition !== 'function' || reducedMotion()) {
-    if (isStandalonePwa()) rememberScroll()
     return navigate(to, options)
   }
-  rememberScroll()
   let resolveReady
   const ready = new Promise(resolve => { resolveReady = resolve })
   const request = { pathname, resolve: resolveReady }
@@ -100,7 +62,6 @@ export function navigatePwaRoute(navigate, to, options) {
 
 function transitionWorkHistory(action, direction = 'back') {
   if (pendingHistory) return
-  rememberScroll()
   let resolveReady
   const ready = new Promise(resolve => { resolveReady = resolve })
   const request = { resolve: resolveReady }
@@ -138,7 +99,7 @@ export function navigateWorkBack(navigate, fallback = '/home') {
 // snapshotted. Replay once inside the transition; the URL/history are unchanged.
 export function installWorkHistoryTransitions() {
   currentPath = window.location.pathname
-  currentKey = historyKey()
+  hasCommitted = false
   currentIndex = window.history.state?.idx ?? 0
   const onPop = event => {
     if (replayedEvents.has(event) || pendingHistory || !isStandalonePwa()) return
@@ -150,8 +111,19 @@ export function installWorkHistoryTransitions() {
     const direction = (event.state?.idx ?? 0) > currentIndex ? 'forward' : 'back'
     transitionWorkHistory(() => window.dispatchEvent(replay), direction)
   }
+  const previousRestoration = window.history.scrollRestoration
+  const media = window.matchMedia('(display-mode: standalone), (display-mode: fullscreen)')
+  const syncRestoration = () => {
+    if ('scrollRestoration' in window.history) window.history.scrollRestoration = isStandalonePwa() ? 'manual' : previousRestoration
+  }
+  syncRestoration()
+  media.addEventListener?.('change', syncRestoration)
   window.addEventListener('popstate', onPop, true)
-  return () => { window.removeEventListener('popstate', onPop, true); clearScrollRestore() }
+  return () => {
+    window.removeEventListener('popstate', onPop, true)
+    media.removeEventListener?.('change', syncRestoration)
+    if ('scrollRestoration' in window.history) window.history.scrollRestoration = previousRestoration
+  }
 }
 
 export function signalPwaRouteReady(pathname) {
