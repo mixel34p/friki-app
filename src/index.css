@@ -657,6 +657,16 @@ body.pwa-landscape-lock::after { position: fixed; z-index: 2147483647; inset: 0;
   to { transform: translateX(0); }
 }
 
+html[data-pwa-work-direction]::view-transition-group(root) { isolation: isolate; animation-duration: 320ms; }
+html[data-pwa-work-direction]::view-transition-old(root),
+html[data-pwa-work-direction]::view-transition-new(root) { mix-blend-mode: normal; }
+html[data-pwa-work-direction="forward"]::view-transition-old(root) { z-index: 1; animation: pwa-route-old 320ms cubic-bezier(.22,.8,.24,1) both; }
+html[data-pwa-work-direction="forward"]::view-transition-new(root) { z-index: 2; animation: pwa-route-new 320ms cubic-bezier(.22,.8,.24,1) both; }
+html[data-pwa-work-direction="back"]::view-transition-old(root) { z-index: 2; animation: pwa-work-back-old 280ms cubic-bezier(.22,.8,.24,1) both; }
+html[data-pwa-work-direction="back"]::view-transition-new(root) { z-index: 1; animation: pwa-work-back-new 280ms cubic-bezier(.22,.8,.24,1) both; }
+@keyframes pwa-work-back-old { from { transform: translateX(0); } to { transform: translateX(100%); } }
+@keyframes pwa-work-back-new { from { transform: translateX(-16%); } to { transform: translateX(0); } }
+
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-old(root),
   ::view-transition-new(root) { animation: none !important; }

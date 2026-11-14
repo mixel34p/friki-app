@@ -41,7 +41,7 @@ export async function logWork(userId, workId, workType, logData) {
 /**
  * Obtiene el log/reseÃ±a especÃ­fico de un usuario para una obra
  */
-export async function getWorkLog(userId, workId, workType) {
+export async function getWorkLog(userId, workId, workType, { throwOnError = false } = {}) {
     if (!userId || !workId) return null
     
     const { data, error } = await supabase
@@ -54,6 +54,7 @@ export async function getWorkLog(userId, workId, workType) {
         
     if (error) {
         console.error('Error fetching work log:', error)
+        if (throwOnError) throw error
         return null
     }
     
@@ -99,7 +100,7 @@ export async function deleteWorkLog(userId, workId, workType) {
 }
 
 // Obtener reseñas (library_entries) de una obra con paginación
-export async function getWorkReviews(workId, workType, page = 1, limit = 3, rating = null) {
+export async function getWorkReviews(workId, workType, page = 1, limit = 3, rating = null, { throwOnError = false } = {}) {
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
@@ -120,15 +121,17 @@ export async function getWorkReviews(workId, workType, page = 1, limit = 3, rati
 
     if (error) {
         console.error('Error fetching work reviews:', error);
+        if (throwOnError) throw error
         return { data: [], count: 0 };
     }
     if (!data || data.length === 0) return { data: [], count: count || 0 }
     const userIds = [...new Set(data.map(entry => entry.user_id))]
-    const { data: profiles } = await supabase
+    const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('id, username, avatar_url, display_name, featured_badge, theme_color')
         .in('id', userIds)
     const profilesById = Object.fromEntries((profiles || []).map(profile => [profile.id, profile]))
+    if (profilesError && throwOnError) throw profilesError
     return {
         data: data.map(entry => ({ ...entry, profiles: profilesById[entry.user_id] || null })),
         count: count || 0

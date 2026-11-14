@@ -11,6 +11,7 @@
 import { supabase } from './supabase'
 import { getGameById, getSimilarGames } from './gameService'
 import { getAnimeById, getSimilarAnime } from './animeService'
+import { summarizeWorkRatings } from './workRatings'
 
 // ═══════════════════════════════════════════════════════
 // GET WORK BY ID
@@ -372,73 +373,35 @@ async function getSimilarFromTierlists(mediaType, mediaId, limit, seenIds = new 
  * @returns {Promise<Object>}
  */
 export async function getWorkStats(mediaType, mediaId) {
-    try {
-        // Get members, average rating
-        const { data: entries, error: entriesError } = await supabase
-            .from('library_entries')
-            .select('user_id, rating, created_at')
-            .eq('work_type', mediaType)
-            .eq('work_id', String(mediaId))
-            
-        let membersCount = 0
-        let ratingsCount = 0
-        let avgRating = 0
-        let recentMembers = []
-        
-        if (entries && entries.length > 0) {
-            membersCount = entries.length
-            const ratings = entries.filter(e => e.rating != null).map(e => e.rating)
-            ratingsCount = ratings.length
-            if (ratings.length > 0) {
-                const sum = ratings.reduce((acc, curr) => acc + curr, 0)
-                avgRating = sum / ratings.length
-            }
-            
-            // Sort by created_at desc
-            const sortedEntries = [...entries].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-            
-            // Extract up to 5 unique user_ids
-            const recentUserIds = []
-            for (const entry of sortedEntries) {
-                if (entry.user_id && !recentUserIds.includes(entry.user_id)) {
-                    recentUserIds.push(entry.user_id)
-                    if (recentUserIds.length >= 5) break
-                }
-            }
-            
-            // Fetch profiles for these users
-            if (recentUserIds.length > 0) {
-                const { data: profiles } = await supabase
-                    .from('profiles')
-                    .select('id, username, avatar_url, theme_color')
-                    .in('id', recentUserIds)
-                    
-                if (profiles) {
-                    // Map back to recentMembers maintaining sort order
-                    for (const uid of recentUserIds) {
-                        const profile = profiles.find(p => p.id === uid)
-                        if (profile) {
-                            recentMembers.push({
-                                username: profile.username || 'Usuario',
-                                avatar: profile.avatar_url,
-                                theme_color: profile.theme_color
-                            })
-                        }
-                    }
-                }
-            }
-        }
-
-        return {
-            membersCount: membersCount,
-            ratingsCount,
-            avgRating: avgRating > 0 ? avgRating.toFixed(1) : 0,
-            recentMembers
-        }
-    } catch (error) {
-        console.error('getWorkStats error:', error)
-        return { membersCount: 0, ratingsCount: 0, avgRating: 0, recentMembers: [] }
+    const workId = String(mediaId)
+    const filter = query => query.eq('work_type', mediaType).eq('work_id', workId)
+    const pageSize = 500
+    const [members, recent, firstPage] = await Promise.all([
+        filter(supabase.from('library_entries').select('id', { count: 'exact', head: true })),
+        filter(supabase.from('library_entries').select('user_id').order('created_at', { ascending: false }).limit(5)),
+        filter(supabase.from('library_entries').select('rating', { count: 'exact' }).not('rating', 'is', null).order('id', { ascending: true }).range(0, pageSize - 1)),
+    ])
+    for (const result of [members, recent, firstPage]) if (result.error) throw result.error
+    const ratings = [...(firstPage.data || [])]
+    const expected = firstPage.count ?? ratings.length
+    // Read every page: the API row limit must not truncate the mean or histogram.
+    while (ratings.length < expected) {
+        const page = await filter(supabase.from('library_entries').select('rating').not('rating', 'is', null).order('id', { ascending: true }).range(ratings.length, ratings.length + pageSize - 1))
+        if (page.error) throw page.error
+        if (!page.data?.length) throw new Error('No se pudieron completar las estadísticas de la obra.')
+        ratings.push(...page.data)
     }
+    const userIds = [...new Set((recent.data || []).map(entry => entry.user_id).filter(Boolean))]
+    let recentMembers = []
+    if (userIds.length) {
+        const { data: profiles, error } = await supabase.from('profiles')
+            .select('id, username, avatar_url, theme_color').in('id', userIds)
+        if (!error) {
+            const byId = new Map((profiles || []).map(profile => [profile.id, profile]))
+            recentMembers = userIds.map(id => byId.get(id)).filter(Boolean)
+        }
+    }
+    return { ...summarizeWorkRatings(ratings), membersCount: members.count || 0, recentMembers }
 }
 
 /**

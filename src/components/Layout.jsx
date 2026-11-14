@@ -1,7 +1,7 @@
 import { createPostgresChannel } from '../lib/postgresChannel'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Link, Outlet, useLocation, useNavigate, useNavigationType } from 'react-router-dom'
 import { SiKofi } from 'react-icons/si'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -10,7 +10,7 @@ import { hasCustomAvatar } from '../lib/avatar'
 import { ListsEntryModal } from '../pages/lists/ListsEntry'
 import DefaultAvatar from './DefaultAvatar'
 import InstallApp from './InstallApp'
-import { isPwaTransitionRoute, isStandalonePwa, navigatePwaRoute } from '../lib/pwaRouteTransition'
+import { completePwaNavigation, isPwaTransitionRoute, isStandalonePwa, navigatePwaRoute } from '../lib/pwaRouteTransition'
 import './Layout.css'
 
 const Icon = ({ name }) => {
@@ -100,6 +100,8 @@ export default function Layout() {
   const { user, profile, signOut, accounts, rememberCurrentAccount, switchAccount } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
+  const navigationType = useNavigationType()
+  useLayoutEffect(() => { completePwaNavigation(location.key, location.pathname, navigationType) }, [location.key, location.pathname, navigationType])
   const [moreOpen, setMoreOpen] = useState(false)
   const [switchingAccountId, setSwitchingAccountId] = useState(null)
   const [unreadCount, setUnreadCount] = useState(0)
