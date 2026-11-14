@@ -376,12 +376,13 @@ export async function getWorkStats(mediaType, mediaId) {
     const workId = String(mediaId)
     const filter = query => query.eq('work_type', mediaType).eq('work_id', workId)
     const pageSize = 500
-    const [members, recent, firstPage] = await Promise.all([
+    const [members, recent, firstPage, reviews] = await Promise.all([
         filter(supabase.from('library_entries').select('id', { count: 'exact', head: true })),
         filter(supabase.from('library_entries').select('user_id').order('created_at', { ascending: false }).limit(5)),
         filter(supabase.from('library_entries').select('rating', { count: 'exact' }).not('rating', 'is', null).order('id', { ascending: true }).range(0, pageSize - 1)),
+        filter(supabase.from('library_entries').select('id', { count: 'exact', head: true }).not('review_text', 'is', null).neq('review_text', '')),
     ])
-    for (const result of [members, recent, firstPage]) if (result.error) throw result.error
+    for (const result of [members, recent, firstPage, reviews]) if (result.error) throw result.error
     const ratings = [...(firstPage.data || [])]
     const expected = firstPage.count ?? ratings.length
     // Read every page: the API row limit must not truncate the mean or histogram.
@@ -401,7 +402,7 @@ export async function getWorkStats(mediaType, mediaId) {
             recentMembers = userIds.map(id => byId.get(id)).filter(Boolean)
         }
     }
-    return { ...summarizeWorkRatings(ratings), membersCount: members.count || 0, recentMembers }
+    return { ...summarizeWorkRatings(ratings), membersCount: members.count || 0, reviewsCount: reviews.count || 0, recentMembers }
 }
 
 /**

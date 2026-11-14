@@ -27,7 +27,7 @@ const source = await readFile(new URL('../src/lib/workPageService.js', import.me
 const code = transformSync(source, { format: 'cjs' }).code
 function service({ fail = false } = {}) {
   const entries = [
-    ...Array.from({ length: 1205 }, (_, index) => ({ id: index, user_id: 'member', work_type: 'game', work_id: '7', rating: index < 1000 ? '5' : '.5' })),
+    ...Array.from({ length: 1205 }, (_, index) => ({ id: index, user_id: 'member', work_type: 'game', work_id: '7', rating: index < 1000 ? '5' : '.5', review_text: index < 12 ? `Review ${index}` : null })),
     { id: 1206, user_id: 'member', work_type: 'game', work_id: '7', rating: null },
     { id: 1207, user_id: 'other', work_type: 'anime', work_id: '7', rating: 1 },
     { id: 1208, user_id: 'other', work_type: 'game', work_id: '8', rating: 1 },
@@ -36,6 +36,7 @@ function service({ fail = false } = {}) {
     constructor(table) { this.table = table; this.filters = []; this.start = 0; this.end = Infinity }
     select(fields, options = {}) { this.options = options; return this }
     eq(key, value) { this.filters.push(row => row[key] === value); return this }
+    neq(key, value) { this.filters.push(row => row[key] !== value); return this }
     not(key, operator, value) { this.filters.push(row => row[key] != value); return this }
     in(key, values) { this.filters.push(row => values.includes(row[key])); return this }
     order() { return this }
@@ -55,6 +56,7 @@ test('statistics cover more than 1000 ratings, exact member counts and both work
   const result = await service().getWorkStats('game', 7)
   assert.equal(result.membersCount, 1206)
   assert.equal(result.ratingsCount, 1205)
+  assert.equal(result.reviewsCount, 12)
   assert.equal(result.avgRating, (1000 * 5 + 205 * .5) / 1205)
   assert.equal(result.distribution[0].count, 205)
   assert.equal(result.distribution[9].count, 1000)

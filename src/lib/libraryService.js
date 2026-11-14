@@ -110,6 +110,7 @@ export async function getWorkReviews(workId, workType, page = 1, limit = 3, rati
         .eq('work_id', String(workId))
         .eq('work_type', workType)
         .not('review_text', 'is', null)
+        .neq('review_text', '')
 
     if (rating != null) {
         query = query.eq('rating', rating)
@@ -117,6 +118,7 @@ export async function getWorkReviews(workId, workType, page = 1, limit = 3, rati
 
     const { data, count, error } = await query
         .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
         .range(from, to)
 
     if (error) {
@@ -139,7 +141,7 @@ export async function getWorkReviews(workId, workType, page = 1, limit = 3, rati
 }
 
 // Obtener todas las valoraciones, tengan o no texto, con paginación
-export async function getWorkRatings(workId, workType, page = 1, limit = 10, rating = null) {
+export async function getWorkRatings(workId, workType, page = 1, limit = 10, rating = null, { throwOnError = false } = {}) {
     const from = (page - 1) * limit
     const to = from + limit - 1
     let query = supabase
@@ -155,19 +157,22 @@ export async function getWorkRatings(workId, workType, page = 1, limit = 10, rat
 
     const { data, count, error } = await query
         .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
         .range(from, to)
 
     if (error) {
         console.error('Error fetching work ratings:', error)
+        if (throwOnError) throw error
         return { data: [], count: 0 }
     }
     if (!data || data.length === 0) return { data: [], count: count || 0 }
 
     const userIds = [...new Set(data.map(entry => entry.user_id))]
-    const { data: profiles } = await supabase
+    const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('id, username, avatar_url, display_name, featured_badge, theme_color')
         .in('id', userIds)
+    if (profilesError && throwOnError) throw profilesError
     const profilesById = Object.fromEntries((profiles || []).map(profile => [profile.id, profile]))
     return {
         data: data.map(entry => ({ ...entry, profiles: profilesById[entry.user_id] || null })),

@@ -22,7 +22,6 @@ import UserReviews from './pages/UserReviews'
 import UserDiary from './pages/UserDiary'
 import UserTierlists from './pages/UserTierlists'
 import UserTemplates from './pages/UserTemplates'
-import WorkReviews from './pages/WorkReviews'
 import ReviewDetail from './pages/ReviewDetail'
 import SharePage from './pages/SharePage'
 import ProfileInvitation from './pages/ProfileInvitation'
@@ -189,6 +188,11 @@ function SpacesRootRoute() {
   return user ? <MySpaces /> : <SpacesExplore />
 }
 
+function WorkReviewsRedirect({ mediaType }) {
+  const { id } = useParams()
+  return <Navigate to={`/${mediaType}/${id}#reviews`} replace />
+}
+
 function App() {
   return (
     <AuthProvider>
@@ -272,8 +276,8 @@ function App() {
             {/* Work Page Routes */}
             <Route path="/game/:id" element={<WorkPage mediaType="game" />} />
             <Route path="/anime/:id" element={<WorkPage mediaType="anime" />} />
-            <Route path="/game/:id/reviews" element={<WorkReviews mediaType="game" />} />
-            <Route path="/anime/:id/reviews" element={<WorkReviews mediaType="anime" />} />
+            <Route path="/game/:id/reviews" element={<WorkReviewsRedirect mediaType="game" />} />
+            <Route path="/anime/:id/reviews" element={<WorkReviewsRedirect mediaType="anime" />} />
             <Route path="/profile/:username/wishlist" element={<WishlistPage />} />
           </Route>
 

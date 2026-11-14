@@ -1,21 +1,21 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { format } from 'date-fns'
 import { useAuth } from '../context/AuthContext'
 import { getWorkById, getSimilarWorks, getWorkStats } from '../lib/workPageService'
-import { getWorkLog, getWorkReviews, logWork } from '../lib/libraryService'
+import { getWorkLog, logWork } from '../lib/libraryService'
 import { getSpacesByWork } from '../lib/spaceService'
-import { formatRelativeDate } from '../lib/formatRelativeDate'
+import { plainTextSynopsis } from '../lib/plainTextSynopsis'
 import { isStandalonePwa, navigatePwaRoute, navigateWorkBack, restorePwaScroll, signalPwaRouteReady } from '../lib/pwaRouteTransition'
 import useSystemBarColor from '../hooks/useSystemBarColor'
 import DefaultAvatar from '../components/DefaultAvatar'
 import { useToast } from '../components/Toast'
 import WorkRatings, { WorkStars } from '../components/WorkRatings'
-import ReviewLikeButton from '../components/ReviewLikeButton'
-import SpoilerNotice from '../components/reviews/SpoilerNotice'
+import WorkCommunity from '../components/WorkCommunity'
 import SEO from '../components/SEO'
-import { BADGES_MAP } from '../lib/badges'
 import './WorkPage.css'
+
+const focusedReviewEntries = new Set()
 
 function coverImage(url) {
   if (!url) return ''
@@ -52,31 +52,11 @@ function WorkImage({ src, title, className = '' }) {
   </span>
 }
 
-function WorkReview({ review }) {
-  const [revealed, setRevealed] = useState(false)
-  const author = review.profiles
-  const badge = BADGES_MAP[author?.featured_badge]
-  const text = (review.review_text || '').trim()
-  const excerpt = text.length > 340 ? `${text.slice(0, 340)}…` : text
-  return <article className="work-review">
-    <header className="work-review-header">
-      {author?.username ? <Link className="work-review-author" to={`/profile/${author.username}`}>
-        {author.avatar_url ? <img className="work-review-avatar" src={author.avatar_url} alt="" loading="lazy" /> : <DefaultAvatar className="work-review-avatar" accent={author.theme_color} />}
-        <span>{author.display_name || author.username}</span>
-        {badge && <span className="work-review-badge" style={{ color: badge.color }} title={badge.title}>{badge.icon}</span>}
-      </Link> : <span className="work-review-author">Usuario</span>}
-      <time dateTime={review.created_at}>{formatRelativeDate(review.created_at)}</time>
-    </header>
-    {review.rating != null && <div className="work-review-score"><WorkStars rating={Number(review.rating)} /><span>{Number(review.rating).toLocaleString('es-ES')}</span></div>}
-    {review.contains_spoiler && !revealed ? <SpoilerNotice text={excerpt} onReveal={() => setRevealed(true)} /> : <p className="work-review-text">{excerpt}</p>}
-    <footer><ReviewLikeButton entryId={review.id} /><Link to={`/reviews/${review.id}`}>Leer reseña <WorkIcon name="arrow" /></Link></footer>
-  </article>
-}
-
 function WorkDetails({ mediaType, workId }) {
   const { user, profile, updateProfile } = useAuth()
   const userId = user?.id
   const navigate = useNavigate()
+  const location = useLocation()
   const { toast } = useToast()
   const route = `/${mediaType}/${workId}`
   const [isPwa, setIsPwa] = useState(isStandalonePwa)
@@ -87,8 +67,6 @@ function WorkDetails({ mediaType, workId }) {
   const [logVersion, setLogVersion] = useState(0)
   const [statsResult, setStatsResult] = useState(null)
   const [statsVersion, setStatsVersion] = useState(0)
-  const [reviewsResult, setReviewsResult] = useState(null)
-  const [reviewsVersion, setReviewsVersion] = useState(0)
   const [similarWorks, setSimilarWorks] = useState(null)
   const [spaces, setSpaces] = useState(null)
   const [expandedSynopsis, setExpandedSynopsis] = useState(false)
@@ -102,13 +80,25 @@ function WorkDetails({ mediaType, workId }) {
   const currentLog = !userId ? { status: 'ready', data: null } : logResult?.userId === userId && logResult.version === logVersion ? logResult : { status: 'loading' }
   const log = currentLog.data
   const stats = statsResult?.version === statsVersion ? statsResult : null
-  const reviews = reviewsResult?.version === reviewsVersion ? reviewsResult : null
   const systemBar = useSystemBarColor('#14b8a6')
 
   useLayoutEffect(() => { ownerRef.current = userId }, [userId])
   useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false } }, [])
   useLayoutEffect(() => { signalPwaRouteReady(route) }, [route])
-  useLayoutEffect(() => { restorePwaScroll() }, [work, stats, reviews, similarWorks, spaces])
+  useLayoutEffect(() => { restorePwaScroll() }, [work, stats, similarWorks, spaces])
+  useEffect(() => {
+    if (!work || location.hash !== '#reviews') return undefined
+    const entry = `${route}:${location.key}`
+    if (focusedReviewEntries.has(entry)) return undefined
+    const frame = requestAnimationFrame(() => {
+      const section = document.getElementById('reviews')
+      if (!section) return
+      section.scrollIntoView({ block: 'start' })
+      focusedReviewEntries.add(entry)
+      if (focusedReviewEntries.size > 40) focusedReviewEntries.delete(focusedReviewEntries.values().next().value)
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [work, location.hash, location.key, route])
 
   useEffect(() => {
     const media = window.matchMedia('(display-mode: standalone), (display-mode: fullscreen)')
@@ -143,14 +133,6 @@ function WorkDetails({ mediaType, workId }) {
     return () => { active = false }
   }, [work, mediaType, workId, statsVersion])
 
-  useEffect(() => {
-    if (!work) return undefined
-    let active = true
-    getWorkReviews(workId, mediaType, 1, 3, null, { throwOnError: true }).then(result => {
-      if (active) setReviewsResult({ version: reviewsVersion, status: 'ready', data: result.data.filter(entry => entry.review_text?.trim()), count: result.count })
-    }).catch(() => { if (active) setReviewsResult({ version: reviewsVersion, status: 'error' }) })
-    return () => { active = false }
-  }, [work, workId, mediaType, reviewsVersion])
 
   useEffect(() => {
     if (!work) return undefined
@@ -208,7 +190,7 @@ function WorkDetails({ mediaType, workId }) {
   const banner = work?.banner_url || cover
   const year = work ? releaseYear(work) : null
   const creators = work ? mediaType === 'anime' ? names(work.studios) : names(work.developers?.length ? work.developers : work.involved_companies?.filter(company => company.developer).map(company => company.company)) : []
-  const synopsis = work?.summary || work?.synopsis || 'No hay sinopsis disponible para esta obra.'
+  const synopsis = plainTextSynopsis(work?.summary || work?.synopsis) || 'No hay sinopsis disponible para esta obra.'
   const genres = names(work?.genres)
   const platforms = names(work?.platforms)
   const longSynopsis = synopsis.length > 420 || synopsis.split('\n').length > 5
@@ -217,7 +199,7 @@ function WorkDetails({ mediaType, workId }) {
     <SEO title={`${title} (${mediaType === 'game' ? 'Videojuego' : 'Anime'})`} description={`${title} en GeekSphere: valoraciones, reseñas y obras similares.`} />
     <div className={`work-backdrop${work?.banner_url ? ' has-banner' : ''}`} aria-hidden="true">{banner && <img src={banner} alt="" />}</div>
     <div className="work-page-inner">
-      <div className="work-topbar"><button type="button" className="work-back" onClick={() => navigateWorkBack(navigate)} aria-label="Volver"><WorkIcon name="back" /><span>Volver</span></button><span className="work-topbar-title">{title === 'Obra' ? '' : title}</span></div>
+      <div className="work-topbar"><button type="button" className="work-back" onClick={() => navigateWorkBack(navigate)} aria-label="Volver"><WorkIcon name="back" /><span>Volver</span></button></div>
       {!work ? workError ? <div className="work-page-state"><h1>{workError}</h1><p>Puedes volver a intentarlo o regresar a la página anterior.</p><button type="button" className="work-primary-button" onClick={() => setWorkVersion(version => version + 1)}>Reintentar</button></div> : <div className="work-page-loading" role="status" aria-label="Cargando obra"><div className="work-loading-hero"><span className="work-skeleton work-loading-cover" /><span className="work-loading-copy"><i className="work-skeleton" /><i className="work-skeleton" /><i className="work-skeleton" /></span></div><div className="work-loading-body work-skeleton" /></div> : <>
         <header className="work-hero">
           <WorkImage src={cover} title={title} className="work-main-cover" />
@@ -237,7 +219,7 @@ function WorkDetails({ mediaType, workId }) {
             {(!similarWorks || similarWorks.length > 0) && <section className="work-similar-section"><h2 className="work-section-heading">Obras similares</h2><div className="work-similar-grid">{similarWorks ? similarWorks.slice(0, 6).map(similar => <Link key={`${similar.media_type || mediaType}:${similar.id}`} to={`/${similar.media_type || mediaType}/${similar.id}`} title={similar.name || similar.title}><WorkImage src={coverImage(similar.cover_url || similar.image_url)} title={similar.name || similar.title} /><span>{similar.name || similar.title}</span></Link>) : [0, 1, 2].map(index => <span key={index} className="work-skeleton work-similar-skeleton" />)}</div></section>}
             {spaces?.length > 0 && <section className="work-spaces-section"><h2 className="work-section-heading">Espacios relacionados</h2><div className="work-spaces">{spaces.map(space => <Link key={space.id} to={`/spaces/${space.id}`}><span className="work-space-image">{space.avatar_url || space.banner_url ? <img src={space.avatar_url || space.banner_url} alt="" loading="lazy" /> : space.name?.slice(0, 1)}</span><span><strong>{space.name}{space.is_verified && <span className="work-space-verified" aria-label="Verificado">✓</span>}</strong><small>{space.member_count ?? 0} {space.member_count === 1 ? 'miembro' : 'miembros'}</small></span><WorkIcon name="arrow" /></Link>)}</div></section>}
           </aside>
-          <section className="work-reviews-section"><div className="work-section-header"><h2 className="work-section-heading">Reseñas recientes</h2><Link to={`${route}/reviews`}>Ver todas <WorkIcon name="arrow" /></Link></div>{!reviews ? <div className="work-reviews-loading" role="status" aria-label="Cargando reseñas">{[0, 1].map(index => <div key={index} className="work-skeleton" />)}</div> : reviews.status === 'error' ? <div className="work-inline-state"><p>No se pudieron cargar las reseñas.</p><button type="button" className="work-text-button" onClick={() => setReviewsVersion(version => version + 1)}>Reintentar</button></div> : reviews.data.length ? <div>{reviews.data.map(review => <WorkReview key={review.id} review={review} />)}</div> : <p className="work-empty">Esta obra todavía no tiene reseñas. La tuya puede ser la primera.</p>}</section>
+          <WorkCommunity key={userId || 'guest'} viewerKey={userId || 'guest'} workId={workId} mediaType={mediaType} stats={stats?.status === 'ready' ? stats.data : null} />
         </div>
       </>}
     </div>
