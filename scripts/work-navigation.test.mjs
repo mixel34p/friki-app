@@ -7,15 +7,15 @@ import { transformSync } from 'esbuild'
 const code = transformSync(await readFile(new URL('../src/lib/pwaRouteTransition.js', import.meta.url), 'utf8'), { format: 'cjs' }).code
 const tick = () => new Promise(resolve => setTimeout(resolve, 15))
 
-function environment({ standalone = true, transitions = true, index = 1 } = {}) {
+function environment({ standalone = true, transitions = true, index = 1, pathname = '/game/7' } = {}) {
   class PopEvent extends Event { constructor(type, { state }) { super(type); this.state = state } }
   const window = Object.assign(new EventTarget(), {
-    location: new URL('https://example.test/game/7'), history: { state: { idx: index, key: 'work' } },
+    location: new URL('https://example.test' + pathname), history: { state: { idx: index, key: 'work' } },
     matchMedia: query => ({ matches: query.includes('display-mode') && standalone }),
     scrollY: 0, innerHeight: 800, setTimeout, clearTimeout,
     scrollTo(x, y) { this.scrollY = y },
   })
-  let visibleRoute = '/game/7'
+  let visibleRoute = pathname
   let routerCalls = 0
   const snapshots = []
   const document = { documentElement: { dataset: {}, scrollHeight: 3000 }, body: {}, querySelector: () => null }
@@ -47,8 +47,24 @@ function environment({ standalone = true, transitions = true, index = 1 } = {}) 
 
 test('work details join the existing transition routes without capturing unrelated subpages', () => {
   const env = environment()
-  for (const route of ['/game/7', '/anime/10', '/posts/post-1', '/reviews/review-1', '/share']) assert.ok(env.controller.isPwaTransitionRoute(route))
-  for (const route of ['/game/7/reviews', '/game/7/edit', '/search', '/lists/new']) assert.equal(env.controller.isPwaTransitionRoute(route), false)
+  for (const route of ['/game/7', '/anime/10', '/posts/post-1', '/reviews/review-1', '/share', '/discover/anime', '/discover/games?order=rated']) assert.ok(env.controller.isPwaTransitionRoute(route))
+  for (const route of ['/game/7/reviews', '/game/7/edit', '/search', '/lists/new', '/discover/users', '/discover/games/extra']) assert.equal(env.controller.isPwaTransitionRoute(route), false)
+  env.cleanup()
+})
+
+test('discovery screens use directional native back and forward without capturing filter history', async () => {
+  const env = environment({ pathname: '/discover/games' })
+  env.pop('/discover/games', 0, 'filter')
+  assert.equal(env.calls(), 1)
+  assert.equal(env.snapshots.length, 0)
+  env.pop('/search', 0, 'search')
+  await tick(); await tick()
+  assert.equal(env.calls(), 2)
+  assert.equal(env.snapshots[0].direction, 'back')
+  env.pop('/discover/games', 1, 'catalog')
+  await tick(); await tick()
+  assert.equal(env.calls(), 3)
+  assert.equal(env.snapshots[1].direction, 'forward')
   env.cleanup()
 })
 

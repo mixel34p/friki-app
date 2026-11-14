@@ -1,7 +1,7 @@
 import { navigateBackOrHome } from './navigation'
 
-const WORK_ROUTE = /^\/(?:game|anime)\/[^/?#]+\/?$/
-const TRANSITION_ROUTE = /^\/share(?:[?#].*)?$|^\/(?:posts|reviews)\/[^/?#]+(?:[?#].*)?$|^\/(?:game|anime)\/[^/?#]+\/?(?:[?#].*)?$|^\/(?:lists|templates)\/(?!new(?:[/?#]|$))[^/?#]+(?:[?#].*)?$/
+const SCREEN_ROUTE = /^\/(?:game|anime)\/[^/?#]+\/?$|^\/discover\/(?:anime|games)\/?$/
+const TRANSITION_ROUTE = /^\/share(?:[?#].*)?$|^\/(?:posts|reviews)\/[^/?#]+(?:[?#].*)?$|^\/(?:game|anime)\/[^/?#]+\/?(?:[?#].*)?$|^\/discover\/(?:anime|games)\/?(?:[?#].*)?$|^\/(?:lists|templates)\/(?!new(?:[/?#]|$))[^/?#]+(?:[?#].*)?$/
 let pendingRoute = null
 let pendingHistory = null
 let currentPath = null
@@ -25,7 +25,7 @@ function getPathname(to) {
 }
 
 function rememberScroll() {
-  const surface = document.querySelector('.work-detail-pwa')
+  const surface = document.querySelector('.work-detail-pwa, .discover-detail-pwa')
   scrollPositions.set(currentKey || historyKey(), { windowY: window.scrollY, workY: surface?.scrollTop || 0 })
   if (scrollPositions.size > 40) scrollPositions.delete(scrollPositions.keys().next().value)
 }
@@ -39,7 +39,7 @@ function clearScrollRestore() {
 
 export function restorePwaScroll(force = false) {
   if (!pendingScroll) return
-  const surface = document.querySelector('.work-detail-pwa')
+  const surface = document.querySelector('.work-detail-pwa, .discover-detail-pwa')
   const top = surface ? pendingScroll.workY : pendingScroll.windowY
   const available = surface ? surface.scrollHeight - surface.clientHeight : document.documentElement.scrollHeight - window.innerHeight
   if (!force && available + 1 < top) return
@@ -79,7 +79,7 @@ export function navigatePwaRoute(navigate, to, options) {
   const ready = new Promise(resolve => { resolveReady = resolve })
   const request = { pathname, resolve: resolveReady }
   pendingRoute = request
-  const workTransition = WORK_ROUTE.test(pathname) || WORK_ROUTE.test(window.location.pathname)
+  const workTransition = SCREEN_ROUTE.test(pathname) || SCREEN_ROUTE.test(window.location.pathname)
   if (workTransition) document.documentElement.dataset.pwaWorkDirection = 'forward'
   const timer = window.setTimeout(resolveReady, 3000)
   const clear = () => {
@@ -122,16 +122,16 @@ function transitionWorkHistory(action, direction = 'back') {
       return transition
     } catch { /* Use the screen animation on browsers without working view transitions. */ }
   }
-  const surface = document.querySelector('.work-detail-pwa')
+  const surface = document.querySelector('.work-detail-pwa, .discover-detail-pwa')
   if (surface?.animate && !reducedMotion() && direction === 'back') {
     const animation = surface.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(100%)' }], { duration: 280, easing: 'cubic-bezier(.22,.8,.24,1)', fill: 'forwards' })
     animation.finished.then(() => { action(); ready.then(clear) }, () => { action(); ready.then(clear) })
   } else { action(); ready.then(clear) }
 }
 
-export function navigateWorkBack(navigate) {
-  if (!isStandalonePwa()) return navigateBackOrHome(navigate)
-  return transitionWorkHistory(() => navigateBackOrHome(navigate))
+export function navigateWorkBack(navigate, fallback = '/home') {
+  if (!isStandalonePwa()) return navigateBackOrHome(navigate, fallback)
+  return transitionWorkHistory(() => navigateBackOrHome(navigate, fallback))
 }
 
 // Capture native history before the router so the outgoing work screen can be
@@ -142,7 +142,8 @@ export function installWorkHistoryTransitions() {
   currentIndex = window.history.state?.idx ?? 0
   const onPop = event => {
     if (replayedEvents.has(event) || pendingHistory || !isStandalonePwa()) return
-    if (!WORK_ROUTE.test(currentPath || '') && !WORK_ROUTE.test(window.location.pathname)) return
+    if (currentPath === window.location.pathname) return
+    if (!SCREEN_ROUTE.test(currentPath || '') && !SCREEN_ROUTE.test(window.location.pathname)) return
     event.stopImmediatePropagation()
     const replay = new PopStateEvent('popstate', { state: event.state })
     replayedEvents.add(replay)
