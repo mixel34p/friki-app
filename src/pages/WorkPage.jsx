@@ -8,9 +8,8 @@ import { getSpacesByWork } from '../lib/spaceService'
 import { plainTextSynopsis } from '../lib/plainTextSynopsis'
 import { isStandalonePwa, navigatePwaRoute, navigateWorkBack, restorePwaScroll, signalPwaRouteReady } from '../lib/pwaRouteTransition'
 import useSystemBarColor from '../hooks/useSystemBarColor'
-import DefaultAvatar from '../components/DefaultAvatar'
 import { useToast } from '../components/Toast'
-import WorkRatings, { WorkStars } from '../components/WorkRatings'
+import WorkRatings, { WorkMembers, WorkStars } from '../components/WorkRatings'
 import WorkCommunity from '../components/WorkCommunity'
 import SEO from '../components/SEO'
 import './WorkPage.css'
@@ -135,12 +134,12 @@ function WorkDetails({ mediaType, workId }) {
 
 
   useEffect(() => {
-    if (!work) return undefined
+    if (!work || isPwa) return undefined
     let active = true
     getSimilarWorks(mediaType, Number(workId), work.genres).then(data => { if (active) setSimilarWorks(data || []) }).catch(() => { if (active) setSimilarWorks([]) })
     getSpacesByWork(Number(workId)).then(data => { if (active) setSpaces(data || []) }).catch(() => { if (active) setSpaces([]) })
     return () => { active = false }
-  }, [work, workId, mediaType])
+  }, [work, workId, mediaType, isPwa])
 
   const ensureProfile = () => {
     if (!user) { navigate('/register'); return false }
@@ -209,15 +208,15 @@ function WorkDetails({ mediaType, workId }) {
             <button type="button" className={`work-wishlist-button${inWishlist ? ' is-active' : ''}`} onClick={toggleWishlist} aria-pressed={inWishlist} disabled={savingWishlist}><WorkIcon name="bookmark" />{inWishlist ? 'En wishlist' : 'Wishlist'}</button>
             {log && <div className="work-personal-log">{log.rating != null ? <><span>Tu valoración</span><WorkStars rating={Number(log.rating)} /><strong>{Number(log.rating).toLocaleString('es-ES')}</strong></> : <><WorkIcon name="check" /><span>En tu diario</span></>}</div>}
           </div>
-          <WorkRatings state={stats} onRetry={() => setStatsVersion(version => version + 1)} />
+          <WorkRatings state={stats} onRetry={() => setStatsVersion(version => version + 1)} variant={isPwa ? 'pwa' : 'default'} />
         </header>
-        <div className="work-community">{stats?.status === 'ready' && <><span className="work-member-avatars">{stats.data.recentMembers.map(member => <Link key={member.id} to={`/profile/${member.username}`} title={member.username}>{member.avatar_url ? <img src={member.avatar_url} alt={member.username} loading="lazy" /> : <DefaultAvatar accent={member.theme_color} />}</Link>)}</span><span><strong>{stats.data.membersCount.toLocaleString('es-ES')}</strong> {stats.data.membersCount === 1 ? 'persona ha registrado esta obra' : 'personas han registrado esta obra'}</span></>}</div>
+        {!isPwa && <WorkMembers stats={stats?.status === 'ready' ? stats.data : null} />}
         <div className="work-body">
           <section className="work-synopsis-section"><h2 className="work-section-heading">Sinopsis</h2><p id="work-synopsis" className={`work-synopsis${longSynopsis && !expandedSynopsis ? ' is-collapsed' : ''}`}>{synopsis}</p>{longSynopsis && <button className="work-text-button" type="button" aria-expanded={expandedSynopsis} aria-controls="work-synopsis" onClick={() => setExpandedSynopsis(value => !value)}>{expandedSynopsis ? 'Leer menos' : 'Leer más'}</button>}{mediaType === 'game' && <p className="work-data-source">Datos de <a href="https://www.igdb.com" target="_blank" rel="noreferrer">IGDB</a></p>}</section>
           <aside className="work-secondary">
             <section className="work-details-section"><h2 className="work-section-heading">Detalles</h2><dl className="work-details"><div><dt>Tipo</dt><dd>{mediaType === 'game' ? 'Videojuego' : 'Anime'}</dd></div>{year && <div><dt>Estreno</dt><dd>{year}</dd></div>}{creators.length > 0 && <div><dt>{mediaType === 'game' ? 'Desarrollo' : 'Estudio'}</dt><dd>{creators.join(', ')}</dd></div>}{genres.length > 0 && <div><dt>Géneros</dt><dd>{genres.join(' · ')}</dd></div>}{platforms.length > 0 && <div><dt>Plataformas</dt><dd>{platforms.join(' · ')}</dd></div>}{mediaType === 'anime' && work.status && <div><dt>Estado</dt><dd>{work.status}</dd></div>}{mediaType === 'anime' && work.episodes != null && <div><dt>Episodios</dt><dd>{work.episodes}</dd></div>}</dl></section>
-            {(!similarWorks || similarWorks.length > 0) && <section className="work-similar-section"><h2 className="work-section-heading">Obras similares</h2><div className="work-similar-grid">{similarWorks ? similarWorks.slice(0, 6).map(similar => <Link key={`${similar.media_type || mediaType}:${similar.id}`} to={`/${similar.media_type || mediaType}/${similar.id}`} title={similar.name || similar.title}><WorkImage src={coverImage(similar.cover_url || similar.image_url)} title={similar.name || similar.title} /><span>{similar.name || similar.title}</span></Link>) : [0, 1, 2].map(index => <span key={index} className="work-skeleton work-similar-skeleton" />)}</div></section>}
-            {spaces?.length > 0 && <section className="work-spaces-section"><h2 className="work-section-heading">Espacios relacionados</h2><div className="work-spaces">{spaces.map(space => <Link key={space.id} to={`/spaces/${space.id}`}><span className="work-space-image">{space.avatar_url || space.banner_url ? <img src={space.avatar_url || space.banner_url} alt="" loading="lazy" /> : space.name?.slice(0, 1)}</span><span><strong>{space.name}{space.is_verified && <span className="work-space-verified" aria-label="Verificado">✓</span>}</strong><small>{space.member_count ?? 0} {space.member_count === 1 ? 'miembro' : 'miembros'}</small></span><WorkIcon name="arrow" /></Link>)}</div></section>}
+            {!isPwa && (!similarWorks || similarWorks.length > 0) && <section className="work-similar-section"><h2 className="work-section-heading">Obras similares</h2><div className="work-similar-grid">{similarWorks ? similarWorks.slice(0, 6).map(similar => <Link key={`${similar.media_type || mediaType}:${similar.id}`} to={`/${similar.media_type || mediaType}/${similar.id}`} title={similar.name || similar.title}><WorkImage src={coverImage(similar.cover_url || similar.image_url)} title={similar.name || similar.title} /><span>{similar.name || similar.title}</span></Link>) : [0, 1, 2].map(index => <span key={index} className="work-skeleton work-similar-skeleton" />)}</div></section>}
+            {!isPwa && spaces?.length > 0 && <section className="work-spaces-section"><h2 className="work-section-heading">Espacios relacionados</h2><div className="work-spaces">{spaces.map(space => <Link key={space.id} to={`/spaces/${space.id}`}><span className="work-space-image">{space.avatar_url || space.banner_url ? <img src={space.avatar_url || space.banner_url} alt="" loading="lazy" /> : space.name?.slice(0, 1)}</span><span><strong>{space.name}{space.is_verified && <span className="work-space-verified" aria-label="Verificado">✓</span>}</strong><small>{space.member_count ?? 0} {space.member_count === 1 ? 'miembro' : 'miembros'}</small></span><WorkIcon name="arrow" /></Link>)}</div></section>}
           </aside>
           <WorkCommunity key={userId || 'guest'} viewerKey={userId || 'guest'} workId={workId} mediaType={mediaType} stats={stats?.status === 'ready' ? stats.data : null} />
         </div>

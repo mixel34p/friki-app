@@ -17,7 +17,8 @@ const score = value => Number(value).toLocaleString('es-ES', { maximumFractionDi
 
 function AuthorAvatar({ author, className }) {
   const [failed, setFailed] = useState(false)
-  return author?.avatar_url && !failed ? <img className={className} src={author.avatar_url} alt="" loading="lazy" onError={() => setFailed(true)} /> : <DefaultAvatar className={className} accent={author?.theme_color} />
+  const style = { borderColor: author?.theme_color || 'var(--work-accent)' }
+  return author?.avatar_url && !failed ? <img className={className} style={style} src={author.avatar_url} alt="" loading="lazy" onError={() => setFailed(true)} /> : <DefaultAvatar className={className} style={style} accent={author?.theme_color} />
 }
 
 function WorkReview({ review }) {

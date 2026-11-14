@@ -24,7 +24,7 @@
 .work-community-feed .wr-ratings-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 26px 12px; padding-top: 4px; }
 .work-community-feed .wr-rating-card { display: flex; min-width: 0; flex-direction: column; align-items: center; gap: 10px; margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
 .work-community-feed .wr-rating-avatar-link { display: grid; max-width: 100%; justify-items: center; gap: 8px; color: var(--text-primary); text-decoration: none; }
-.work-community-feed .wr-user-avatar { display: block; width: 58px; height: 58px; border: 2px solid var(--work-accent); border-radius: 50%; object-fit: cover; }
+.work-community-feed .wr-user-avatar { display: block; box-sizing: border-box; width: 58px; height: 58px; border: 2px solid var(--work-accent); border-radius: 50%; object-fit: cover; }
 .work-rating-user-name { display: block; max-width: 100%; overflow: hidden; font: 550 .82rem/1.4 var(--font-sans); text-overflow: ellipsis; white-space: nowrap; }
 .work-community-feed .wr-rating-card-score { display: inline-flex; align-items: center; justify-content: center; gap: 5px; color: var(--text-secondary); font: 500 .8rem/1.2 var(--font-sans); }
 .work-community-feed .wr-rating-card-score .work-stars { gap: 1px; }
