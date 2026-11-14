@@ -6,6 +6,7 @@ import { getDiscoverLists } from '../lib/listService'
 import { useAuth } from '../context/AuthContext'
 import DefaultAvatar from '../components/DefaultAvatar'
 import { hasCustomAvatar } from '../lib/avatar'
+import { isStandalonePwa } from '../lib/pwaRouteTransition'
 import SEO from '../components/SEO'
 import './Search.css'
 
@@ -139,10 +140,10 @@ function ResultLink({ item, active, id, onClick, display = 'row' }) {
   </Link>
 }
 
-function SearchInput({ value, onChange, onFocus, onKeyDown, inputRef, resultsId, isOpen, activeDescendant }) {
+function SearchInput({ value, onChange, onFocus, onKeyDown, inputRef, resultsId, isOpen, activeDescendant, previewEnabled = true, onCompositionChange }) {
   return <div className="search-input-shell">
     <SearchIcon />
-    <input ref={inputRef} type="search" role="combobox" aria-autocomplete="list" aria-expanded={isOpen} aria-controls={resultsId} aria-activedescendant={activeDescendant || undefined} aria-label="Buscar obras, espacios y usuarios" placeholder="Busca cualquier cosa" value={value} onChange={event => onChange(event.target.value)} onFocus={onFocus} onKeyDown={onKeyDown} autoComplete="off" />
+    <input ref={inputRef} type="search" role={previewEnabled ? 'combobox' : undefined} aria-autocomplete={previewEnabled ? 'list' : undefined} aria-expanded={previewEnabled ? isOpen : undefined} aria-controls={previewEnabled ? resultsId : undefined} aria-activedescendant={previewEnabled ? activeDescendant || undefined : undefined} aria-label="Buscar obras, espacios y usuarios" placeholder="Busca cualquier cosa" value={value} onChange={event => onChange(event.target.value)} onFocus={onFocus} onKeyDown={onKeyDown} onCompositionStart={() => onCompositionChange?.(true)} onCompositionEnd={() => onCompositionChange?.(false)} autoComplete="off" />
     {value && <button className="search-clear" type="button" onClick={() => onChange('')} aria-label="Borrar búsqueda">×</button>}
   </div>
 }
@@ -332,6 +333,8 @@ export default function Search() {
   const location = useLocation()
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
+  const [isPwa, setIsPwa] = useState(isStandalonePwa)
+  const [isComposing, setIsComposing] = useState(false)
   const normalizedPath = location.pathname.replace(/\/+$/, '')
   const isResults = normalizedPath === '/search/results' || (normalizedPath === '/search' && params.has('filter'))
   const urlQuery = params.get('q') || ''
@@ -360,7 +363,35 @@ export default function Search() {
   const draftPreviewActive = isResults && previewQuery.trim() !== urlQuery.trim()
   const previewData = draftPreviewActive ? draftData : data
   const previewLoading = draftPreviewActive ? draftLoading : loading
-  const previewOpen = isFocused && previewQuery.trim().length >= 2
+  const previewOpen = !isPwa && isFocused && previewQuery.trim().length >= 2
+  const requestQuery = isPwa ? isResults ? urlQuery.trim() : '' : debouncedQuery
+
+  useEffect(() => {
+    const media = window.matchMedia('(display-mode: standalone), (display-mode: fullscreen)')
+    const update = () => setIsPwa(isStandalonePwa())
+    media.addEventListener('change', update)
+    return () => media.removeEventListener('change', update)
+  }, [])
+
+  useEffect(() => { if (isPwa && !isResults) setLocalQuery(urlQuery) }, [isPwa, isResults, urlQuery])
+
+  useEffect(() => {
+    if (!isPwa || isComposing) return undefined
+    const term = query.trim()
+    if (isResults ? term === urlQuery.trim() : term.length < 2) return undefined
+    const timer = window.setTimeout(() => {
+      const next = new URLSearchParams(params)
+      if (term) next.set('q', term)
+      else next.delete('q')
+      next.set('filter', filter)
+      if (isResults) setParams(next, { replace: true })
+      else {
+        setResultsDraft(term)
+        navigate(`/search/results?${next.toString()}`)
+      }
+    }, 400)
+    return () => window.clearTimeout(timer)
+  }, [isPwa, isComposing, query, urlQuery, isResults, params, filter, navigate, setParams])
 
   useEffect(() => { const timer = window.setTimeout(() => setDebouncedQuery(searchTerm.trim()), 300); return () => window.clearTimeout(timer) }, [searchTerm])
   useEffect(() => { const timer = window.setTimeout(() => setDebouncedResultsDraft(resultsDraft.trim()), 300); return () => window.clearTimeout(timer) }, [resultsDraft])
@@ -369,7 +400,7 @@ export default function Search() {
 
   useEffect(() => {
     const term = debouncedResultsDraft.trim()
-    if (!isResults || term.length < 2 || term === urlQuery.trim()) {
+    if (isPwa || !isResults || term.length < 2 || term === urlQuery.trim()) {
       setDraftData({ works: [], spaces: [], users: [], lists: [], errors: {} })
       setDraftLoading(false)
       return undefined
@@ -383,21 +414,21 @@ export default function Search() {
       if (!cancelled) setDraftData({ works: [], spaces: [], users: [], lists: [], errors: { all: error } })
     }).finally(() => { if (!cancelled) setDraftLoading(false) })
     return () => { cancelled = true; controller.abort() }
-  }, [debouncedResultsDraft, isResults, urlQuery])
+  }, [debouncedResultsDraft, isResults, urlQuery, isPwa])
 
   useEffect(() => {
-    if (debouncedQuery.trim().length < 2) return undefined
+    if (requestQuery.trim().length < 2) return undefined
     const requestId = ++requestRef.current
     let cancelled = false
     const controller = new AbortController()
     setLoading(true)
-    searchPlatform(debouncedQuery, isResults ? 20 : 8, controller.signal, isResults ? filter : 'all').then(result => {
+    searchPlatform(requestQuery, isResults ? 20 : 8, controller.signal, isResults ? filter : 'all').then(result => {
       if (!cancelled && requestId === requestRef.current) setData(result)
     }).catch(error => {
       if (!cancelled && requestId === requestRef.current) setData({ works: [], spaces: [], users: [], lists: [], errors: { all: error } })
     }).finally(() => { if (!cancelled && requestId === requestRef.current) setLoading(false) })
     return () => { cancelled = true; controller.abort(); requestRef.current += 1 }
-  }, [debouncedQuery, isResults, filter])
+  }, [requestQuery, isResults, filter])
 
   useEffect(() => {
     let cancelled = false
@@ -426,11 +457,13 @@ export default function Search() {
 
   const flatResults = useMemo(() => [...previewData.works.slice(0, 8), ...previewData.spaces.slice(0, 8), ...previewData.lists.slice(0, MAX_SEARCH_LISTS), ...previewData.users.slice(0, 8)], [previewData])
   const viewAll = useCallback(() => {
-    const next = new URLSearchParams({ q: query.trim(), filter: 'all' })
+    if (isPwa && isResults && query.trim() === urlQuery.trim()) return
+    const next = new URLSearchParams({ q: query.trim(), filter: isPwa ? filter : 'all' })
     setIsFocused(false)
     setLoading(true)
-    navigate(`/search/results?${next.toString()}`)
-  }, [navigate, query])
+    if (isPwa) setResultsDraft(query.trim())
+    navigate(`/search/results?${next.toString()}`, isPwa && isResults ? { replace: true } : undefined)
+  }, [navigate, query, isPwa, isResults, urlQuery, filter])
   const onInputChange = value => {
     setActiveIndex(-1)
     if (isResults) {
@@ -443,6 +476,7 @@ export default function Search() {
     }
   }
   const onInputKeyDown = event => {
+    if (isPwa && event.nativeEvent.isComposing) return
     if (event.key === 'Escape') { setIsFocused(false); setActiveIndex(-1); inputRef.current?.blur(); return }
     if (!previewOpen) { if (event.key === 'Enter' && query.trim()) viewAll(); return }
     if (event.key === 'ArrowDown') { event.preventDefault(); setActiveIndex(index => Math.min(index + 1, flatResults.length)) }
@@ -476,12 +510,12 @@ export default function Search() {
     {isResults ? <div className="search-results-layout">
       <div className="search-results-main">
       <section className={`search-universal${previewOpen ? ' has-preview' : ''}`} aria-label="Búsqueda global">
-        <SearchInput value={query} onChange={onInputChange} onFocus={() => setIsFocused(true)} onKeyDown={onInputKeyDown} inputRef={inputRef} resultsId="search-preview" isOpen={previewOpen} activeDescendant={activeDescendant} />
+        <SearchInput value={query} onChange={onInputChange} onFocus={() => setIsFocused(true)} onKeyDown={onInputKeyDown} inputRef={inputRef} resultsId="search-preview" isOpen={previewOpen} activeDescendant={activeDescendant} previewEnabled={!isPwa} onCompositionChange={setIsComposing} />
         {previewOpen && <Preview query={previewQuery} data={previewData} loading={previewLoading} error={Object.keys(previewData.errors || {}).length > 0} activeIndex={activeIndex} onSelect={() => setIsFocused(false)} onViewAll={viewAll} listRef={listRef} />}
       </section>
       <section className="search-results-content" aria-live="polite">
         <nav className="search-filters" aria-label="Filtrar resultados" style={{ '--filter-index': FILTERS.findIndex(item => item.id === filter), '--filter-count': FILTERS.length }}>
-          {FILTERS.map(item => <button type="button" key={item.id} className={filter === item.id ? 'active' : ''} aria-pressed={filter === item.id} onClick={() => { setResultsDraft(urlQuery); const next = new URLSearchParams(params); next.set('filter', item.id); if (urlQuery.trim()) next.set('q', urlQuery.trim()); setParams(next) }}>{item.label}</button>)}
+          {FILTERS.map(item => <button type="button" key={item.id} className={filter === item.id ? 'active' : ''} aria-pressed={filter === item.id} onClick={() => { const term = isPwa ? query.trim() : urlQuery.trim(); setResultsDraft(term); const next = new URLSearchParams(params); next.set('filter', item.id); if (term) next.set('q', term); else next.delete('q'); setParams(next, isPwa ? { replace: true } : undefined) }}>{item.label}</button>)}
         </nav>
         {urlQuery.trim().length < 2 ? <div className="search-full-empty"><span>⌕</span><h2>Empieza con dos letras o más</h2><p>Busca títulos, espacios y usuarios.</p></div>
           : loading && !data.works.length && !data.spaces.length && !data.users.length && !data.lists.length ? <SearchSkeleton />
@@ -502,7 +536,7 @@ export default function Search() {
     </div> : <div className="search-landing-layout">
       <div className="search-landing-main">
         <section className={`search-universal${previewOpen ? ' has-preview' : ''}`} aria-label="Búsqueda global">
-          <SearchInput value={query} onChange={onInputChange} onFocus={() => setIsFocused(true)} onKeyDown={onInputKeyDown} inputRef={inputRef} resultsId="search-preview" isOpen={previewOpen} activeDescendant={activeDescendant} />
+          <SearchInput value={query} onChange={onInputChange} onFocus={() => setIsFocused(true)} onKeyDown={onInputKeyDown} inputRef={inputRef} resultsId="search-preview" isOpen={previewOpen} activeDescendant={activeDescendant} previewEnabled={!isPwa} onCompositionChange={setIsComposing} />
           {previewOpen && <Preview query={previewQuery} data={previewData} loading={previewLoading} error={Object.keys(previewData.errors || {}).length > 0} activeIndex={activeIndex} onSelect={() => setIsFocused(false)} onViewAll={viewAll} listRef={listRef} />}
         </section>
         <section className="search-explore" aria-labelledby="explore-title">

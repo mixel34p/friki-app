@@ -60,18 +60,16 @@ function ListArtwork({ images, type }) {
 function ListCard({ item, template = false }) {
   const images = template ? templatePreviewImages(item) : collectListPreviewImages(item.content)
   const profile = template ? item.profiles : item.author
+  const href = (template ? '/templates/' : '/lists/') + item.id
+  const title = item.title || (template ? 'Plantilla sin título' : 'Lista sin título')
   return <article className="discover-list-card">
-    <Link to={(template ? '/templates/' : '/lists/') + item.id} className="discover-list-card-link">
-      <ListArtwork images={images} type={item.list_type} />
-      <span className="discover-list-card-copy">
-        <strong>{item.title || (template ? 'Plantilla sin título' : 'Lista sin título')}</strong>
-        <span className="discover-list-card-tags"><span>{listTypeName(item.list_type)}</span>{item.media_type && <><span aria-hidden="true">·</span><span>{item.media_type === 'game' ? 'Juegos' : item.media_type === 'anime' ? 'Anime' : item.media_type}</span></>}</span>
-      </span>
-    </Link>
-    <footer className="discover-list-card-footer">
+    <Link to={href} className="discover-list-thumbnail" tabIndex={-1} aria-hidden="true"><ListArtwork images={images} type={item.list_type} /></Link>
+    <div className="discover-list-card-copy">
+      <Link to={href} className="discover-list-card-link"><strong>{title}</strong></Link>
+      <span className="discover-list-card-tags"><span>{listTypeName(item.list_type)}</span>{item.media_type && <><span aria-hidden="true">·</span><span>{item.media_type === 'game' ? 'Juegos' : item.media_type === 'anime' ? 'Anime' : item.media_type}</span></>}</span>
       <Author key={profile?.id || 'anonymous'} profile={profile} />
-      {template ? <span className="discover-list-uses">{Number(item.uses_count || 0).toLocaleString('es-ES')} {Number(item.uses_count) === 1 ? 'uso' : 'usos'}</span> : <div className="discover-list-like"><ListLikeButton listId={item.id} compact /></div>}
-    </footer>
+    </div>
+    {template ? <span className="discover-list-uses"><strong>{Number(item.uses_count || 0).toLocaleString('es-ES', { notation: 'compact', maximumFractionDigits: 1 })}</strong><span>{Number(item.uses_count) === 1 ? 'uso' : 'usos'}</span></span> : <div className="discover-list-like"><ListLikeButton listId={item.id} compact /></div>}
   </article>
 }
 
