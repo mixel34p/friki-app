@@ -887,6 +887,7 @@
   .share-review-picker-results > p { padding: 16px 4px; color: var(--text-muted); font-size: .84rem; }
   .share-review-picker-results > button { display: flex; width: 100%; min-height: 76px; align-items: center; gap: 14px; padding: 10px 4px; border: 0; border-bottom: 1px solid rgba(255,255,255,.07); color: var(--text-primary); background: transparent; text-align: left; }
   .share-review-picker-results > button img { width: 44px; height: 58px; flex: 0 0 44px; border-radius: 9px; object-fit: cover; }
+  .share-review-picker-results > button img[src="/icons/logo.png"] { object-fit: contain; }
   .share-review-picker-results > button span { display: grid; min-width: 0; flex: 1; gap: 5px; }
   .share-review-picker-results > button strong { overflow: hidden; font-size: .86rem; text-overflow: ellipsis; white-space: nowrap; }
   .share-review-picker-results > button small { color: var(--text-muted); font-size: .72rem; }

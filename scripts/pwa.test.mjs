@@ -15,6 +15,7 @@ function worker(fetch) {
     self: {
       location: { origin: 'https://geeksphere.example' },
       addEventListener: (name, handler) => { handlers[name] = handler },
+      skipWaiting: async () => {},
       clients: { claim: async () => {} },
     },
     caches: {
@@ -34,7 +35,8 @@ test('manifest has standalone launch and icons of the declared sizes', async () 
   assert.equal(manifest.scope, '/')
   assert.equal(manifest.prefer_related_applications, false)
   for (const icon of manifest.icons) {
-    const png = await readFile(new URL(`../public${icon.src}`, import.meta.url))
+    const iconPath = new URL(icon.src, 'https://geeksphere.example').pathname
+    const png = await readFile(new URL(`../public${iconPath}`, import.meta.url))
     assert.equal(png.subarray(1, 4).toString(), 'PNG')
     assert.equal(`${png.readUInt32BE(16)}x${png.readUInt32BE(20)}`, icon.sizes)
   }

@@ -8,7 +8,9 @@ import {
     getSimilarWorks,
     getWorkStats
 } from '../lib/workPageService'
-import { getWorkLog, getWorkReviews } from '../lib/libraryService'
+import { getWorkLog, getWorkReviews, logWork } from '../lib/libraryService'
+import { useToast } from '../components/Toast'
+import { format } from 'date-fns'
 import { formatRelativeDate } from '../lib/formatRelativeDate'
 import { getSpacesByWork } from '../lib/spaceService'
 import LogModal from '../components/LogModal'
@@ -27,6 +29,7 @@ import { SiSega } from 'react-icons/si'
 export default function WorkPage({ mediaType }) {
     const { id } = useParams()
     const { user, profile, updateProfile } = useAuth()
+    const { toast } = useToast()
     const navigate = useNavigate()
     // Data states
     const [work, setWork] = useState(null)
@@ -41,6 +44,7 @@ export default function WorkPage({ mediaType }) {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
     const [showReviewModal, setShowReviewModal] = useState(false)
+    const [registering, setRegistering] = useState(false)
     const [reviewsRefreshTrigger, setReviewsRefreshTrigger] = useState(0)
 
     useEffect(() => {
@@ -102,6 +106,35 @@ export default function WorkPage({ mediaType }) {
             await updateProfile({ wishlist: newWishlist });
         } catch (error) {
             console.error('Error toggling wishlist', error);
+        }
+    }
+
+    const handleRegister = async () => {
+        if (!user) {
+            navigate('/register')
+            return
+        }
+        if (!profile) {
+            navigate('/onboarding')
+            return
+        }
+        if (registering || userReview) return
+
+        setRegistering(true)
+        try {
+            const savedLog = await logWork(user.id, id, mediaType, {
+                rating: null,
+                review_text: null,
+                contains_spoiler: false,
+                finished_date: format(new Date(), 'yyyy-MM-dd')
+            })
+            await handleReviewAdded(savedLog)
+            toast({ title: 'Obra registrada', type: 'success' })
+        } catch (err) {
+            console.error('Error registering work:', err)
+            toast({ title: 'No se pudo registrar la obra', message: 'Inténtalo de nuevo.', type: 'error' })
+        } finally {
+            setRegistering(false)
         }
     }
 
@@ -302,9 +335,9 @@ export default function WorkPage({ mediaType }) {
                                 )}
                             </>
                         ) : (
-                            <button className="interaction-btn" onClick={openReviewModal}>
+                            <button className="interaction-btn" onClick={handleRegister} disabled={registering} aria-busy={registering}>
                                 <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2"><path d="M12 5v14M5 12h14"></path></svg>
-                                Registrar / Reseñar
+                                {registering ? 'Registrando...' : 'Registrar'}
                             </button>
                         )}
                         <button 

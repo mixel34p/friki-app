@@ -64,7 +64,7 @@
 .register-composition { width: min(100%, 880px); margin: 0 auto; }
 .register-hero { display: flex; flex-direction: column; align-items: center; margin: 0 auto 30px; text-align: center; }
 .register-mark { display: grid; width: auto; height: auto; place-items: center; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
-.register-mark img { width: 48px; height: 48px; object-fit: contain; }
+.register-mark img { display: block; width: 72px; height: 72px; object-fit: contain; }
 .register-hero h1 { margin: 19px 0 0; color: var(--text-primary); font: 800 clamp(2.4rem,5.6vw,4rem)/1.03 var(--font-display); letter-spacing: -.06em; }
 .register-hero h1 span { color: var(--brand-primary); }
 .register-form-section { width: min(100%, 620px); margin: 0 auto; }
@@ -94,7 +94,7 @@
     .auth-page.auth-register-page { padding: 10px 0 28px; }
     .auth-page.auth-login-page { padding: 10px 0 28px; }
     .register-hero { margin-bottom: 22px; }
-    .register-mark img { width: 42px; height: 42px; }
+    .register-mark img { width: 64px; height: 64px; }
     .register-hero h1 { margin-top: 14px; font-size: clamp(2.1rem,9vw,3rem); }
     .register-form-section { width: min(100%, 620px); }
 }

@@ -283,7 +283,7 @@ export default function ViewTierlist() {
                 description="Puedes mirar esta tierlist en geeksphere."
                 ogTitle={tierlist.title}
                 ogDescription="Puedes mirar esta tierlist en geeksphere."
-                ogImage={tierlist.screenshot_url || Object.values(legacyImages)[0] || '/logo.png'}
+                ogImage={tierlist.screenshot_url || Object.values(legacyImages)[0] || '/icons/logo.png'}
             />
             <div className="container">
                 {/* Header */}

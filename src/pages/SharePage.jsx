@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import DefaultAvatar from '../components/DefaultAvatar'
 import MentionSuggestions from '../components/MentionSuggestions'
 import MentionHighlights from '../components/MentionHighlights'
+import ShareActivitySidebar from '../components/ShareActivitySidebar'
 import useSystemBarColor from '../hooks/useSystemBarColor'
 import useMentionAutocomplete from '../hooks/useMentionAutocomplete'
 import { supabase } from '../lib/supabase'
@@ -165,6 +166,7 @@ export default function SharePage() {
   const [existingWorkEntry, setExistingWorkEntry] = useState(null)
   const [deletingEntry, setDeletingEntry] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [activityVersion, setActivityVersion] = useState(0)
   const [imageDimensions, setImageDimensions] = useState({})
   const [previewLayout, setPreviewLayout] = useState({ width: 0, viewportHeight: 0, isMobile: false })
   const isOverLimit = text.length > POST_LIMIT
@@ -746,6 +748,7 @@ export default function SharePage() {
     setDeletingEntry(true)
     try {
       await deleteWorkLog(user.id, selectedReview.id, selectedReview.type)
+      setActivityVersion(version => version + 1)
       setExistingWorkEntry(null)
       setSelectedReview(null)
       setDeleteConfirmOpen(false)
@@ -1096,6 +1099,7 @@ export default function SharePage() {
           <div className="share-delete-actions"><button type="button" className="share-delete-cancel" onClick={() => setDeleteConfirmOpen(false)} disabled={deletingEntry}>Cancelar</button><button type="button" className="share-delete-confirm" onClick={handleDeleteEntry} disabled={deletingEntry}>{deletingEntry ? 'Eliminando…' : 'Eliminar entrada'}</button></div>
         </section>
       </div>, document.body)}
+      <ShareActivitySidebar userId={user?.id} accent={accent} refreshKey={activityVersion} />
     </section>
   )
 }

@@ -828,7 +828,7 @@
 .onboarding-page.onboarding-in-layout { display: flex; justify-content: center; align-items: flex-start; }
 .onboarding-content-shell { width: min(100%, 880px); margin: 0 auto; padding: 18px 0 30px; }
 .onboarding-hero { display: flex; flex-direction: column; align-items: center; margin: 0 auto 30px; text-align: center; }
-.onboarding-hero img { width: 48px; height: 48px; object-fit: contain; }
+.onboarding-hero img { display: block; width: 72px; height: 72px; object-fit: contain; }
 .onboarding-hero h1 { margin: 17px 0 0; color: var(--text-primary); font: 800 clamp(2.1rem, 4.5vw, 3.25rem)/1.04 var(--font-display); letter-spacing: -.055em; }
 .onboarding-hero h1 span { color: var(--brand-primary); }
 .onboarding-in-layout .onboarding-container {
@@ -909,7 +909,7 @@
 @media (max-width: 560px) {
     .onboarding-content-shell { padding: 10px 0 24px; }
     .onboarding-hero { margin-bottom: 25px; }
-    .onboarding-hero img { width: 42px; height: 42px; }
+    .onboarding-hero img { width: 64px; height: 64px; }
     .onboarding-hero h1 { margin-top: 13px; font-size: clamp(1.9rem, 8vw, 2.5rem); }
     .onboarding-avatar-control { width: 100px; height: 100px; }
 }

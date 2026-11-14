@@ -55,17 +55,17 @@ const DEFAULT_ICONS = {
 }
 
 /* ── Single toast card ── */
-function ToastItem({ id, title, message, type = 'info', icon, duration, exiting, onDismiss, variant }) {
+function ToastItem({ title, message, type = 'info', icon, exiting, onDismiss }) {
     const resolvedIcon = icon ?? DEFAULT_ICONS[type] ?? DEFAULT_ICONS.info
 
     return (
         <div
-            className={`toast-card${variant ? ` toast-card-${variant}` : ''}${exiting ? ' exiting' : ''}`}
+            className={`toast-card${exiting ? ' exiting' : ''}`}
             data-type={type}
-            role="alert"
-            aria-live="polite"
+            role={type === 'error' ? 'alert' : 'status'}
+            aria-atomic="true"
         >
-            <div className="toast-icon-wrap">
+            <div className="toast-icon-wrap" aria-hidden="true">
                 {resolvedIcon}
             </div>
 
@@ -74,18 +74,10 @@ function ToastItem({ id, title, message, type = 'info', icon, duration, exiting,
                 {message && <div className="toast-message">{message}</div>}
             </div>
 
-            <button className="toast-dismiss" onClick={onDismiss} aria-label="Cerrar">
+            <button type="button" className="toast-dismiss" onClick={onDismiss} aria-label="Cerrar notificación">
                 <IconX />
             </button>
 
-            {duration > 0 && (
-                <div className="toast-progress-wrap">
-                    <div
-                        className="toast-progress-bar"
-                        style={{ '--toast-duration': `${duration}ms` }}
-                    />
-                </div>
-            )}
         </div>
     )
 }
@@ -96,12 +88,12 @@ export function ToastProvider({ children }) {
 
     const dismiss = useCallback((id) => {
         setToasts(prev => prev.map(t => t.id === id ? { ...t, exiting: true } : t))
-        setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 320)
+        setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 180)
     }, [])
 
-    const toast = useCallback(({ title, message, type = 'info', icon, duration = 4000, position = 'bottom', variant } = {}) => {
+    const toast = useCallback(({ title, message, type = 'info', icon, duration = 2000 } = {}) => {
         const id = ++_id
-        setToasts(prev => [...prev, { id, title, message, type, icon, duration, position, variant, exiting: false }])
+        setToasts(prev => [...prev, { id, title, message, type, icon, exiting: false }])
         if (duration > 0) {
             setTimeout(() => dismiss(id), duration)
         }
@@ -112,28 +104,20 @@ export function ToastProvider({ children }) {
         const accountLabel = sessionStorage.getItem('geeksphere.account-switched-toast')
         if (accountLabel === null) return
         sessionStorage.removeItem('geeksphere.account-switched-toast')
-        toast({ title: `Ahora estás en ${accountLabel || 'tu cuenta'}`, type: 'success', position: 'top', variant: 'account-switch', duration: 2000 })
+        toast({ title: `Ahora estás en ${accountLabel || 'tu cuenta'}`, type: 'success', duration: 2000 })
     }, [toast])
 
     return (
         <ToastContext.Provider value={{ toast, dismiss }}>
             {children}
             {createPortal(
-                <div className="toast-container toast-container-top" aria-label="Notificaciones">
-                    {toasts.filter(t => t.position === 'top').map(t => (
+                <div className="toast-container" aria-label="Notificaciones">
+                    {toasts.map(t => (
                         <ToastItem
                             key={t.id}
                             {...t}
                             onDismiss={() => dismiss(t.id)}
                         />
-                    ))}
-                </div>,
-                document.body
-            )}
-            {createPortal(
-                <div className="toast-container" aria-label="Notificaciones">
-                    {toasts.filter(t => t.position !== 'top').map(t => (
-                        <ToastItem key={t.id} {...t} onDismiss={() => dismiss(t.id)} />
                     ))}
                 </div>,
                 document.body
