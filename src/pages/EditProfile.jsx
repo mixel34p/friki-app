@@ -802,7 +802,7 @@ export default function EditProfile({ onClose, standalone = false, pwaPage = fal
                     <div className="ep-settings-editor">
                         <div className="ep-modal-header">
                             {pwaPage && <button type="button" className="pwa-settings-back" onClick={() => navigateWorkBack(navigate, '/settings')} aria-label="Volver a ajustes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg></button>}
-                            <h1 className="ep-modal-title">{activeSection === 'blocked' ? 'Bloqueados y silenciados' : activeSection === 'account' ? 'Cuenta' : pwaPage ? 'Perfil' : 'Personalización'}</h1>
+                            <h1 className="ep-modal-title">{activeSection === 'blocked' ? (pwaPage ? 'Usuarios bloqueados' : 'Bloqueados y silenciados') : activeSection === 'account' ? 'Cuenta' : pwaPage ? 'Editar perfil' : 'Personalización'}</h1>
                             {activeSection === 'photos' && <button type="submit" form="profile-settings-form" className="btn btn-primary ep-settings-save-button" disabled={saving || !!usernameError}>{saving ? 'Guardando…' : 'Guardar'}</button>}
                         </div>
                         <input ref={fileInputRef} type="file" accept="image/*" onChange={e => handleFileChange(e, 'avatar')} hidden />

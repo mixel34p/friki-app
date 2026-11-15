@@ -7,14 +7,14 @@ import { navigateWorkBack, signalPwaRouteReady } from '../lib/pwaRouteTransition
 import './SettingsHome.css'
 
 const groups = [
-  { title: 'Tu perfil', options: [
-    { to: '/settings/profile', title: 'perfil', description: 'foto, nombre, bio, acento, fuente, fondo y favoritos' },
+  { title: 'Personalización', options: [
+    { to: '/settings/profile', title: 'Editar perfil', description: 'Cambia tu foto, biografía, favoritos y estilo del perfil.' },
   ] },
-  { title: 'Quién te ve', options: [
-    { to: '/settings/blocked', title: 'bloqueados y silenciados', description: 'a quién bloqueaste o silenciaste' },
+  { title: 'Privacidad', options: [
+    { to: '/settings/blocked', title: 'Usuarios bloqueados', description: 'Consulta y gestiona las cuentas que has bloqueado.' },
   ] },
-  { title: 'Tu cuenta', options: [
-    { to: '/settings/account', title: 'cuenta', description: 'conexiones, acceso y opciones de tu cuenta' },
+  { title: 'Cuenta', options: [
+    { to: '/settings/account', title: 'Conexiones y acceso', description: 'Vincula tus cuentas, cierra sesión o gestiona tu cuenta.' },
   ] },
 ]
 
@@ -37,7 +37,7 @@ export default function SettingsHome() {
         <button type="button" className="pwa-settings-back" onClick={() => navigateWorkBack(navigate, '/profile')} aria-label="Volver al perfil">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
         </button>
-        <h1>ajustes</h1>
+        <h1>Ajustes</h1>
         <button type="button" className="pwa-settings-back settings-pwa-search-toggle" aria-label={searchOpen ? 'Cerrar búsqueda de ajustes' : 'Buscar en ajustes'} aria-expanded={searchOpen} aria-controls="settings-search" onClick={() => { setSearchOpen(open => !open); setQuery('') }}>
           <svg viewBox="0 0 24 24" aria-hidden="true">{searchOpen ? <path d="m6 6 12 12M6 18 18 6" /> : <><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 4 4" /></>}</svg>
         </button>

@@ -1550,7 +1550,7 @@ img.square-cover { height: auto !important; aspect-ratio: 1/1 !important; }
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
-  background: #000;
+  background: var(--bg-primary);
   backdrop-filter: none;
   animation: none;
 }
@@ -1590,7 +1590,7 @@ img.square-cover { height: auto !important; aspect-ratio: 1/1 !important; }
   margin: 0 -16px 12px;
   padding: 8px 16px;
   border: 0;
-  background: rgba(0,0,0,.94);
+  background: color-mix(in srgb, var(--bg-primary) 94%, transparent);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
 }

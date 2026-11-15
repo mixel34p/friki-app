@@ -667,7 +667,7 @@ export default function Profile() {
                             )}
                             <div className="profile-actions">
                                 {isOwnProfile ? (
-                                    <button onClick={() => isStandalonePwa ? navigatePwaRoute(navigate, '/settings') : navigate('/settings')} className="btn btn-secondary profile-edit-button">
+                                    <button onClick={() => isStandalonePwa ? navigatePwaRoute(navigate, '/settings/profile') : navigate('/settings')} className="btn btn-secondary profile-edit-button">
                                         <IconEdit /> Editar perfil
                                     </button>
                                 ) : (
