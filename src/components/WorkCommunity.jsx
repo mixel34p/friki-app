@@ -73,9 +73,9 @@ export default function WorkCommunity({ workId, mediaType, stats, viewerKey }) {
   const navigationType = useNavigationType()
   const historyKey = `${viewerKey}:${mediaType}:${workId}:${location.key}`
   const [initial] = useState(() => navigationType === 'POP' ? feedHistory.get(historyKey) : null)
-  const [kind, setKind] = useState(initial?.kind || 'reviews')
-  const [rating, setRating] = useState(initial?.rating ?? null)
-  const [page, setPage] = useState(initial?.page || 1)
+  const [selectedKind, setKind] = useState(initial?.kind || 'reviews')
+  const [selectedRating, setRating] = useState(initial?.rating ?? null)
+  const [selectedPage, setPage] = useState(initial?.page || 1)
   const [retry, setRetry] = useState(0)
   const [feed, setFeed] = useState(initial?.feed || null)
   const [knownCounts, setKnownCounts] = useState({ reviews: null, ratings: null })
@@ -83,13 +83,18 @@ export default function WorkCommunity({ workId, mediaType, stats, viewerKey }) {
   const tabsRef = useRef(null)
   const tabRefs = useRef({})
   const id = useId()
+  const counts = { reviews: stats?.reviewsCount ?? knownCounts.reviews, ratings: stats?.ratingsCount ?? knownCounts.ratings }
+  const unrated = counts.ratings === 0
+  const kind = unrated ? 'reviews' : selectedKind
+  const rating = unrated ? null : selectedRating
+  const page = unrated && (selectedKind === 'ratings' || selectedRating != null) ? 1 : selectedPage
+  const tabs = unrated ? TABS.filter(tab => tab.id !== 'ratings') : TABS
   const filterKey = `${kind}:${rating ?? 'all'}`
   const queryId = `${filterKey}:${page}:${retry}`
   const current = feed?.filterKey === filterKey ? feed : null
   const loading = current?.queryId !== queryId
   const items = current?.items || []
   const hasMore = current?.status === 'ready' && current.page * PAGE_SIZE < current.count
-  const counts = { reviews: stats?.reviewsCount ?? knownCounts.reviews, ratings: stats?.ratingsCount ?? knownCounts.ratings }
 
   useEffect(() => {
     if (loading || current?.status !== 'ready') return
@@ -127,6 +132,7 @@ export default function WorkCommunity({ workId, mediaType, stats, viewerKey }) {
   }, [filterOpen, kind])
 
   const selectTab = next => {
+    if (unrated) return
     if (next === kind) { setFilterOpen(value => !value); return }
     setKind(next)
     setPage(1)
@@ -139,7 +145,7 @@ export default function WorkCommunity({ workId, mediaType, stats, viewerKey }) {
     tabRefs.current[kind]?.focus()
   }
   const tabKeys = event => {
-    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
+    if (unrated || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
     event.preventDefault()
     const next = event.key === 'Home' ? 'reviews' : event.key === 'End' ? 'ratings' : kind === 'reviews' ? 'ratings' : 'reviews'
     if (next !== kind) selectTab(next)
@@ -147,11 +153,11 @@ export default function WorkCommunity({ workId, mediaType, stats, viewerKey }) {
   }
   const empty = rating != null ? `No hay ${kind === 'reviews' ? 'reseñas' : 'valoraciones'} con ${score(rating)} estrellas.` : kind === 'reviews' ? 'Esta obra todavía no tiene reseñas. La tuya puede ser la primera.' : 'Esta obra todavía no tiene valoraciones.'
 
-  return <section className="work-reviews-section work-community-feed" id="reviews" aria-label="Reviews y valoraciones">
+  return <section className="work-reviews-section work-community-feed" id="reviews" aria-label={unrated ? 'Reviews' : 'Reviews y valoraciones'}>
     <div className="wr-tabs" role="tablist" aria-label="Contenido de la obra" ref={tabsRef}>
-      {TABS.map(tab => <div className="wr-tab-item" key={tab.id}>
-        <button type="button" role="tab" id={`${id}-${tab.id}`} aria-controls={`${id}-panel`} aria-selected={kind === tab.id} aria-expanded={kind === tab.id && filterOpen} aria-haspopup="dialog" tabIndex={kind === tab.id ? 0 : -1} className={`wr-tab${kind === tab.id ? ' active' : ''}`} ref={node => { tabRefs.current[tab.id] = node }} onClick={() => selectTab(tab.id)} onKeyDown={tabKeys}>{tab.label}<span>{counts[tab.id] == null ? '—' : counts[tab.id].toLocaleString('es-ES')}</span></button>
-        {kind === tab.id && filterOpen && <StarFilter label={tab.label} selected={rating} onSelect={selectRating} />}
+      {tabs.map(tab => <div className="wr-tab-item" key={tab.id}>
+        <button type="button" role="tab" id={`${id}-${tab.id}`} aria-controls={`${id}-panel`} aria-selected={kind === tab.id} aria-expanded={unrated ? undefined : kind === tab.id && filterOpen} aria-haspopup={unrated ? undefined : 'dialog'} tabIndex={kind === tab.id ? 0 : -1} className={`wr-tab${kind === tab.id ? ' active' : ''}`} ref={node => { tabRefs.current[tab.id] = node }} onClick={() => selectTab(tab.id)} onKeyDown={tabKeys}>{tab.label}<span>{counts[tab.id] == null ? '—' : counts[tab.id].toLocaleString('es-ES')}</span></button>
+        {!unrated && kind === tab.id && filterOpen && <StarFilter label={tab.label} selected={rating} onSelect={selectRating} />}
       </div>)}
     </div>
     {rating != null && <div className="work-review-filter-note"><span>{score(rating)} estrellas</span><button type="button" onClick={() => selectRating(null)}>Quitar filtro</button></div>}

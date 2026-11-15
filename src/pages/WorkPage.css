@@ -225,3 +225,13 @@ body:has(.work-detail-pwa) { overflow: hidden; }
   .work-detail-pwa.work-motion-enter, .work-skeleton { animation: none; }
   .work-page *, .work-page *::before, .work-page *::after { transition: none !important; }
 }
+
+/* Collapse the space reserved for community ratings on unrated works. */
+.work-hero.work-hero--unrated { grid-template-columns: 160px minmax(0, 1fr); grid-template-areas: 'poster identity' 'poster actions'; }
+@media (max-width: 1240px) {
+  .work-hero.work-hero--unrated { grid-template-columns: 144px minmax(0, 1fr); }
+}
+@media (max-width: 700px) {
+  .work-hero.work-hero--unrated { grid-template-columns: 104px minmax(0, 1fr); grid-template-areas: 'poster identity' 'actions actions'; }
+}
+.work-detail-pwa .work-hero.work-hero--unrated { grid-template-columns: clamp(100px, 32%, 190px) minmax(0, 1fr); grid-template-areas: 'poster identity' 'actions actions'; }

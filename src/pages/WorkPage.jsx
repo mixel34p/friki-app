@@ -192,6 +192,7 @@ function WorkDetails({ mediaType, workId }) {
   const synopsis = plainTextSynopsis(work?.summary || work?.synopsis) || 'No hay sinopsis disponible para esta obra.'
   const genres = names(work?.genres)
   const platforms = names(work?.platforms)
+  const unrated = stats?.status === 'ready' && Number(stats.data.ratingsCount) === 0
   const longSynopsis = synopsis.length > 420 || synopsis.split('\n').length > 5
 
   return <div className={`work-page${isPwa ? ` work-detail-pwa${managedMotion ? '' : ' work-motion-enter'}` : ''}`} style={{ '--work-system-bar': systemBar }}>
@@ -200,7 +201,7 @@ function WorkDetails({ mediaType, workId }) {
     <div className="work-page-inner">
       <div className="work-topbar"><button type="button" className="work-back" onClick={() => navigateWorkBack(navigate)} aria-label="Volver"><WorkIcon name="back" /><span>Volver</span></button></div>
       {!work ? workError ? <div className="work-page-state"><h1>{workError}</h1><p>Puedes volver a intentarlo o regresar a la página anterior.</p><button type="button" className="work-primary-button" onClick={() => setWorkVersion(version => version + 1)}>Reintentar</button></div> : <div className="work-page-loading" role="status" aria-label="Cargando obra"><div className="work-loading-hero"><span className="work-skeleton work-loading-cover" /><span className="work-loading-copy"><i className="work-skeleton" /><i className="work-skeleton" /><i className="work-skeleton" /></span></div><div className="work-loading-body work-skeleton" /></div> : <>
-        <header className="work-hero">
+        <header className={`work-hero${unrated ? ' work-hero--unrated' : ''}`}>
           <WorkImage src={cover} title={title} className="work-main-cover" />
           <div className="work-identity"><p className="work-eyebrow">{workType(mediaType).label}{year && <><span>·</span>{year}</>}</p><h1>{title}</h1>{creators.length > 0 && <p className="work-creators">{creators.slice(0, 3).join(' · ')}</p>}</div>
           <div className="work-actions">
@@ -210,7 +211,7 @@ function WorkDetails({ mediaType, workId }) {
           </div>
           <WorkRatings state={stats} onRetry={() => setStatsVersion(version => version + 1)} variant={isPwa ? 'pwa' : 'default'} />
         </header>
-        {!isPwa && <WorkMembers stats={stats?.status === 'ready' ? stats.data : null} />}
+        {(!isPwa || unrated) && <WorkMembers stats={stats?.status === 'ready' ? stats.data : null} compact={isPwa} />}
         <div className="work-body">
           <section className="work-synopsis-section"><h2 className="work-section-heading">Sinopsis</h2><p id="work-synopsis" className={`work-synopsis${longSynopsis && !expandedSynopsis ? ' is-collapsed' : ''}`}>{synopsis}</p>{longSynopsis && <button className="work-text-button" type="button" aria-expanded={expandedSynopsis} aria-controls="work-synopsis" onClick={() => setExpandedSynopsis(value => !value)}>{expandedSynopsis ? 'Leer menos' : 'Leer más'}</button>}{mediaType === 'manga' && <p className="work-data-source">Datos de <a href={work.source_url} target="_blank" rel="noreferrer">MyAnimeList</a>{work.stale && ' · Datos guardados; el proveedor no está disponible.'}</p>}{mediaType === 'game' && <p className="work-data-source">Datos de <a href="https://www.igdb.com" target="_blank" rel="noreferrer">IGDB</a></p>}</section>
           <aside className="work-secondary">

@@ -44,9 +44,10 @@ export default function WorkRatings({ state, onRetry, variant = 'default' }) {
   if (!state || state.status === 'loading') return <section className="work-rating-block work-rating-loading" aria-label="Cargando valoraciones" aria-busy="true"><span className="work-skeleton" /><span className="work-skeleton" /></section>
   if (state.status === 'error') return <section className="work-rating-block work-rating-error"><p>No se pudieron cargar las valoraciones.</p><button type="button" onClick={onRetry}>Reintentar</button></section>
   const stats = state.data
+  if (!stats.ratingsCount) return null
   return <section className="work-rating-block" aria-label="Valoraciones de la comunidad">
     <div className="work-rating-summary"><strong className="work-rating-average">{stats.avgRating == null ? '—' : Number(stats.avgRating).toLocaleString('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</strong><div><WorkStars rating={stats.avgRating} /><span className="work-rating-count">{variant === 'pwa' ? `promedio de ${compactNumber(stats.ratingsCount)}` : number(stats.ratingsCount)} {stats.ratingsCount === 1 ? 'valoración' : 'valoraciones'}</span></div></div>
-    {stats.ratingsCount ? <WorkRatingDistribution distribution={stats.distribution} total={stats.ratingsCount} /> : <p className="work-unrated">Todavía no hay valoraciones.</p>}
+    <WorkRatingDistribution distribution={stats.distribution} total={stats.ratingsCount} />
     {variant === 'pwa' && <WorkMembers stats={stats} compact />}
   </section>
 }
