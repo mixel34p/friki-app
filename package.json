@@ -12,6 +12,7 @@
     "test:search-recommendations": "node --test scripts/search-recommendations.test.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
+    "test:pwa-more:browser": "node scripts/pwa-more-browser.test.mjs",
     "test:saved": "node --test scripts/saved-items.test.mjs",
     "test:saved:browser": "node scripts/saved-items-browser.test.mjs"
   },

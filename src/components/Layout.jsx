@@ -1,5 +1,5 @@
 import { createPostgresChannel } from '../lib/postgresChannel'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { SiKofi } from 'react-icons/si'
@@ -10,6 +10,7 @@ import { hasCustomAvatar } from '../lib/avatar'
 import { ListsEntryModal } from '../pages/lists/ListsEntry'
 import DefaultAvatar from './DefaultAvatar'
 import InstallApp from './InstallApp'
+import PwaMoreDrawer from './PwaMoreDrawer'
 import { isPwaTransitionRoute, isStandalonePwa, navigatePwaRoute } from '../lib/pwaRouteTransition'
 import './Layout.css'
 
@@ -27,25 +28,41 @@ const Icon = ({ name }) => {
     logout: <><path d="M10 17l5-5-5-5M15 12H3"/><path d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"/></>,
     arrow: <><path d="m9 18 6-6-6-6"/></>,
     user: <><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></>,
+    invite: <><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0M19 8v6M16 11h6"/></>,
+    saved: <path d="M6 3h12v18l-6-4-6 4V3z"/>,
+    groups: <><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></>,
+    settings: <><path d="m10 3-.6 2.3-2 .9-2.1-.7-2 3.5L5 10.6v2.8l-1.7 1.6 2 3.5 2.1-.7 2 .9.6 2.3h4l.6-2.3 2-.9 2.1.7 2-3.5-1.7-1.6v-2.8L20.7 9l-2-3.5-2.1.7-2-.9L14 3z"/><circle cx="12" cy="12" r="3"/></>,
   }
   return <svg {...common}>{paths[name]}</svg>
 }
 
-function MoreMenu({ profile, image, username, accentColor, onSignOut, accounts = [], userId, onSwitchAccount, onAddAccount, switchingAccountId }) {
+function subscribePwaMode(listener) {
+  const query = window.matchMedia('(display-mode: standalone), (display-mode: fullscreen)')
+  query.addEventListener('change', listener)
+  return () => query.removeEventListener('change', listener)
+}
+
+function MoreMenu({ profile, image, username, accentColor, onSignOut, accounts = [], userId, onSwitchAccount, onAddAccount, switchingAccountId, pwa = false, profilePath }) {
   const [accountsOpen, setAccountsOpen] = useState(false)
+  const accountsButtonRef = useRef(null)
+  const accountsBackRef = useRef(null)
+  const location = useLocation()
+  useLayoutEffect(() => {
+    if (pwa) (accountsOpen ? accountsBackRef : accountsButtonRef).current?.focus({ preventScroll: true })
+  }, [accountsOpen, pwa])
   const displayName = profile?.display_name || username || 'Mi cuenta'
   const accountCount = new Set([...accounts.map(account => account.id), userId].filter(Boolean)).size
   const canAddAccount = accountCount < 3
   if (accountsOpen) return <>
     <div className="more-submenu-heading">
-      <button className="more-submenu-back" type="button" aria-label="Volver al menú" onClick={() => setAccountsOpen(false)}>
+      <button ref={accountsBackRef} className="more-submenu-back" type="button" aria-label="Volver al menú" onClick={() => setAccountsOpen(false)}>
         <Icon name="arrow" />
       </button>
       <strong>Cuentas</strong>
     </div>
     <div className="more-submenu-divider" />
     <button className={`more-current-account ${switchingAccountId === userId ? 'is-switching' : ''}`} type="button" aria-current="true" aria-busy={switchingAccountId === userId} aria-label={`${displayName}, cuenta actual`}>
-      {image ? <img src={image} alt="" /> : <DefaultAvatar className="more-account-avatar-placeholder" accent={profile?.theme_color} />}
+      {image ? <img src={image} alt="" /> : <DefaultAvatar className="more-account-avatar-placeholder" accent={pwa ? getVisibleAccentColor(profile?.theme_color || '#14b8a6') : profile?.theme_color} />}
       <span className="more-account-copy"><strong>{displayName}</strong><small>@{username || 'usuario'}</small></span>
       {switchingAccountId === userId
         ? <span className="more-account-loading-spinner" role="status" aria-label="Cambiando de cuenta" />
@@ -58,7 +75,7 @@ function MoreMenu({ profile, image, username, accentColor, onSignOut, accounts =
       const savedImage = (hasCustomAvatar(savedProfile?.avatar_url) && savedProfile.avatar_url) || (hasCustomAvatar(savedProfile?.profile_picture) && savedProfile.profile_picture) || null
       const isSwitching = account.id === switchingAccountId
       return <button key={account.id} className={`more-current-account ${isSwitching ? 'is-switching' : ''}`} type="button" onClick={() => onSwitchAccount(account.id)} aria-label={`Cambiar a ${savedName}`} aria-busy={isSwitching}>
-        {savedImage ? <img src={savedImage} alt="" /> : <DefaultAvatar className="more-account-avatar-placeholder" accent={savedProfile?.theme_color} />}
+        {savedImage ? <img src={savedImage} alt="" /> : <DefaultAvatar className="more-account-avatar-placeholder" accent={pwa ? getVisibleAccentColor(savedProfile?.theme_color || '#14b8a6') : savedProfile?.theme_color} />}
         <span className="more-account-copy"><strong>{savedName}</strong><small>{savedUsername ? `@${savedUsername}` : account.email}</small></span>
         {isSwitching && <span className="more-account-loading-spinner" role="status" aria-label="Cambiando de cuenta" />}
       </button>
@@ -70,16 +87,33 @@ function MoreMenu({ profile, image, username, accentColor, onSignOut, accounts =
     </nav>
   </>
   return <>
-    <button className="more-account" type="button" aria-haspopup="true" aria-expanded="false" onClick={() => setAccountsOpen(true)}>
+    {pwa ? <div className="pwa-more-identity">
+      <Link className="pwa-more-profile" to={profilePath} aria-label={`Ver perfil de ${displayName}`}>
+        {image ? <img src={image} alt="" /> : <DefaultAvatar accent={getVisibleAccentColor(profile?.theme_color || '#14b8a6')} />}
+        <strong>{displayName}</strong>
+        <small>@{username || 'usuario'}</small>
+      </Link>
+      <button ref={accountsButtonRef} className="pwa-more-account-toggle" type="button" aria-label="Cambiar de cuenta" aria-expanded={false} onClick={() => setAccountsOpen(true)}>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 10 4-4 4 4M8 14l4 4 4-4"/></svg>
+      </button>
+    </div> : <button className="more-account" type="button" aria-haspopup="true" aria-expanded="false" onClick={() => setAccountsOpen(true)}>
       {image ? <img src={image} alt="" /> : <DefaultAvatar className="more-account-avatar-placeholder" accent={profile?.theme_color} />}
       <span className="more-account-copy"><strong>{displayName}</strong><small>@{username || 'usuario'}</small></span>
       <svg className="more-account-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m8 10 4-4 4 4M8 14l4 4 4-4"/></svg>
-    </button>
+    </button>}
     <nav className="more-menu-links" aria-label="Más opciones">
-      <Link className="more-menu-link" to="/settings">Ajustes</Link>
-      <Link className="more-menu-link" to="/saved">Guardados</Link>
-      <Link className="more-menu-link" to="/groups">Grupos</Link>
-      <Link className="more-menu-link" to="/invite">Invitar</Link>
+      {pwa ? [
+        { to: profilePath, icon: 'user', label: 'Mi perfil' },
+        { to: '/invite', icon: 'invite', label: 'Invitar amigos' },
+        { to: '/saved', icon: 'saved', label: 'Guardados' },
+        { to: '/groups', icon: 'groups', label: 'Grupos' },
+        { to: '/settings', icon: 'settings', label: 'Ajustes' },
+      ].map(item => <Link key={item.to} className="more-menu-link" to={item.to} aria-current={location.pathname === item.to ? 'page' : undefined}><Icon name={item.icon} /><span>{item.label}</span></Link>) : <>
+        <Link className="more-menu-link" to="/settings">Ajustes</Link>
+        <Link className="more-menu-link" to="/saved">Guardados</Link>
+        <Link className="more-menu-link" to="/groups">Grupos</Link>
+        <Link className="more-menu-link" to="/invite">Invitar</Link>
+      </>}
       <a className="more-menu-link more-menu-support" href="https://ko-fi.com/mixel34" target="_blank" rel="noopener noreferrer" aria-label="Apoyar en Ko-fi (se abre en una pestaña nueva)">
         <SiKofi className="more-menu-kofi-icon" aria-hidden="true" />
         <span>Apoyar</span>
@@ -107,10 +141,13 @@ export default function Layout() {
   const menuRef = useRef(null)
   const moreButtonRef = useRef(null)
   const moreMenuContentRef = useRef(null)
+  const moreTriggerRef = useRef(null)
   const mobileNavRef = useRef(null)
   const mobileTopbarRef = useRef(null)
   const [moreMenuPosition, setMoreMenuPosition] = useState({ left: 256, bottom: 14 })
   const isDesktop = typeof window !== 'undefined' && window.innerWidth > 960
+  const isPwa = useSyncExternalStore(subscribePwaMode, isStandalonePwa)
+  const closeMoreMenu = useCallback(() => setMoreOpen(false), [])
 
   useEffect(() => {
     const transitionDetailNavigation = event => {
@@ -169,8 +206,10 @@ export default function Layout() {
       setSwitchingAccountId(null)
     }
   }
-  const moreMenu = <MoreMenu profile={profile} image={image} username={username} userId={user?.id} accounts={accounts} onSwitchAccount={changeAccount} onAddAccount={addAccount} switchingAccountId={switchingAccountId} accentColor={getVisibleAccentColor(profile?.theme_color || 'var(--brand-primary)')} onSignOut={handleSignOut} />
-  const toggleMoreMenu = () => {
+  const themeStyle = { '--profile-theme-color': profile?.theme_color || 'var(--brand-primary)', '--profile-accent-visible': getVisibleAccentColor(profile?.theme_color || '#14b8a6'), '--profile-accent-text': getAccentTextColor(profile?.theme_color || '#14b8a6') }
+  const moreMenu = <MoreMenu profile={profile} image={image} username={username} userId={user?.id} accounts={accounts} onSwitchAccount={changeAccount} onAddAccount={addAccount} switchingAccountId={switchingAccountId} accentColor={getVisibleAccentColor(profile?.theme_color || 'var(--brand-primary)')} onSignOut={handleSignOut} pwa={isPwa} profilePath={profilePath} />
+  const toggleMoreMenu = event => {
+    moreTriggerRef.current = event.currentTarget
     if (moreOpen) { setMoreOpen(false); return }
     if (isDesktop && moreButtonRef.current) {
       const rect = moreButtonRef.current.getBoundingClientRect()
@@ -228,7 +267,7 @@ export default function Layout() {
   const mobileNavIndex = active('/home') ? 0 : active('/search') ? 1 : active('/share') ? 2 : active('/spaces') ? 3 : -1
 
   return (
-    <div className="layout" style={{ '--profile-theme-color': profile?.theme_color || 'var(--brand-primary)', '--profile-accent-visible': getVisibleAccentColor(profile?.theme_color || '#14b8a6'), '--profile-accent-text': getAccentTextColor(profile?.theme_color || '#14b8a6') }}>
+    <div className="layout" style={themeStyle}>
       <aside className="app-sidebar" aria-label="Navegación principal">
         <Link className="sidebar-brand" to="/home" aria-label="GeekSphere, inicio">
           <span className="sidebar-brand-mark"><img src="/icons/logo.png" alt="" onError={event => { event.currentTarget.style.display = 'none' }} /></span>
@@ -264,8 +303,8 @@ export default function Layout() {
         </Link>
         <div className="sidebar-bottom-space" />
         <div className="sidebar-popover-anchor more-anchor" ref={menuRef}>
-          <button ref={moreButtonRef} className="sidebar-link more-link" type="button" aria-label="Más" aria-expanded={moreOpen} onClick={toggleMoreMenu}><Icon name="more"/><span>Más</span></button>
-          {moreOpen && !isDesktop && <section className="sidebar-popover more-popover" aria-label="Más opciones">{moreMenu}</section>}
+          <button ref={moreButtonRef} className="sidebar-link more-link" type="button" aria-label="Más" aria-expanded={moreOpen} aria-haspopup={isPwa ? 'dialog' : undefined} aria-controls={isPwa && moreOpen ? 'pwa-more-menu' : undefined} onClick={toggleMoreMenu}><Icon name="more"/><span>Más</span></button>
+          {moreOpen && !isPwa && !isDesktop && <section className="sidebar-popover more-popover" aria-label="Más opciones">{moreMenu}</section>}
         </div>
         </>}
         <InstallApp className="sidebar-install" />
@@ -285,8 +324,8 @@ export default function Layout() {
             </Link>
           </div>}
           {user && <div className="mobile-topbar-anchor">
-            <button className={`mobile-topbar-button ${moreOpen ? 'active' : ''}`} type="button" aria-label="Abrir menú" aria-expanded={moreOpen} onClick={toggleMoreMenu}><Icon name="more"/></button>
-            {moreOpen && <section className="sidebar-popover mobile-topbar-popover mobile-topbar-menu" aria-label="Menú">{moreMenu}</section>}
+            <button className={`mobile-topbar-button ${moreOpen ? 'active' : ''}`} type="button" aria-label="Abrir menú" aria-expanded={moreOpen} aria-haspopup={isPwa ? 'dialog' : undefined} aria-controls={isPwa && moreOpen ? 'pwa-more-menu' : undefined} onClick={toggleMoreMenu}><Icon name="more"/></button>
+            {moreOpen && !isPwa && <section className="sidebar-popover mobile-topbar-popover mobile-topbar-menu" aria-label="Menú">{moreMenu}</section>}
           </div>}
         </div>
       </header>
@@ -313,7 +352,8 @@ export default function Layout() {
       <main className={`main ${['/terms', '/privacy', '/community-guidelines'].includes(location.pathname) ? 'legal-main' : ''} ${location.pathname === '/onboarding' ? 'onboarding-main' : ''} ${location.pathname === '/invite' ? 'invite-main' : ''} ${isProfilePage ? 'profile-main' : ''} ${isWorkPage ? 'work-main' : ''} ${['/discover/anime', '/discover/games', '/discover/manga', '/discover/lists'].includes(location.pathname) ? 'discover-works-main' : ''} ${location.pathname === '/discover/spaces' || location.pathname === '/spaces/explore' ? 'spaces-explore-main' : ''} ${location.pathname === '/spaces' ? 'my-spaces-main' : ''} ${/^\/reviews\/[^/]+/.test(location.pathname) ? 'review-detail-main' : ''} ${/^\/posts\/[^/]+$/.test(location.pathname) ? 'post-detail-main' : ''} ${/^\/lists\/[^/]+$/.test(location.pathname) ? 'list-detail-main' : ''} ${location.pathname === '/share' ? 'share-main' : ''}`}><Outlet /></main>
 
       {listsOpen && <ListsEntryModal onClose={() => setListsOpen(false)} />}
-      {moreOpen && isDesktop && createPortal(
+      {moreOpen && user && isPwa && <PwaMoreDrawer contentRef={moreMenuContentRef} returnFocusRef={moreTriggerRef} onClose={closeMoreMenu} style={themeStyle}>{moreMenu}</PwaMoreDrawer>}
+      {moreOpen && !isPwa && isDesktop && createPortal(
         <section ref={moreMenuContentRef} className="sidebar-popover more-popover more-popover-desktop" style={moreMenuPosition} aria-label="Más opciones">
           {moreMenu}
         </section>,
