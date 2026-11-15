@@ -27,3 +27,5 @@ src/components/reviews/ReviewCard.jsx
 src/components/reviews/ReviewList.jsx
 src/components/reviews/Reviews.css
 src/lib/reviewService.js
+.codex-attachments
+.codex-remote-attachments

@@ -1,4 +1,5 @@
 import FavoriteWorksEditor from '../components/profile/FavoriteWorksEditor'
+import usePwaSettingsScreen from '../hooks/usePwaSettingsScreen'
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
@@ -296,6 +297,7 @@ export default function EditProfile({ onClose, standalone = false, pwaPage = fal
     const { user, profile, updateProfile, signOut, removeAccount } = useAuth()
     const navigate = useNavigate()
     const location = useLocation()
+    usePwaSettingsScreen(pwaPage)
     const fileInputRef = useRef(null)
     const bannerInputRef = useRef(null)
     const textareaRef = useRef(null)
@@ -1508,5 +1510,6 @@ export default function EditProfile({ onClose, standalone = false, pwaPage = fal
         </div>
     )
 
+    if (pwaPage) return createPortal(settingsMarkup, document.body)
     return standalone ? settingsMarkup : createPortal(editorMarkup, document.body)
 }

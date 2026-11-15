@@ -27,7 +27,7 @@ export function completePwaNavigation(pathname) {
   if (changedPage && isStandalonePwa()) {
     const position = { top: 0, left: 0, behavior: 'instant' }
     window.scrollTo(position)
-    for (const surface of document.querySelectorAll('.work-detail-pwa, .discover-detail-pwa, .pwa-detail-screen')) surface.scrollTo(position)
+    for (const surface of document.querySelectorAll('.work-detail-pwa, .discover-detail-pwa, .pwa-detail-screen, .settings-pwa-page, .ep-pwa-settings-screen')) surface.scrollTo(position)
   }
   pendingHistory?.resolve()
 }

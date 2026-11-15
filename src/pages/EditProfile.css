@@ -1550,7 +1550,7 @@ img.square-cover { height: auto !important; aspect-ratio: 1/1 !important; }
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
-  background: var(--bg-primary);
+  background: #000;
   backdrop-filter: none;
   animation: none;
 }
@@ -1571,6 +1571,7 @@ img.square-cover { height: auto !important; aspect-ratio: 1/1 !important; }
 .ep-pwa-settings-screen .ep-settings-nav,
 .ep-pwa-settings-screen .ep-settings-preview-column { display: none !important; }
 .ep-pwa-settings-screen .ep-settings-editor {
+  box-sizing: border-box;
   display: flex;
   width: 100%;
   min-height: 100dvh;
@@ -1589,7 +1590,7 @@ img.square-cover { height: auto !important; aspect-ratio: 1/1 !important; }
   margin: 0 -16px 12px;
   padding: 8px 16px;
   border: 0;
-  background: color-mix(in srgb, var(--bg-primary) 92%, transparent);
+  background: rgba(0,0,0,.94);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
 }
