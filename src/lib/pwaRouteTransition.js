@@ -1,7 +1,7 @@
 import { navigateBackOrHome } from './navigation'
 
-const SCREEN_ROUTE = /^\/(?:game|anime|manga)\/[^/?#]+\/?$|^\/discover\/(?:anime|games|manga|lists)\/?$|^\/settings(?:\/(?:profile|account|blocked))?\/?$/
-const TRANSITION_ROUTE = /^\/share(?:[?#].*)?$|^\/(?:posts|reviews)\/[^/?#]+(?:[?#].*)?$|^\/(?:game|anime|manga)\/[^/?#]+\/?(?:[?#].*)?$|^\/discover\/(?:anime|games|manga|lists)\/?(?:[?#].*)?$|^\/settings(?:\/(?:profile|account|blocked))?\/?$|^\/(?:lists|templates)\/(?!new(?:[/?#]|$))[^/?#]+(?:[?#].*)?$/
+const SCREEN_ROUTE = /^\/saved\/?$|^\/(?:game|anime|manga)\/[^/?#]+\/?$|^\/discover\/(?:anime|games|manga|lists)\/?$|^\/settings(?:\/(?:profile|account|blocked))?\/?$/
+const TRANSITION_ROUTE = /^\/saved\/?$|^\/share(?:[?#].*)?$|^\/(?:posts|reviews)\/[^/?#]+(?:[?#].*)?$|^\/(?:game|anime|manga)\/[^/?#]+\/?(?:[?#].*)?$|^\/discover\/(?:anime|games|manga|lists)\/?(?:[?#].*)?$|^\/settings(?:\/(?:profile|account|blocked))?\/?$|^\/(?:lists|templates)\/(?!new(?:[/?#]|$))[^/?#]+(?:[?#].*)?$/
 let pendingRoute = null
 let pendingHistory = null
 let currentPath = null
@@ -27,7 +27,7 @@ export function completePwaNavigation(pathname) {
   if (changedPage && isStandalonePwa()) {
     const position = { top: 0, left: 0, behavior: 'instant' }
     window.scrollTo(position)
-    for (const surface of document.querySelectorAll('.work-detail-pwa, .discover-detail-pwa, .pwa-detail-screen, .settings-pwa-page, .ep-pwa-settings-screen')) surface.scrollTo(position)
+    for (const surface of document.querySelectorAll('.work-detail-pwa, .discover-detail-pwa, .pwa-detail-screen, .settings-pwa-page, .ep-pwa-settings-screen, .saved-page--pwa')) surface.scrollTo(position)
   }
   pendingHistory?.resolve()
 }
@@ -83,7 +83,7 @@ function transitionWorkHistory(action, direction = 'back') {
       return transition
     } catch { /* Use the screen animation on browsers without working view transitions. */ }
   }
-  const surface = document.querySelector('.work-detail-pwa, .discover-detail-pwa, .settings-pwa-page, .ep-pwa-settings-screen')
+  const surface = document.querySelector('.work-detail-pwa, .discover-detail-pwa, .settings-pwa-page, .ep-pwa-settings-screen, .saved-page--pwa')
   if (surface?.animate && !reducedMotion()) {
     const frames = direction === 'back'
       ? [{ transform: 'translateX(0)' }, { transform: 'translateX(100%)' }]

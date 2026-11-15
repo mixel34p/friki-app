@@ -53,7 +53,7 @@ function getListCoverImages(content) {
     return images
 }
 
-export function PostCard({ post, hideAvatar = false, hideAuthor = false, useDesktopMediaSizing = false }) {
+export function PostCard({ post, hideAvatar = false, hideAuthor = false, useDesktopMediaSizing = false, onOpen, className = '' }) {
     const navigate = useNavigate()
     const [revealed, setRevealed] = useState(false)
     const [mediaFrameHeight, setMediaFrameHeight] = useState(null)
@@ -66,6 +66,7 @@ export function PostCard({ post, hideAvatar = false, hideAuthor = false, useDesk
         ? `Spoiler de ${post.spoiler_work_title || 'la publicación'}`
         : 'Contenido sensible'
     const profilePath = author.username ? `/profile/${author.username}` : '/profile'
+    const MediaLink = onOpen ? 'button' : Link
     const handleMediaLoad = event => {
         const image = event.currentTarget
         const isMobile = window.innerWidth <= 600
@@ -79,18 +80,20 @@ export function PostCard({ post, hideAvatar = false, hideAuthor = false, useDesk
     const accentText = getAccentTextColor(author.theme_color)
     const postText = post.body && (hasWarning && !revealed
         ? <SpoilerNotice text={post.body} label={`${warning} · pulsa para ver`} ariaLabel={`Mostrar ${warning}`} onReveal={() => setRevealed(true)} />
-        : <div className="home-post-text-link"><p className={media.length ? 'home-post-copy' : 'home-post-bubble'}><MentionText text={post.body} mentions={post.mentions} fallbackToPost={`/posts/${post.id}`} /></p></div>)
+        : <div className="home-post-text-link"><p className={media.length ? 'home-post-copy' : 'home-post-bubble'}><MentionText text={post.body} mentions={post.mentions} fallbackToPost={onOpen ? undefined : `/posts/${post.id}`} /></p></div>)
     const openPost = event => {
         if (event.target.closest('a, button')) return
-        navigatePwaRoute(navigate, `/posts/${post.id}`)
+        if (onOpen) onOpen()
+        else navigatePwaRoute(navigate, `/posts/${post.id}`)
     }
     const handleCardKeyDown = event => {
         if ((event.key === 'Enter' || event.key === ' ') && event.target === event.currentTarget) {
             event.preventDefault()
-            navigatePwaRoute(navigate, `/posts/${post.id}`)
+            if (onOpen) onOpen()
+            else navigatePwaRoute(navigate, `/posts/${post.id}`)
         }
     }
-    return <article className="home-post" style={{ '--home-post-accent': accent, '--home-post-text': accentText }} onClick={openPost} onKeyDown={handleCardKeyDown} role="link" tabIndex={0} aria-label={`Abrir publicación de ${name}`}>
+    return <article className={`home-post ${className}`.trim()} style={{ '--home-post-accent': accent, '--home-post-text': accentText }} onClick={openPost} onKeyDown={handleCardKeyDown} role={onOpen ? 'button' : 'link'} tabIndex={0} aria-label={`Abrir publicación de ${name}`}>
         <header className="home-post-header">
             {!hideAuthor && <Link className="home-post-author" to={profilePath} aria-label={`Ver perfil de ${name}`}>
                 {!hideAvatar && <span className="home-post-avatar">
@@ -108,9 +111,9 @@ export function PostCard({ post, hideAvatar = false, hideAuthor = false, useDesk
                         <span className="home-post-media-warning"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3 21 21"/><path d="M10.6 10.6a2 2 0 0 0 2.8 2.8"/><path d="M9.9 5.2A11.3 11.3 0 0 1 12 5c5.5 0 9.5 4.5 10 7-.2 1.1-1.2 2.6-2.6 3.9"/><path d="M6.6 6.6C3.9 8.2 2.2 10.6 2 12c.5 2.5 4.5 7 10 7 1.2 0 2.3-.2 3.3-.6"/></svg><strong>{warning}</strong><small>Pulsa para ver</small></span>
                     </span>
                 </button>
-                : <Link className="home-post-media-link" to={`/posts/${post.id}`} aria-label={`Abrir publicación de ${name}`}><span className="home-post-media count-1" style={mediaFrameHeight ? { height: `${mediaFrameHeight}px` } : undefined}>
+                : <MediaLink className="home-post-media-link" {...(onOpen ? { type: 'button', onClick: onOpen } : { to: `/posts/${post.id}` })} aria-label={`Abrir publicación de ${name}`}><span className="home-post-media count-1" style={mediaFrameHeight ? { height: `${mediaFrameHeight}px` } : undefined}>
                     {media[0] && <img src={media[0].url} alt={media[0].name || ''} loading="lazy" onLoad={handleMediaLoad} />}
-                </span></Link>)}
+                </span></MediaLink>)}
             {postText}
         </div>
     </article>

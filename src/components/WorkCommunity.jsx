@@ -1,3 +1,4 @@
+import SaveButton from './SaveButton'
 import { useEffect, useId, useRef, useState } from 'react'
 import { Link, useLocation, useNavigationType } from 'react-router-dom'
 import { getWorkRatings, getWorkReviews } from '../lib/libraryService'
@@ -41,7 +42,7 @@ function WorkReview({ review }) {
       <p className="work-review-text">{excerpt}</p>
       {text.length > 340 && <button type="button" className="work-text-button" aria-expanded={expanded} onClick={() => setExpanded(value => !value)}>{expanded ? 'Leer menos' : 'Leer más'}</button>}
     </>}
-    <footer><ReviewLikeButton entryId={review.id} /><Link to={`/reviews/${review.id}`}>Comentarios <span aria-hidden="true">→</span></Link></footer>
+    <footer><ReviewLikeButton entryId={review.id} /><SaveButton type="review" targetId={review.id} /><Link to={`/reviews/${review.id}`}>Comentarios <span aria-hidden="true">→</span></Link></footer>
   </article>
 }
 

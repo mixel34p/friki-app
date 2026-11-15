@@ -1,3 +1,4 @@
+import SaveButton from '../../components/SaveButton'
 import { isMangaCover, mangaExportPlaceholder } from '../../lib/artworkExport'
 import useSystemBarColor from '../../hooks/useSystemBarColor'
 import AlignmentBoard from '../../components/AlignmentBoard';
@@ -779,10 +780,7 @@ export default function ViewList() {
                 <div className="review-post-actions">
                     <ListLikeButton listId={id} />
                     <span className="review-post-action-spacer" />
-                    {user || authLoading ? <button type="button" className="review-post-action upcoming" disabled title="Guardar listas estará disponible próximamente">
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.75A1.75 1.75 0 0 1 7.75 3h8.5A1.75 1.75 0 0 1 18 4.75V21l-6-4-6 4z"/></svg>
-                        Guardar
-                    </button> : <Link to={templateUseUrl} className="review-post-action guest-make-list-action">
+                    {user || authLoading ? <SaveButton type="list" targetId={id} /> : <Link to={templateUseUrl} className="review-post-action guest-make-list-action">
                         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
                         Hacer la mía
                     </Link>}

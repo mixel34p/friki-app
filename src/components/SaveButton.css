@@ -1,0 +1,29 @@
+.review-post-action.save-item-button {
+  --save-accent: var(--review-page-accent, var(--work-accent, var(--brand-primary)));
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color .18s ease, background .18s ease, border-color .18s ease, transform .18s ease;
+}
+.save-item-button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.review-post-action.save-item-button.is-saved { color: var(--save-accent); }
+.save-item-button.is-saved svg { fill: currentColor; }
+/* Override the circular PWA action defaults as well as the desktop action colors. */
+:is(.pwa-post-detail, .pwa-detail-screen) .review-post-actions .review-post-action.save-item-button { color: var(--text-primary); }
+:is(.pwa-post-detail, .pwa-detail-screen) .review-post-actions .review-post-action.save-item-button.is-saved {
+  color: var(--save-accent);
+  background: color-mix(in srgb, var(--save-accent) 10%, var(--bg-secondary));
+  border-color: color-mix(in srgb, var(--save-accent) 40%, var(--border-default));
+}
+@media (hover: hover) {
+  .review-post-action.save-item-button:hover:not(:disabled) { color: var(--save-accent); transform: translateY(-1px); }
+  :is(.pwa-post-detail, .pwa-detail-screen) .review-post-actions .review-post-action.save-item-button:hover:not(:disabled) {
+    color: var(--save-accent);
+    background: color-mix(in srgb, var(--save-accent) 16%, var(--bg-secondary));
+    border-color: color-mix(in srgb, var(--save-accent) 55%, var(--border-default));
+  }
+}
+.review-post-action.save-item-button:focus-visible:not(:disabled) { color: var(--save-accent); outline: 2px solid var(--save-accent); outline-offset: 3px; }
+:is(.pwa-post-detail, .pwa-detail-screen) .review-post-actions .review-post-action.save-item-button:focus-visible:not(:disabled) { color: var(--save-accent); }
+.review-post-action.save-item-button:active:not(:disabled) { transform: scale(.96); }
+.save-item-button:disabled { opacity: .5; cursor: wait; }
+@media (prefers-reduced-motion: reduce) { .review-post-action.save-item-button { transition: none; } }

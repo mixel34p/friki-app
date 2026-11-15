@@ -77,7 +77,7 @@ function MoreMenu({ profile, image, username, accentColor, onSignOut, accounts =
     </button>
     <nav className="more-menu-links" aria-label="Más opciones">
       <Link className="more-menu-link" to="/settings">Ajustes</Link>
-      <button className="more-menu-link" type="button" aria-disabled="true">Guardados</button>
+      <Link className="more-menu-link" to="/saved">Guardados</Link>
       <Link className="more-menu-link" to="/groups">Grupos</Link>
       <Link className="more-menu-link" to="/invite">Invitar</Link>
       <a className="more-menu-link more-menu-support" href="https://ko-fi.com/mixel34" target="_blank" rel="noopener noreferrer" aria-label="Apoyar en Ko-fi (se abre en una pestaña nueva)">

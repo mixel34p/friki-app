@@ -1,3 +1,4 @@
+import SaveButton from '../components/SaveButton'
 import useSystemBarColor from '../hooks/useSystemBarColor'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -377,7 +378,7 @@ export default function PostDetail() {
           <span>{likeCount > 0 ? likeCount : 'Like'}</span>
         </button>
         <span className="review-post-action-spacer" />
-        <button type="button" className="review-post-action upcoming" disabled title="Guardar posts estará disponible próximamente"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.75A1.75 1.75 0 0 1 7.75 3h8.5A1.75 1.75 0 0 1 18 4.75V21l-6-4-6 4z"/></svg>Guardar</button>
+        <SaveButton type="post" targetId={post.id} />
         <button type="button" className="review-post-action upcoming" disabled title="Repostear estará disponible próximamente"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m17 2 4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4M21 13v2a3 3 0 0 1-3 3H3"/></svg>Repostear</button>
         <button type="button" className="review-post-action review-share-trigger" onClick={handleShare} aria-label="Compartir publicación"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.7 10.7 6.6-4.4M8.7 13.3l6.6 4.4"/></svg>{shareCopied ? 'Enlace copiado' : 'Compartir'}</button>
       </div>

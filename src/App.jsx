@@ -14,6 +14,8 @@ import Home from './pages/Home'
 import LegalPage from './pages/LegalPage'
 
 import Profile from './pages/Profile'
+import SavedPage from './pages/SavedPage'
+import { SavedItemsProvider } from './context/SavedItemsContext'
 import EditProfile from './pages/EditProfile'
 import SettingsHome from './pages/SettingsHome'
 import { isStandalonePwa } from './lib/pwaRouteTransition'
@@ -48,7 +50,7 @@ function getPageTitle(pathname) {
   const parts = pathname.split('/').filter(Boolean)
   const [section, identifier, subpage] = parts
   const exact = {
-    '/': 'GeekSphere', '/home': 'Inicio', '/activity': 'Actividad', '/spaces': 'Espacios',
+    '/': 'GeekSphere', '/home': 'Inicio', '/activity': 'Actividad', '/saved': 'Guardados', '/spaces': 'Espacios',
     '/search': 'Busca tus aficiones', '/search/results': 'Busca tus aficiones',
     '/connections': 'Conexiones', '/templates': 'Plantillas', '/old-library': 'Biblioteca',
     '/onboarding': 'Configura tu perfil', '/lists/new': 'Crear lista', '/groups': 'Grupos', '/groups/new': 'Crear grupo', '/custom-groups': 'Grupos', '/settings': 'Ajustes', '/settings/profile': 'Perfil', '/settings/account': 'Cuenta', '/settings/blocked': 'Bloqueados y silenciados', '/share': 'Compartir',
@@ -214,6 +216,7 @@ function App() {
     <AuthProvider>
       <ToastProvider>
         <BrowserRouter>
+        <SavedItemsProvider>
         <RouteTitle />
         <InvitationAttribution />
         <Routes>
@@ -249,6 +252,7 @@ function App() {
             <Route path="/share" element={<ProtectedRoute><SharePage /></ProtectedRoute>} />
             <Route path="/invite" element={<ProtectedRoute><ProfileInvitation manage /></ProtectedRoute>} />
             <Route path="/posts/:postId" element={<PostDetail />} />
+            <Route path="/saved" element={<ProtectedRoute><SavedPage /></ProtectedRoute>} />
             <Route path="/activity" element={<ProtectedRoute><ActivityPage /></ProtectedRoute>} />
             <Route path="/search" element={<Search />} />
             <Route path="/search/results" element={<Search />} />
@@ -305,6 +309,7 @@ function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <PwaNavigation />
+        </SavedItemsProvider>
         </BrowserRouter>
       </ToastProvider>
     </AuthProvider>

@@ -11,7 +11,9 @@
     "test:manga:browser": "node scripts/manga-browser.test.mjs",
     "test:search-recommendations": "node --test scripts/search-recommendations.test.mjs",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:saved": "node --test scripts/saved-items.test.mjs",
+    "test:saved:browser": "node scripts/saved-items-browser.test.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
