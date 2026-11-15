@@ -19,6 +19,7 @@ import LibraryGrid from '../components/LibraryGrid'
 import ListLikeButton from '../components/ListLikeButton'
 import { getPostsByUser } from '../lib/postService'
 import { navigateBackOrHome } from '../lib/navigation'
+import { navigatePwaRoute } from '../lib/pwaRouteTransition'
 import { PostCard } from './Home'
 
 import LoadingSpinner from '../components/LoadingSpinner'
@@ -666,7 +667,7 @@ export default function Profile() {
                             )}
                             <div className="profile-actions">
                                 {isOwnProfile ? (
-                                    <button onClick={() => navigate('/settings')} className="btn btn-secondary profile-edit-button">
+                                    <button onClick={() => isStandalonePwa ? navigatePwaRoute(navigate, '/settings') : navigate('/settings')} className="btn btn-secondary profile-edit-button">
                                         <IconEdit /> Editar perfil
                                     </button>
                                 ) : (

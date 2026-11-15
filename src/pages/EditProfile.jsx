@@ -1,7 +1,7 @@
 import FavoriteWorksEditor from '../components/profile/FavoriteWorksEditor'
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { getAccentTextColor } from '../lib/colorContrast'
@@ -11,6 +11,7 @@ import { searchGames } from '../lib/gameService'
 import { getBlockedUsers, unblockUser } from '../lib/socialDiscoveryService'
 import { BADGES_MAP } from '../lib/badges'
 import './EditProfile.css'
+import { navigateWorkBack, signalPwaRouteReady } from '../lib/pwaRouteTransition'
 import { SocialIcons } from '../components/SocialIcons'
 import DefaultAvatar from '../components/DefaultAvatar'
 import ImageCropperModal from '../components/ImageCropperModal'
@@ -240,7 +241,6 @@ function ProfileFontChoice({ nameFont, bioFont, onApply, onPreview, id }) {
     }, [nameFont])
 
     return <div className={`ep-font-picker${isOpen ? ' is-open' : ''}`} ref={rootRef}>
-        <span className="ep-font-picker-label">Fuente</span>
         <button
             id={id}
             className="ep-font-pill"
@@ -292,14 +292,15 @@ function ProfileFontControls({ nameFont, bioFont, onApply, onPreview, idPrefix }
 /* ──────────────────────────────────────
    Component
    ────────────────────────────────────── */
-export default function EditProfile({ onClose, standalone = false }) {
+export default function EditProfile({ onClose, standalone = false, pwaPage = false, pwaSection = 'photos' }) {
     const { user, profile, updateProfile, signOut, removeAccount } = useAuth()
     const navigate = useNavigate()
+    const location = useLocation()
     const fileInputRef = useRef(null)
     const bannerInputRef = useRef(null)
     const textareaRef = useRef(null)
 
-    const [activeSection, setActiveSection] = useState('photos')
+    const [activeSection, setActiveSection] = useState(pwaSection)
 
     const [formData, setFormData] = useState({
         username:        profile?.username        || '',
@@ -411,6 +412,8 @@ export default function EditProfile({ onClose, standalone = false }) {
     const showProfileSections = !standalone || activeSection !== 'blocked'
 
     /* ── Effects ── */
+    useEffect(() => { setActiveSection(pwaSection) }, [pwaSection])
+    useEffect(() => { if (pwaPage) signalPwaRouteReady(location.pathname) }, [pwaPage, location.pathname])
     useEffect(() => {
         if (!user) return
         setLoadingBlocked(true)
@@ -778,13 +781,13 @@ export default function EditProfile({ onClose, standalone = false }) {
     }
 
     const settingsMarkup = (
-        <div className="ep-portal-root" style={{
+        <div className={`ep-portal-root${pwaPage ? ' ep-pwa-settings-root' : ''}`} style={{
             '--brand-primary': formData.theme_color || '#14b8a6',
             '--brand-dark': formData.theme_color || '#14b8a6',
             '--profile-theme-color': formData.theme_color || '#14b8a6',
             '--profile-accent-text': getAccentTextColor(formData.theme_color || '#14b8a6')
         }}>
-            <div className="ep-overlay ep-settings-overlay">
+            <div className={`ep-overlay ep-settings-overlay${pwaPage ? ' ep-pwa-settings-screen' : ''}`}>
                 <div className="ep-modal ep-settings-shell">
                     <h1 className="ep-settings-page-title">Ajustes</h1>
                     <aside className="ep-settings-nav">
@@ -796,7 +799,8 @@ export default function EditProfile({ onClose, standalone = false }) {
 
                     <div className="ep-settings-editor">
                         <div className="ep-modal-header">
-                            <h1 className="ep-modal-title">{activeSection === 'blocked' ? 'Bloqueados y silenciados' : activeSection === 'account' ? 'Cuenta' : 'Personalización'}</h1>
+                            {pwaPage && <button type="button" className="pwa-settings-back" onClick={() => navigateWorkBack(navigate, '/settings')} aria-label="Volver a ajustes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg></button>}
+                            <h1 className="ep-modal-title">{activeSection === 'blocked' ? 'Bloqueados y silenciados' : activeSection === 'account' ? 'Cuenta' : pwaPage ? 'Perfil' : 'Personalización'}</h1>
                             {activeSection === 'photos' && <button type="submit" form="profile-settings-form" className="btn btn-primary ep-settings-save-button" disabled={saving || !!usernameError}>{saving ? 'Guardando…' : 'Guardar'}</button>}
                         </div>
                         <input ref={fileInputRef} type="file" accept="image/*" onChange={e => handleFileChange(e, 'avatar')} hidden />
@@ -865,7 +869,7 @@ export default function EditProfile({ onClose, standalone = false }) {
                                 </div>
 
                                 <div className="ep-settings-row">
-                                    <label>Personaliza el nombre y la bio</label>
+                                    <label>Fuente</label>
                                     <ProfileFontControls nameFont={formData.name_font} bioFont={formData.bio_font} onApply={applyProfileFont} onPreview={previewProfileFont} idPrefix="settings" />
                                 </div>
 
@@ -1219,7 +1223,7 @@ export default function EditProfile({ onClose, standalone = false }) {
                                 </div>
 
                                 <div className="ep-field">
-                                    <label className="ep-label">Personaliza el nombre y la bio</label>
+                                    <label className="ep-label">Fuente</label>
                                     <ProfileFontControls nameFont={formData.name_font} bioFont={formData.bio_font} onApply={applyProfileFont} onPreview={previewProfileFont} idPrefix="profile" />
                                 </div>
 

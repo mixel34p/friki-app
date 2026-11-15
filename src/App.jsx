@@ -15,6 +15,8 @@ import LegalPage from './pages/LegalPage'
 
 import Profile from './pages/Profile'
 import EditProfile from './pages/EditProfile'
+import SettingsHome from './pages/SettingsHome'
+import { isStandalonePwa } from './lib/pwaRouteTransition'
 import Library from './pages/Library'
 import WorkPage from './pages/WorkPage'
 import Connections from './pages/Connections'
@@ -49,7 +51,7 @@ function getPageTitle(pathname) {
     '/': 'GeekSphere', '/home': 'Inicio', '/activity': 'Actividad', '/spaces': 'Espacios',
     '/search': 'Busca tus aficiones', '/search/results': 'Busca tus aficiones',
     '/connections': 'Conexiones', '/templates': 'Plantillas', '/old-library': 'Biblioteca',
-    '/onboarding': 'Configura tu perfil', '/lists/new': 'Crear lista', '/groups': 'Grupos', '/groups/new': 'Crear grupo', '/custom-groups': 'Grupos', '/settings': 'Ajustes', '/share': 'Compartir',
+    '/onboarding': 'Configura tu perfil', '/lists/new': 'Crear lista', '/groups': 'Grupos', '/groups/new': 'Crear grupo', '/custom-groups': 'Grupos', '/settings': 'Ajustes', '/settings/profile': 'Perfil', '/settings/account': 'Cuenta', '/settings/blocked': 'Bloqueados y silenciados', '/share': 'Compartir',
     '/terms': 'Términos de uso', '/privacy': 'Política de privacidad', '/community-guidelines': 'Normas de la comunidad', '/invite': 'Invita a tu esfera',
   }
   if (exact[pathname]) return exact[pathname]
@@ -189,6 +191,19 @@ function SpacesRootRoute() {
   return user ? <MySpaces /> : <SpacesExplore />
 }
 
+
+function SettingsRoute() {
+  return isStandalonePwa() ? <SettingsHome /> : <EditProfile standalone />
+}
+
+function SettingsSectionRoute() {
+  const { section } = useParams()
+  const sections = { profile: 'photos', account: 'account', blocked: 'blocked' }
+  if (!isStandalonePwa()) return <Navigate to="/settings" replace />
+  if (!sections[section]) return <Navigate to="/settings" replace />
+  return <EditProfile key={section} standalone pwaPage pwaSection={sections[section]} />
+}
+
 function WorkReviewsRedirect({ mediaType }) {
   const { id } = useParams()
   return <Navigate to={`/${mediaType}/${id}#reviews`} replace />
@@ -242,7 +257,9 @@ function App() {
             <Route path="/profile/:username/diary" element={<UserDiary />} />
             <Route path="/profile/:username/tierlists" element={<UserTierlists />} />
             <Route path="/profile/:username/templates" element={<UserTemplates />} />
-            <Route path="/settings/*" element={<ProtectedRoute><EditProfile standalone /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><SettingsRoute /></ProtectedRoute>} />
+            <Route path="/settings/:section" element={<ProtectedRoute><SettingsSectionRoute /></ProtectedRoute>} />
+            <Route path="/settings/*" element={<ProtectedRoute><SettingsSectionRoute /></ProtectedRoute>} />
             <Route path="/reviews/:reviewId" element={<ReviewDetail />} />
             <Route path="/edit-profile" element={<Navigate to="/profile?edit=true" replace />} />
             

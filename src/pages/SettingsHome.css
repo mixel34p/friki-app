@@ -1,0 +1,32 @@
+.settings-pwa-page {
+  position: fixed;
+  z-index: 10000;
+  inset: 0;
+  box-sizing: border-box;
+  width: 100vw;
+  height: 100dvh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: calc(env(safe-area-inset-top) + 10px) 16px calc(24px + env(safe-area-inset-bottom));
+  color: var(--text-primary);
+  background: var(--bg-primary);
+}
+.settings-pwa-header { display: flex; min-height: 52px; align-items: center; gap: 12px; margin-bottom: 20px; }
+.settings-pwa-header h1 { margin: 0; font-family: var(--font-display); font-size: 1.45rem; font-weight: 720; letter-spacing: -.035em; }
+.pwa-settings-back { position: relative; display: grid; width: 42px; height: 42px; flex: 0 0 42px; place-items: center; padding: 0; border: 1px solid rgba(255,255,255,.1); border-radius: 50%; color: var(--text-primary); background: rgba(255,255,255,.075); cursor: pointer; transition: background .16s ease, transform .16s ease; }
+.pwa-settings-back:hover { background: rgba(255,255,255,.12); }
+.pwa-settings-back:active { transform: scale(.94); }
+.pwa-settings-back svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.settings-pwa-options { display: grid; width: min(100%, 720px); gap: 9px; margin: 0 auto; }
+.settings-pwa-option { display: flex; min-width: 0; min-height: 76px; align-items: center; gap: 13px; padding: 12px 13px; border: 1px solid var(--border-subtle); border-radius: 16px; color: var(--text-primary); text-decoration: none; background: color-mix(in srgb, var(--bg-card) 88%, transparent); transition: border-color .16s ease, background .16s ease, transform .16s ease; }
+.settings-pwa-option:hover { border-color: color-mix(in srgb, var(--brand-primary) 35%, var(--border-subtle)); background: var(--bg-elevated); }
+.settings-pwa-option:active { transform: scale(.99); }
+.settings-pwa-option-icon { display: grid; width: 42px; height: 42px; flex: 0 0 42px; place-items: center; border: 1px solid color-mix(in srgb, var(--brand-primary) 25%, transparent); border-radius: 13px; color: var(--brand-primary); background: color-mix(in srgb, var(--brand-primary) 9%, transparent); }
+.settings-pwa-option-icon svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.settings-pwa-option-copy { display: grid; min-width: 0; gap: 4px; }
+.settings-pwa-option-copy strong { font-size: .88rem; font-weight: 700; }
+.settings-pwa-option-copy small { color: var(--text-muted); font-size: .74rem; line-height: 1.4; }
+.settings-pwa-option-chevron { width: 18px; height: 18px; flex: 0 0 18px; margin-left: auto; fill: none; stroke: var(--text-muted); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+@media (prefers-reduced-motion: reduce) { .settings-pwa-option,.pwa-settings-back { transition: none; } }

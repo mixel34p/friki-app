@@ -1,7 +1,7 @@
 import { navigateBackOrHome } from './navigation'
 
-const SCREEN_ROUTE = /^\/(?:game|anime|manga)\/[^/?#]+\/?$|^\/discover\/(?:anime|games|manga|lists)\/?$/
-const TRANSITION_ROUTE = /^\/share(?:[?#].*)?$|^\/(?:posts|reviews)\/[^/?#]+(?:[?#].*)?$|^\/(?:game|anime|manga)\/[^/?#]+\/?(?:[?#].*)?$|^\/discover\/(?:anime|games|manga|lists)\/?(?:[?#].*)?$|^\/(?:lists|templates)\/(?!new(?:[/?#]|$))[^/?#]+(?:[?#].*)?$/
+const SCREEN_ROUTE = /^\/(?:game|anime|manga)\/[^/?#]+\/?$|^\/discover\/(?:anime|games|manga|lists)\/?$|^\/settings(?:\/(?:profile|account|blocked))?\/?$/
+const TRANSITION_ROUTE = /^\/share(?:[?#].*)?$|^\/(?:posts|reviews)\/[^/?#]+(?:[?#].*)?$|^\/(?:game|anime|manga)\/[^/?#]+\/?(?:[?#].*)?$|^\/discover\/(?:anime|games|manga|lists)\/?(?:[?#].*)?$|^\/settings(?:\/(?:profile|account|blocked))?\/?$|^\/(?:lists|templates)\/(?!new(?:[/?#]|$))[^/?#]+(?:[?#].*)?$/
 let pendingRoute = null
 let pendingHistory = null
 let currentPath = null
@@ -83,9 +83,12 @@ function transitionWorkHistory(action, direction = 'back') {
       return transition
     } catch { /* Use the screen animation on browsers without working view transitions. */ }
   }
-  const surface = document.querySelector('.work-detail-pwa, .discover-detail-pwa')
-  if (surface?.animate && !reducedMotion() && direction === 'back') {
-    const animation = surface.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(100%)' }], { duration: 280, easing: 'cubic-bezier(.22,.8,.24,1)', fill: 'forwards' })
+  const surface = document.querySelector('.work-detail-pwa, .discover-detail-pwa, .settings-pwa-page, .ep-pwa-settings-screen')
+  if (surface?.animate && !reducedMotion()) {
+    const frames = direction === 'back'
+      ? [{ transform: 'translateX(0)' }, { transform: 'translateX(100%)' }]
+      : [{ transform: 'translateX(0)' }, { transform: 'translateX(-16%)' }]
+    const animation = surface.animate(frames, { duration: 280, easing: 'cubic-bezier(.22,.8,.24,1)', fill: 'forwards' })
     animation.finished.then(() => { action(); ready.then(clear) }, () => { action(); ready.then(clear) })
   } else { action(); ready.then(clear) }
 }

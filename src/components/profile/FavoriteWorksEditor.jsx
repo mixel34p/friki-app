@@ -1,11 +1,28 @@
 import { useEffect, useId, useState } from 'react'
-import { workAdapter } from '../../lib/workAdapters'
-import { SortableFavoriteItem } from './SortableFavoriteItem'
+import { useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { arrayMove, SortableContext, rectSortingStrategy } from '@dnd-kit/sortable'
+import { workAdapter } from '../../lib/workAdapters'
 
 const labels = { game: 'Juegos', anime: 'Anime', manga: 'Manga' }
 const favoriteKey = item => `${item.type}:${item.id}`
+
+function SortableFavoriteChip({ item, onRemove }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: favoriteKey(item) })
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.65 : 1,
+    cursor: isDragging ? 'grabbing' : 'grab',
+  }
+  return <div ref={setNodeRef} className="ep-settings-selected-work" style={style} {...attributes} {...listeners}>
+    {item.cover_url && <img src={item.cover_url} alt="" />}
+    <span title={item.title}>{item.title}</span>
+    <small className="ep-settings-favorite-type">{labels[item.type]}</small>
+    <button type="button" onPointerDown={event => event.stopPropagation()} onClick={event => { event.stopPropagation(); onRemove() }} aria-label={`Quitar ${item.title}`}>×</button>
+  </div>
+}
 
 export default function FavoriteWorksEditor({ value = [], onChange }) {
   const [query, setQuery] = useState('')
@@ -15,7 +32,10 @@ export default function FavoriteWorksEditor({ value = [], onChange }) {
 
   useEffect(() => {
     const term = query.trim()
-    if (term.length < 2) { setSearch({ query: term, items: [], loading: false, error: '' }); return undefined }
+    if (term.length < 2) {
+      setSearch({ query: term, items: [], loading: false, error: '' })
+      return undefined
+    }
     const controller = new AbortController()
     const timer = setTimeout(async () => {
       setSearch({ query: term, items: [], loading: true, error: '' })
@@ -43,25 +63,27 @@ export default function FavoriteWorksEditor({ value = [], onChange }) {
     if (from >= 0 && to >= 0) onChange(arrayMove(value, from, to))
   }
 
-  return <div className="ep-field ep-favorite-works-editor">
-    <label className="ep-label" htmlFor={id}>Obras favoritas <small>{value.length}/4</small></label>
-    <p className="ep-favorite-works-hint">Combina videojuegos, anime y manga. Arrastra las carátulas para ordenarlas.</p>
-    <div className="ep-favorites-grid">
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-        <SortableContext items={value.map(favoriteKey)} strategy={rectSortingStrategy}>
-          {value.map((item, index) => <SortableFavoriteItem
-            key={favoriteKey(item)} sortableId={favoriteKey(item)}
-            item={{ ...item, name: item.title }}
+  return <div className="ep-settings-row ep-favorite-works-editor">
+    <label htmlFor={id}>
+      <span>Obras favoritas</span>
+      <small>{value.length}/4</small>
+    </label>
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+      <SortableContext items={value.map(favoriteKey)} strategy={rectSortingStrategy}>
+        <div className="ep-settings-selected-works">
+          {value.map((item, index) => <SortableFavoriteChip
+            item={item}
+            key={favoriteKey(item)}
             onRemove={() => onChange(value.filter((_, i) => i !== index))}
           />)}
-        </SortableContext>
-      </DndContext>
-      {Array.from({ length: 4 - value.length }, (_, index) => <span className="ep-empty-slot" key={`empty-${index}`} aria-hidden="true"><span>＋</span></span>)}
-    </div>
+        </div>
+      </SortableContext>
+    </DndContext>
+    {!value.length && <p className="ep-favorite-works-empty">Todavía no has añadido ninguna obra.</p>}
     {value.length < 4 && <div className="ep-settings-search-wrap">
       <input id={id} className="ep-settings-control" value={query} onChange={event => setQuery(event.target.value)} placeholder="Buscar juego, anime o manga…" />
       {search.query === query && query.trim().length >= 2 && <div className="ep-settings-work-results" aria-live="polite">
-        {search.loading ? 'Buscando…' : search.error || search.items.filter(item => !value.some(favorite => favoriteKey(favorite) === favoriteKey(item))).map(item => <button type="button" className="ep-settings-work-result" key={favoriteKey(item)} onClick={() => add(item)}>{item.cover_url && <img src={item.cover_url} alt="" />}<span>{item.title}</span><span>{labels[item.type]}</span><span>Añadir</span></button>)}
+        {search.loading ? <div className="ep-settings-search-status">Buscando…</div> : search.error || search.items.filter(item => !value.some(favorite => favoriteKey(favorite) === favoriteKey(item))).map(item => <button type="button" className="ep-settings-work-result" key={favoriteKey(item)} onClick={() => add(item)}>{item.cover_url && <img src={item.cover_url} alt="" />}<span>{item.title}</span><span className="ep-settings-favorite-type">{labels[item.type]}</span><span className="ep-settings-result-add">Añadir</span></button>)}
       </div>}
     </div>}
   </div>
