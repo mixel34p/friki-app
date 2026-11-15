@@ -31,7 +31,7 @@ export async function getLibraryReview(reviewId) {
       .select('id, username, display_name, avatar_url, theme_color, featured_badge')
       .eq('id', entry.user_id)
       .maybeSingle(),
-    getWorkById(entry.work_type, Number(entry.work_id)),
+    getWorkById(entry.work_type, entry.work_id),
   ])
 
   if (profileResult.error) throw profileResult.error

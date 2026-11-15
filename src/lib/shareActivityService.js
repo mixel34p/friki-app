@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { WORK_TYPE_IDS, workType } from './workTypes'
 
 export async function getRecentUserReviews(userId, limit = 3) {
   if (!userId) return []
@@ -12,11 +13,11 @@ export async function getRecentUserReviews(userId, limit = 3) {
   if (error) throw error
 
   const reviews = (data || []).filter(entry => entry.review_text?.trim())
-  const workGroups = await Promise.all(['game', 'anime'].map(async type => {
+  const workGroups = await Promise.all(WORK_TYPE_IDS.map(async type => {
     const ids = [...new Set(reviews.filter(entry => entry.work_type === type).map(entry => String(entry.work_id)))]
     if (!ids.length) return []
-    const { data: works, error: worksError } = await supabase.from(type === 'game' ? 'games' : 'anime')
-      .select(type === 'game' ? 'id, name, cover_url' : 'id, title, image_url')
+    const { data: works, error: worksError } = await supabase.from(workType(type).table)
+      .select(`id, ${workType(type).titleField}, ${workType(type).imageField}`)
       .in('id', ids)
     if (worksError) throw worksError
     return (works || []).map(work => [`${type}:${work.id}`, {

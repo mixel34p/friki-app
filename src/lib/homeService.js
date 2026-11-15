@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { WORK_TYPE_IDS, workType } from './workTypes'
 
 function getLocalDayRange(date = new Date()) {
   const start = new Date(date.getFullYear(), date.getMonth(), date.getDate())
@@ -7,18 +8,18 @@ function getLocalDayRange(date = new Date()) {
 }
 
 async function attachWorks(entries) {
-  const result = await Promise.all(['anime', 'game'].map(async type => {
+  const result = await Promise.all(WORK_TYPE_IDS.map(async type => {
     const ids = [...new Set(entries.filter(entry => entry.work_type === type).map(entry => String(entry.work_id)))]
     if (!ids.length) return []
-    const table = type === 'anime' ? 'anime' : 'games'
-    const fields = type === 'anime' ? 'id, title, image_url' : 'id, name, cover_url'
+    const table = workType(type).table
+    const fields = `id, ${workType(type).titleField}, ${workType(type).imageField}`
     const { data, error } = await supabase.from(table).select(fields).in('id', ids)
     if (error) throw error
     return (data || []).map(work => ({
       id: String(work.id),
       type,
-      title: type === 'anime' ? work.title : work.name,
-      image: type === 'anime' ? work.image_url : work.cover_url,
+      title: work[workType(type).titleField],
+      image: work[workType(type).imageField],
     }))
   }))
   return new Map(result.flat().map(work => [`${work.type}:${work.id}`, work]))
@@ -58,7 +59,7 @@ export async function getHomeSnapshot() {
     const key = `${entry.work_type}:${entry.work_id}`
     todayCounts.set(key, (todayCounts.get(key) || 0) + 1)
   }
-  const dailyLeaders = ['anime', 'game'].flatMap(type => {
+  const dailyLeaders = WORK_TYPE_IDS.flatMap(type => {
     const candidates = [...todayCounts.entries()].filter(([key]) => key.startsWith(`${type}:`))
       .sort((a, b) => b[1] - a[1])
     return candidates[0] ? [{ key: candidates[0][0], count: candidates[0][1], type }] : []
@@ -78,7 +79,8 @@ export async function getHomeSnapshot() {
     : null
   const workKeys = [...new Set([...(review ? [`${review.work_type}:${review.work_id}`] : []), ...(dailyLeader ? [dailyLeader.key] : [])])]
   const workEntries = workKeys.map(key => {
-    const [work_type, work_id] = key.split(':')
+    const work_type = key.slice(0, key.indexOf(':'))
+    const work_id = key.slice(key.indexOf(':') + 1)
     return { work_type, work_id }
   })
   const profileEntries = await attachProfiles([review, recentList].filter(Boolean))

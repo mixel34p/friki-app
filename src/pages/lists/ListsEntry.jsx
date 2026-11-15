@@ -124,7 +124,7 @@ export function ListsEntryModal({ onClose, onCreateTemplate }) {
                             <div className="le-option-text">
                                 <div className="le-option-title">Crear plantilla nueva</div>
                                 <div className="le-option-desc">
-                                    Diseña tu propia estructura con tiers, rankings o grids personalizados.
+                                    Diseña tu propia estructura con tiers, grids o alineamientos personalizados.
                                 </div>
                             </div>
                             <span className="le-option-arrow">

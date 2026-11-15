@@ -990,6 +990,7 @@
     gap: 12px;
 }
 .profile-favorite-poster {
+    display: block;
     position: relative;
     width: 86px;
     aspect-ratio: 2/3;

@@ -1,0 +1,89 @@
+{
+  "importedAt": "2026-11-15T12:45:13.626Z",
+  "items": [
+    {
+      "id": "mal:manga:2",
+      "title": "Berserk",
+      "image_url": "https://cdn.myanimelist.net/images/manga/1/157897l.jpg",
+      "format": "manga",
+      "metadata_checked_at": "2026-11-15T12:42:11.799+00:00"
+    },
+    {
+      "id": "mal:manga:13",
+      "title": "One Piece",
+      "image_url": "https://cdn.myanimelist.net/images/manga/2/253146l.webp",
+      "format": "manga",
+      "metadata_checked_at": "2026-11-15T12:44:28.671+00:00"
+    },
+    {
+      "id": "mal:manga:11",
+      "title": "Naruto",
+      "image_url": "https://cdn.myanimelist.net/images/manga/3/249658l.jpg",
+      "format": "manga",
+      "metadata_checked_at": "2026-11-15T12:44:32.628+00:00"
+    },
+    {
+      "id": "mal:manga:21",
+      "title": "Death Note",
+      "image_url": "https://cdn.myanimelist.net/images/manga/1/258245l.jpg",
+      "format": "manga",
+      "metadata_checked_at": "2026-11-15T12:44:37.327+00:00"
+    },
+    {
+      "id": "mal:manga:25",
+      "title": "Fullmetal Alchemist",
+      "image_url": "https://cdn.myanimelist.net/images/manga/3/243675l.jpg",
+      "format": "manga",
+      "metadata_checked_at": "2026-11-15T12:44:43.029+00:00"
+    },
+    {
+      "id": "mal:manga:12",
+      "title": "Bleach",
+      "image_url": "https://cdn.myanimelist.net/images/manga/3/180031l.jpg",
+      "format": "manga",
+      "metadata_checked_at": "2026-11-15T12:44:49.393+00:00"
+    },
+    {
+      "id": "mal:manga:1",
+      "title": "Monster",
+      "image_url": "https://cdn.myanimelist.net/images/manga/3/258224l.jpg",
+      "format": "manga",
+      "metadata_checked_at": "2026-11-15T12:44:55.705+00:00"
+    },
+    {
+      "id": "mal:manga:23390",
+      "title": "Shingeki no Kyojin",
+      "image_url": "https://cdn.myanimelist.net/images/manga/2/37846l.jpg",
+      "format": "manga",
+      "metadata_checked_at": "2026-11-15T12:44:59.649+00:00"
+    },
+    {
+      "id": "mal:manga:44347",
+      "title": "One Punch-Man",
+      "image_url": "https://cdn.myanimelist.net/images/manga/3/80661l.jpg",
+      "format": "manga",
+      "metadata_checked_at": "2026-11-15T12:45:03.53+00:00"
+    },
+    {
+      "id": "mal:manga:116778",
+      "title": "Chainsaw Man",
+      "image_url": "https://cdn.myanimelist.net/images/manga/3/216464l.webp",
+      "format": "manga",
+      "metadata_checked_at": "2026-11-15T12:45:07.506+00:00"
+    },
+    {
+      "id": "mal:manga:113138",
+      "title": "Jujutsu Kaisen",
+      "image_url": "https://cdn.myanimelist.net/images/manga/3/210341l.jpg",
+      "format": "manga",
+      "metadata_checked_at": "2026-11-15T12:45:11.303+00:00"
+    },
+    {
+      "id": "mal:manga:96792",
+      "title": "Kimetsu no Yaiba",
+      "image_url": "https://cdn.myanimelist.net/images/manga/3/179023l.jpg",
+      "format": "manga",
+      "metadata_checked_at": "2026-11-15T12:45:15.182+00:00"
+    }
+  ]
+}

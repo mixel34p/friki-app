@@ -1,3 +1,5 @@
+import { listTypeLabel } from '../lib/listTypes'
+import { AlignmentIcon } from '../components/AlignmentBoard'
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
@@ -277,8 +279,8 @@ export default function UserTierlists() {
                                                     <span className={'vl-tag type-' + t.list_type}>
                                                         {t.list_type === 'tierlist' && <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>}
                                                         {t.list_type === 'ranking' && <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>}
-                                                        {t.list_type === 'grid' && <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>}
-                                                        {t.list_type === 'ranking' ? 'Ranking' : t.list_type === 'grid' ? 'Grid' : 'Tierlist'}
+                                                        {t.list_type === 'alignment' && <AlignmentIcon/>}{t.list_type === 'grid' && <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>}
+                                                        {listTypeLabel(t.list_type)}
                                                     </span>
                                                 )}
                                                 {t.list_type !== 'ranking' && t.media_type && (

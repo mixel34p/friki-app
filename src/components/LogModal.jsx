@@ -155,7 +155,7 @@ export default function LogModal({ isOpen, onClose, work, existingLog, onSaveCom
                     <div className="log-header-content">
                         <div className="log-poster-thumb" style={{ backgroundImage: `url(${work.image})` }}></div>
                         <div className="log-header-info">
-                            <span className="log-badge">{work.type === 'game' ? 'VIDEOJUEGO' : 'ANIME'}</span>
+                            <span className="log-badge">{{ game: 'VIDEOJUEGO', anime: 'ANIME', manga: 'MANGA' }[work.type]}</span>
                             <h2 className="log-title-compact">{work.title}</h2>
                         </div>
                     </div>

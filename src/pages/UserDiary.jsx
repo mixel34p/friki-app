@@ -79,7 +79,7 @@ export default function UserDiary() {
                 
                 // Get fully populated logs
                 const populatedLogs = await Promise.all(logs.map(async (log) => {
-                    const workDetails = await getWorkById(log.work_type, parseInt(log.work_id))
+                    const workDetails = await getWorkById(log.work_type, log.work_id)
                     return {
                         ...log,
                         work: workDetails
@@ -141,7 +141,7 @@ export default function UserDiary() {
             entries: month.entries.filter(entry => workFilter === 'all' || entry.work_type === workFilter)
         }))
         .filter(month => month.entries.length > 0)
-    const selectedLabel = workFilter === 'anime' ? 'anime' : 'juegos'
+    const selectedLabel = { anime: 'anime', game: 'juegos', manga: 'manga' }[workFilter]
 
     return (
         <div
@@ -172,6 +172,7 @@ export default function UserDiary() {
                     {[
                         { id: 'all', label: 'Todos' },
                         { id: 'anime', label: 'Anime' },
+                        { id: 'manga', label: 'Manga' },
                         { id: 'game', label: 'Juegos' },
                     ].map(option => (
                         <button

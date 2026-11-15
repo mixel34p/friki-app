@@ -337,15 +337,9 @@ export async function getUserSpaces(userId) {
     return data.map(m => m.space);
 }
 
-export async function getSpacesByWork(workId) {
+export async function getSpacesByWork(workId, mediaType) {
     const { data, error } = await supabase
-        .from('spaces')
-        .select(`
-            *,
-            owner:profiles!spaces_owner_id_fkey (username, display_name, avatar_url, featured_badge)
-        `)
-        .contains('related_works', `[{"id": ${workId}}]`)
-        .order('created_at', { ascending: false });
+        .rpc('get_spaces_for_work', { work_id_input: String(workId), work_type_input: mediaType });
 
     if (error) {
         console.error("Error fetching spaces by work:", error);

@@ -12,6 +12,7 @@ import { useToast } from '../components/Toast'
 import WorkRatings, { WorkMembers, WorkStars } from '../components/WorkRatings'
 import WorkCommunity from '../components/WorkCommunity'
 import SEO from '../components/SEO'
+import { workHref, workType } from '../lib/workTypes'
 import './WorkPage.css'
 
 const focusedReviewEntries = new Set()
@@ -57,7 +58,7 @@ function WorkDetails({ mediaType, workId }) {
   const navigate = useNavigate()
   const location = useLocation()
   const { toast } = useToast()
-  const route = `/${mediaType}/${workId}`
+  const route = workHref(mediaType, workId)
   const [isPwa, setIsPwa] = useState(isStandalonePwa)
   const [managedMotion] = useState(() => Boolean(document.documentElement.dataset.pwaWorkDirection))
   const [workResult, setWorkResult] = useState(null)
@@ -107,7 +108,7 @@ function WorkDetails({ mediaType, workId }) {
 
   useEffect(() => {
     let active = true
-    getWorkById(mediaType, Number(workId)).then(data => {
+    getWorkById(mediaType, workId).then(data => {
       if (active) setWorkResult({ version: workVersion, data, error: data ? null : 'No encontramos esta obra.' })
     }).catch(() => { if (active) setWorkResult({ version: workVersion, data: null, error: 'No se pudo cargar la obra.' }) })
     return () => { active = false }
@@ -135,8 +136,8 @@ function WorkDetails({ mediaType, workId }) {
   useEffect(() => {
     if (!work || isPwa) return undefined
     let active = true
-    getSimilarWorks(mediaType, Number(workId), work.genres).then(data => { if (active) setSimilarWorks(data || []) }).catch(() => { if (active) setSimilarWorks([]) })
-    getSpacesByWork(Number(workId)).then(data => { if (active) setSpaces(data || []) }).catch(() => { if (active) setSpaces([]) })
+    getSimilarWorks(mediaType, workId, work.genres).then(data => { if (active) setSimilarWorks(data || []) }).catch(() => { if (active) setSimilarWorks([]) })
+    getSpacesByWork(workId, mediaType).then(data => { if (active) setSpaces(data || []) }).catch(() => { if (active) setSpaces([]) })
     return () => { active = false }
   }, [work, workId, mediaType, isPwa])
 
@@ -168,7 +169,7 @@ function WorkDetails({ mediaType, workId }) {
 
   const editLog = () => {
     if (!ensureProfile()) return
-    navigatePwaRoute(navigate, '/share', { state: { reviewWork: { id: Number(workId), type: mediaType, title: work.name || work.title, image: coverImage(work.cover_url || work.image_url) } } })
+    navigatePwaRoute(navigate, '/share', { state: { reviewWork: { id: workId, type: mediaType, title: work.name || work.title, image: coverImage(work.cover_url || work.image_url) } } })
   }
 
   const wishlist = profile?.wishlist || []
@@ -187,21 +188,21 @@ function WorkDetails({ mediaType, workId }) {
   const cover = coverImage(work?.cover_url || work?.image_url)
   const banner = work?.banner_url || cover
   const year = work ? releaseYear(work) : null
-  const creators = work ? mediaType === 'anime' ? names(work.studios) : names(work.developers?.length ? work.developers : work.involved_companies?.filter(company => company.developer).map(company => company.company)) : []
+  const creators = work ? mediaType === 'manga' ? (work.authors || []).map(author => author.name + (author.role ? ` (${author.role})` : '')) : mediaType === 'anime' ? names(work.studios) : names(work.developers?.length ? work.developers : work.involved_companies?.filter(company => company.developer).map(company => company.company)) : []
   const synopsis = plainTextSynopsis(work?.summary || work?.synopsis) || 'No hay sinopsis disponible para esta obra.'
   const genres = names(work?.genres)
   const platforms = names(work?.platforms)
   const longSynopsis = synopsis.length > 420 || synopsis.split('\n').length > 5
 
   return <div className={`work-page${isPwa ? ` work-detail-pwa${managedMotion ? '' : ' work-motion-enter'}` : ''}`} style={{ '--work-system-bar': systemBar }}>
-    <SEO title={`${title} (${mediaType === 'game' ? 'Videojuego' : 'Anime'})`} description={`${title} en GeekSphere: valoraciones, reseñas y obras similares.`} />
+    <SEO title={`${title} (${workType(mediaType).label})`} description={`${title} en GeekSphere: valoraciones, reseñas y obras similares.`} />
     <div className={`work-backdrop${work?.banner_url ? ' has-banner' : ''}`} aria-hidden="true">{banner && <img src={banner} alt="" />}</div>
     <div className="work-page-inner">
       <div className="work-topbar"><button type="button" className="work-back" onClick={() => navigateWorkBack(navigate)} aria-label="Volver"><WorkIcon name="back" /><span>Volver</span></button></div>
       {!work ? workError ? <div className="work-page-state"><h1>{workError}</h1><p>Puedes volver a intentarlo o regresar a la página anterior.</p><button type="button" className="work-primary-button" onClick={() => setWorkVersion(version => version + 1)}>Reintentar</button></div> : <div className="work-page-loading" role="status" aria-label="Cargando obra"><div className="work-loading-hero"><span className="work-skeleton work-loading-cover" /><span className="work-loading-copy"><i className="work-skeleton" /><i className="work-skeleton" /><i className="work-skeleton" /></span></div><div className="work-loading-body work-skeleton" /></div> : <>
         <header className="work-hero">
           <WorkImage src={cover} title={title} className="work-main-cover" />
-          <div className="work-identity"><p className="work-eyebrow">{mediaType === 'game' ? 'Videojuego' : 'Anime'}{year && <><span>·</span>{year}</>}</p><h1>{title}</h1>{creators.length > 0 && <p className="work-creators">{creators.slice(0, 3).join(' · ')}</p>}</div>
+          <div className="work-identity"><p className="work-eyebrow">{workType(mediaType).label}{year && <><span>·</span>{year}</>}</p><h1>{title}</h1>{creators.length > 0 && <p className="work-creators">{creators.slice(0, 3).join(' · ')}</p>}</div>
           <div className="work-actions">
             {currentLog.status === 'error' ? <div className="work-log-error"><span>No se pudo comprobar tu registro.</span><button type="button" onClick={() => setLogVersion(version => version + 1)}>Reintentar</button></div> : <button type="button" className={`work-primary-button${log ? ' is-logged' : ''}`} onClick={log ? editLog : registerWork} disabled={registering || currentLog.status === 'loading'} aria-busy={registering || currentLog.status === 'loading'}><WorkIcon name={log ? 'edit' : 'plus'} />{registering ? 'Registrando…' : currentLog.status === 'loading' ? 'Cargando…' : log ? 'Editar registro' : 'Registrar'}</button>}
             <button type="button" className={`work-wishlist-button${inWishlist ? ' is-active' : ''}`} onClick={toggleWishlist} aria-pressed={inWishlist} disabled={savingWishlist}><WorkIcon name="bookmark" />{inWishlist ? 'En wishlist' : 'Wishlist'}</button>
@@ -211,10 +212,10 @@ function WorkDetails({ mediaType, workId }) {
         </header>
         {!isPwa && <WorkMembers stats={stats?.status === 'ready' ? stats.data : null} />}
         <div className="work-body">
-          <section className="work-synopsis-section"><h2 className="work-section-heading">Sinopsis</h2><p id="work-synopsis" className={`work-synopsis${longSynopsis && !expandedSynopsis ? ' is-collapsed' : ''}`}>{synopsis}</p>{longSynopsis && <button className="work-text-button" type="button" aria-expanded={expandedSynopsis} aria-controls="work-synopsis" onClick={() => setExpandedSynopsis(value => !value)}>{expandedSynopsis ? 'Leer menos' : 'Leer más'}</button>}{mediaType === 'game' && <p className="work-data-source">Datos de <a href="https://www.igdb.com" target="_blank" rel="noreferrer">IGDB</a></p>}</section>
+          <section className="work-synopsis-section"><h2 className="work-section-heading">Sinopsis</h2><p id="work-synopsis" className={`work-synopsis${longSynopsis && !expandedSynopsis ? ' is-collapsed' : ''}`}>{synopsis}</p>{longSynopsis && <button className="work-text-button" type="button" aria-expanded={expandedSynopsis} aria-controls="work-synopsis" onClick={() => setExpandedSynopsis(value => !value)}>{expandedSynopsis ? 'Leer menos' : 'Leer más'}</button>}{mediaType === 'manga' && <p className="work-data-source">Datos de <a href={work.source_url} target="_blank" rel="noreferrer">MyAnimeList</a>{work.stale && ' · Datos guardados; el proveedor no está disponible.'}</p>}{mediaType === 'game' && <p className="work-data-source">Datos de <a href="https://www.igdb.com" target="_blank" rel="noreferrer">IGDB</a></p>}</section>
           <aside className="work-secondary">
-            <section className="work-details-section"><h2 className="work-section-heading">Detalles</h2><dl className="work-details"><div><dt>Tipo</dt><dd>{mediaType === 'game' ? 'Videojuego' : 'Anime'}</dd></div>{year && <div><dt>Estreno</dt><dd>{year}</dd></div>}{creators.length > 0 && <div><dt>{mediaType === 'game' ? 'Desarrollo' : 'Estudio'}</dt><dd>{creators.join(', ')}</dd></div>}{genres.length > 0 && <div><dt>Géneros</dt><dd>{genres.join(' · ')}</dd></div>}{platforms.length > 0 && <div><dt>Plataformas</dt><dd>{platforms.join(' · ')}</dd></div>}{mediaType === 'anime' && work.status && <div><dt>Estado</dt><dd>{work.status}</dd></div>}{mediaType === 'anime' && work.episodes != null && <div><dt>Episodios</dt><dd>{work.episodes}</dd></div>}</dl></section>
-            {!isPwa && (!similarWorks || similarWorks.length > 0) && <section className="work-similar-section"><h2 className="work-section-heading">Obras similares</h2><div className="work-similar-grid">{similarWorks ? similarWorks.slice(0, 6).map(similar => <Link key={`${similar.media_type || mediaType}:${similar.id}`} to={`/${similar.media_type || mediaType}/${similar.id}`} title={similar.name || similar.title}><WorkImage src={coverImage(similar.cover_url || similar.image_url)} title={similar.name || similar.title} /><span>{similar.name || similar.title}</span></Link>) : [0, 1, 2].map(index => <span key={index} className="work-skeleton work-similar-skeleton" />)}</div></section>}
+            <section className="work-details-section"><h2 className="work-section-heading">Detalles</h2><dl className="work-details"><div><dt>Tipo</dt><dd>{workType(mediaType).label}</dd></div>{year && <div><dt>{mediaType === 'manga' ? 'Publicación' : 'Estreno'}</dt><dd>{year}</dd></div>}{creators.length > 0 && <div><dt>{workType(mediaType).creatorLabel}</dt><dd>{creators.join(', ')}</dd></div>}{genres.length > 0 && <div><dt>Géneros</dt><dd>{genres.join(' · ')}</dd></div>}{platforms.length > 0 && <div><dt>Plataformas</dt><dd>{platforms.join(' · ')}</dd></div>}{mediaType === 'anime' && work.status && <div><dt>Estado</dt><dd>{work.status}</dd></div>}{mediaType === 'anime' && work.episodes != null && <div><dt>Episodios</dt><dd>{work.episodes}</dd></div>}{mediaType === 'manga' && <><div><dt>Formato</dt><dd>{{ manga: 'Manga', one_shot: 'One-shot', manhwa: 'Manhwa', manhua: 'Manhua' }[work.format] || 'Desconocido'}</dd></div><div><dt>Estado de publicación</dt><dd>{{ currently_publishing: 'En publicación', finished: 'Finalizado', not_yet_published: 'Sin publicar', on_hiatus: 'En pausa', discontinued: 'Interrumpido' }[work.publication_status] || work.publication_status || 'Desconocido'}</dd></div><div><dt>Capítulos</dt><dd>{work.chapters ?? 'Desconocido'}</dd></div><div><dt>Volúmenes</dt><dd>{work.volumes ?? 'Desconocido'}</dd></div>{work.external_score != null && <div><dt>Puntuación de MyAnimeList</dt><dd>{work.external_score} / {work.external_score_scale}</dd></div>}</>}</dl></section>
+            {!isPwa && (!similarWorks || similarWorks.length > 0) && <section className="work-similar-section"><h2 className="work-section-heading">Obras similares</h2><div className="work-similar-grid">{similarWorks ? similarWorks.slice(0, 6).map(similar => <Link key={`${similar.media_type || mediaType}:${similar.id}`} to={workHref(similar.media_type || mediaType, similar.id)} title={similar.name || similar.title}><WorkImage src={coverImage(similar.cover_url || similar.image_url)} title={similar.name || similar.title} /><span>{similar.name || similar.title}</span></Link>) : [0, 1, 2].map(index => <span key={index} className="work-skeleton work-similar-skeleton" />)}</div></section>}
             {!isPwa && spaces?.length > 0 && <section className="work-spaces-section"><h2 className="work-section-heading">Espacios relacionados</h2><div className="work-spaces">{spaces.map(space => <Link key={space.id} to={`/spaces/${space.id}`}><span className="work-space-image">{space.avatar_url || space.banner_url ? <img src={space.avatar_url || space.banner_url} alt="" loading="lazy" /> : space.name?.slice(0, 1)}</span><span><strong>{space.name}{space.is_verified && <span className="work-space-verified" aria-label="Verificado">✓</span>}</strong><small>{space.member_count ?? 0} {space.member_count === 1 ? 'miembro' : 'miembros'}</small></span><WorkIcon name="arrow" /></Link>)}</div></section>}
           </aside>
           <WorkCommunity key={userId || 'guest'} viewerKey={userId || 'guest'} workId={workId} mediaType={mediaType} stats={stats?.status === 'ready' ? stats.data : null} />
@@ -226,5 +227,6 @@ function WorkDetails({ mediaType, workId }) {
 
 export default function WorkPage({ mediaType }) {
   const { id } = useParams()
-  return <WorkDetails key={`${mediaType}:${id}`} mediaType={mediaType} workId={id} />
+  const workId = mediaType === 'manga' && /^\d+$/.test(id || '') ? `mal:manga:${id}` : id
+  return <WorkDetails key={`${mediaType}:${workId}`} mediaType={mediaType} workId={workId} />
 }

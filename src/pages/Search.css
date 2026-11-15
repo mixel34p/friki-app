@@ -68,6 +68,7 @@
 .search-category-card:hover, .search-category-card:focus-visible { transform: translateY(-3px); border-color: color-mix(in srgb, var(--category-color) 65%, transparent); box-shadow: var(--shadow-md), 0 0 24px color-mix(in srgb, var(--category-color) 13%, transparent); color: var(--text-primary); outline: 0; }
 .search-category-card:active { transform: translateY(-1px) scale(.99); }
 .search-category-card.anime { --category-color: #d59cff; }
+.search-category-card.manga { --category-color: #ffc46b; }
 .search-category-card.games { --category-color: #75a8ff; }
 .search-category-card.users { --category-color: #50dbc5; }
 .search-category-card.spaces { --category-color: #ffc46b; }
@@ -887,6 +888,7 @@
 .search-list-tag.type-tierlist { color:#d8b3ff; border-color:color-mix(in srgb,#d8b3ff 30%,var(--border-default)); }
 .search-list-tag.type-ranking { color:#ffd479; border-color:color-mix(in srgb,#ffd479 30%,var(--border-default)); }
 .search-list-tag.type-grid { color:#72d8c5; border-color:color-mix(in srgb,#72d8c5 30%,var(--border-default)); }
+.search-list-tag.type-alignment { color:#c4a5fa; border-color:color-mix(in srgb,#c4a5fa 30%,var(--border-default)); }
 .search-list-tag.media-game,.search-list-tag.media-anime { color:var(--text-secondary); }
 @media(max-width:680px) {
   .search-result-grid .search-list-card { gap:.75rem; padding:.75rem 0; }
@@ -1257,7 +1259,7 @@
 .search-landing-main .search-explore-heading { margin-bottom:.75rem; }
 .search-landing-main .search-explore-heading h2,
 .search-spotlight-heading h2 { color:var(--text-secondary); font-size:.8rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
-.search-landing-main .search-category-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:.75rem; }
+.search-landing-main .search-category-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:.75rem; }
 
 @media(max-width:680px) {
   .search-landing-main { display:flex; flex-direction:column; }
@@ -1276,7 +1278,7 @@
   .search-spotlight-avatar { width:66px; height:66px; flex-basis:66px; }
   .search-spotlight-cover { height:82px; flex-basis:82px; }
   .search-spotlight-card.space .search-spotlight-cover { height:auto; flex-basis:auto; }
-  .search-landing-main .search-category-grid { grid-template-columns:repeat(2,minmax(0,1fr)); overflow:visible; padding-bottom:0; }
+  .search-landing-main .search-category-grid { grid-template-columns:repeat(3,minmax(0,1fr)); overflow:visible; padding-bottom:0; }
   .search-spotlight-mobile-panel { display:flex; flex-direction:column; margin:0 0 1.8rem; overflow:hidden; border:1px solid var(--border-default); border-radius:var(--radius-xl); background:var(--bg-card); }
   .search-spotlight-mobile-panel .search-spotlight { margin:0; }
   .search-spotlight-mobile-panel .search-spotlight-heading,

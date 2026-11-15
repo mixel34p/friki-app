@@ -8,11 +8,15 @@ import DefaultAvatar from '../components/DefaultAvatar'
 import { hasCustomAvatar } from '../lib/avatar'
 import { isStandalonePwa } from '../lib/pwaRouteTransition'
 import SEO from '../components/SEO'
+import MangaAvailability from '../components/MangaAvailability'
+import { workHref, workType } from '../lib/workTypes'
+import { AlignmentIcon } from '../components/AlignmentBoard'
+import { listTypeLabel } from '../lib/listTypes'
 import './Search.css'
 
 const FILTERS = [
-  { id: 'all', label: 'All' }, { id: 'game', label: 'Games' }, { id: 'anime', label: 'Anime' },
-  { id: 'spaces', label: 'Spaces' }, { id: 'lists', label: 'Lists' }, { id: 'users', label: 'Users' },
+  { id: 'all', label: 'Todo' }, { id: 'game', label: 'Juegos' }, { id: 'anime', label: 'Anime' }, { id: 'manga', label: 'Manga' },
+  { id: 'spaces', label: 'Espacios' }, { id: 'lists', label: 'Listas' }, { id: 'users', label: 'Usuarios' },
 ]
 const FILTER_IDS = new Set(FILTERS.map(filter => filter.id))
 const CATEGORY_LABELS = { works: 'Obras', spaces: 'Espacios', users: 'Usuarios', lists: 'Listas' }
@@ -21,8 +25,7 @@ const nameOf = item => item.title || item.name || item.display_name || item.user
 
 function resultHref(item) {
   if (item.type === 'list') return `/lists/${item.id}`
-  if (item.type === 'game') return `/game/${item.id}`
-  if (item.type === 'anime') return `/anime/${item.id}`
+  if (['game', 'anime', 'manga'].includes(item.type)) return workHref(item.type, item.id)
   if (item.username) return `/profile/${item.username}`
   return `/spaces/${item.id}`
 }
@@ -70,7 +73,7 @@ function highResolutionArtwork(item, kind) {
 
 function getSecondary(item) {
   if (item.type === 'list') return item.author?.username ? `@${item.author.username}` : '@usuario'
-  if (item.type === 'game' || item.type === 'anime') {
+  if (['game', 'anime', 'manga'].includes(item.type)) {
     return getYear(item)
   }
   if (item.username) return `@${item.username}`
@@ -79,7 +82,7 @@ function getSecondary(item) {
 }
 
 function getYear(item) {
-  const date = item.release_date || item.first_release_date
+  const date = item.release_date || item.first_release_date || item.start_date
   return typeof date === 'number' ? new Date(date * 1000).getFullYear() : date ? String(date).slice(0, 4) : ''
 }
 
@@ -96,10 +99,10 @@ function SearchIcon() {
 function ResultLink({ item, active, id, onClick, display = 'row' }) {
   const isCard = display === 'card'
   if (item.type === 'list') {
-    const listType = item.list_type === 'ranking' ? 'Ranking' : item.list_type === 'grid' ? 'Grid' : 'Tierlist'
+    const listType = listTypeLabel(item.list_type)
     const authorName = item.author?.username || 'usuario'
     const authorAvatar = hasCustomAvatar(item.author?.avatar_url) ? item.author.avatar_url : null
-    const typeIcon = item.list_type === 'ranking'
+    const typeIcon = item.list_type === 'alignment' ? <AlignmentIcon/> : item.list_type === 'ranking'
       ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
       : item.list_type === 'grid'
         ? <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
@@ -135,7 +138,7 @@ function ResultLink({ item, active, id, onClick, display = 'row' }) {
     </> : <>
       {artwork}
       <span className="search-result-copy">{titleContent}{getSecondary(item) && <small>{getSecondary(item)}</small>}</span>
-      {(item.type === 'game' || item.type === 'anime') && <span className={`search-kind ${item.type}`}>{item.type === 'game' ? 'VIDEOJUEGO' : 'ANIME'}</span>}
+      {(['game', 'anime', 'manga'].includes(item.type)) && <span className={`search-kind ${item.type}`}>{{ game: 'VIDEOJUEGO', anime: 'ANIME', manga: 'MANGA' }[item.type]}</span>}
     </>}
   </Link>
 }
@@ -238,8 +241,8 @@ function SpotlightRow({ kind, items = [], loading = false, isLoggedIn = false })
 
 
 function RecommendationItem({ work }) {
-  const isAnime = work.type === 'anime' || work.media_type === 'anime'
-  const href = isAnime ? `/anime/${work.id}` : `/game/${work.id}`
+  const type = work.type || work.media_type || 'game'
+  const href = workHref(type, work.id)
   const image = work.image || work.cover_url || work.image_url
   return (
     <Link to={href} className="srec-card" title={work.title} aria-label={work.title}>
@@ -247,7 +250,7 @@ function RecommendationItem({ work }) {
         {image ? (
           <img src={image} alt={work.title} loading="lazy" />
         ) : (
-          <div className="srec-card-fallback">{isAnime ? '▣' : '▤'}</div>
+          <div className="srec-card-fallback">{workType(type).icon}</div>
         )}
         <div className="srec-card-overlay">
           <span className="srec-card-title">{work.title}</span>
@@ -297,6 +300,7 @@ function RecommendationSidebar({ userId }) {
   useEffect(() => {
     let cancelled = false
     setLoading(true)
+    setRecs([])
     getSearchRecommendations(6, userId).then(items => {
       if (!cancelled) {
         setRecs(items)
@@ -311,7 +315,7 @@ function RecommendationSidebar({ userId }) {
   return (
     <aside className="search-sidebar" aria-label="Te puede gustar">
       <div className="search-explore-heading">
-        <div><h2>{userId ? 'TE PUEDE GUSTAR' : 'OBRAS POPULARES'}</h2></div>
+        <div><h2>{userId && (loading || recs.personalized) ? 'TE PUEDE GUSTAR' : 'OBRAS PARA DESCUBRIR'}</h2></div>
       </div>
       <div className="srec-grid">
         {loading && Array.from({ length: 6 }).map((_, i) => (
@@ -339,6 +343,7 @@ export default function Search() {
   const isResults = normalizedPath === '/search/results' || (normalizedPath === '/search' && params.has('filter'))
   const urlQuery = params.get('q') || ''
   const filter = FILTER_IDS.has(params.get('filter')) ? params.get('filter') : 'all'
+  const mangaOffset = filter === 'manga' ? Math.max(0, Math.min(1000, Number(params.get('offset')) || 0)) : 0
   const [localQuery, setLocalQuery] = useState(urlQuery)
   const [resultsDraft, setResultsDraft] = useState(urlQuery)
   const query = isResults ? resultsDraft : localQuery
@@ -422,13 +427,13 @@ export default function Search() {
     let cancelled = false
     const controller = new AbortController()
     setLoading(true)
-    searchPlatform(requestQuery, isResults ? 20 : 8, controller.signal, isResults ? filter : 'all').then(result => {
+    searchPlatform(requestQuery, isResults ? 20 : 8, controller.signal, isResults ? filter : 'all', mangaOffset).then(result => {
       if (!cancelled && requestId === requestRef.current) setData(result)
     }).catch(error => {
       if (!cancelled && requestId === requestRef.current) setData({ works: [], spaces: [], users: [], lists: [], errors: { all: error } })
     }).finally(() => { if (!cancelled && requestId === requestRef.current) setLoading(false) })
     return () => { cancelled = true; controller.abort(); requestRef.current += 1 }
-  }, [requestQuery, isResults, filter])
+  }, [requestQuery, isResults, filter, mangaOffset])
 
   useEffect(() => {
     let cancelled = false
@@ -493,12 +498,11 @@ export default function Search() {
     option?.scrollIntoView({ block: 'nearest' })
   }, [activeIndex, flatResults.length])
 
-  const selectedItems = filter === 'game' ? data.works.filter(item => item.type === 'game')
-    : filter === 'anime' ? data.works.filter(item => item.type === 'anime')
+  const selectedItems = ['game', 'anime', 'manga'].includes(filter) ? data.works.filter(item => item.type === filter)
       : filter === 'spaces' ? data.spaces : filter === 'users' ? data.users : filter === 'lists' ? data.lists : null
   const sections = filter === 'all'
     ? [['works', data.works], ['spaces', data.spaces], ['lists', data.lists], ['users', data.users]]
-    : filter === 'game' || filter === 'anime' ? [['works', selectedItems]]
+    : ['game', 'anime', 'manga'].includes(filter) ? [['works', selectedItems]]
       : [[filter, selectedItems]]
   const hasVisibleResults = sections.some(([, items]) => items?.length > 0)
   const activeDescendant = previewOpen && activeIndex >= 0
@@ -521,12 +525,14 @@ export default function Search() {
           : loading && !data.works.length && !data.spaces.length && !data.users.length && !data.lists.length ? <SearchSkeleton />
             : Object.keys(data.errors || {}).length === 4 && !data.works.length && !data.spaces.length && !data.users.length && !data.lists.length ? <div className="search-full-empty"><span>!</span><h2>No se pudo completar la búsqueda</h2><p>Comprueba tu conexión e inténtalo de nuevo.</p></div>
               : <>
+                {filter === 'manga' && <MangaAvailability />}
                 {sections.map(([key, items]) => items?.length > 0 && <section className={`search-result-section ${key}`} data-result-category={key} key={key}>
                   <div className="search-section-heading"><div className="search-section-title"><h2>{CATEGORY_LABELS[key]}</h2><span className="search-section-count">{items.length}</span></div></div>
                   <div className="search-result-grid">{items.map(item => <ResultLink key={`${item.type || key}-${item.id}`} item={item} display={key === 'users' ? 'row' : 'card'} />)}</div>
                 </section>)}
-                {!loading && Object.keys(data.errors || {}).length > 0 && <p className="search-full-error">Algunos catálogos no respondieron. Los resultados disponibles siguen visibles.</p>}
+                {!loading && Object.keys(data.errors || {}).length > 0 && <p className="search-full-error">Algunos catálogos no respondieron. Los resultados disponibles siguen visibles.{data.errors.manga?.message && <> {data.errors.manga.message}</>}</p>}
                 {!loading && !hasVisibleResults && <p className="search-no-results">Sin resultados para «{urlQuery}»</p>}
+                {!loading && filter === 'manga' && (mangaOffset > 0 || data.nextOffset != null) && <nav className="discover-pagination" aria-label="Paginación de manga"><button type="button" disabled={!mangaOffset} onClick={() => { const next = new URLSearchParams(params); next.set('offset', String(Math.max(0, mangaOffset - 20))); setParams(next) }}>Anterior</button><button type="button" disabled={data.nextOffset == null || data.nextOffset > 1000} onClick={() => { const next = new URLSearchParams(params); next.set('offset', String(data.nextOffset)); setParams(next) }}>Siguiente</button></nav>}
                 {loading && <SearchSkeleton />}
               </>}
       </section>
@@ -543,6 +549,7 @@ export default function Search() {
           <div className="search-explore-heading"><div><h2 id="explore-title">EXPLORAR</h2></div></div>
           <div className="search-category-grid">
             <CategoryCard kind="anime" title="Animes" items={highlightData.anime} to="/discover/anime" />
+            <CategoryCard kind="manga" title="Manga" items={highlightData.manga} to="/discover/manga" />
             <CategoryCard kind="games" title="Juegos" items={highlightData.games} to="/discover/games" />
           </div>
         </section>

@@ -1,0 +1,77 @@
+[
+  {
+    "width": 1360,
+    "layout": [
+      {
+        "title": "Animes",
+        "width": 183.53125,
+        "top": 144.6875
+      },
+      {
+        "title": "Manga",
+        "width": 183.546875,
+        "top": 144.6875
+      },
+      {
+        "title": "Juegos",
+        "width": 183.546875,
+        "top": 144.6875
+      }
+    ],
+    "cards": 24,
+    "mangaCoverImages": 2,
+    "providerRequestsForDecoration": 0,
+    "correctDetailLink": true,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "layout": [
+      {
+        "title": "Animes",
+        "width": 102.265625,
+        "top": 427.103271484375
+      },
+      {
+        "title": "Manga",
+        "width": 102.265625,
+        "top": 427.103271484375
+      },
+      {
+        "title": "Juegos",
+        "width": 102.28125,
+        "top": 427.103271484375
+      }
+    ],
+    "cards": 24,
+    "mangaCoverImages": 2,
+    "providerRequestsForDecoration": 0,
+    "correctDetailLink": true,
+    "errors": []
+  },
+  {
+    "width": 360,
+    "layout": [
+      {
+        "title": "Animes",
+        "width": 92.265625,
+        "top": 427.09375
+      },
+      {
+        "title": "Manga",
+        "width": 92.265625,
+        "top": 427.09375
+      },
+      {
+        "title": "Juegos",
+        "width": 92.28125,
+        "top": 427.09375
+      }
+    ],
+    "cards": 24,
+    "mangaCoverImages": 2,
+    "providerRequestsForDecoration": 0,
+    "correctDetailLink": true,
+    "errors": []
+  }
+]

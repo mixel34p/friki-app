@@ -1,4 +1,8 @@
+import { isMangaCover, mangaExportPlaceholder } from '../../lib/artworkExport'
 import useSystemBarColor from '../../hooks/useSystemBarColor'
+import AlignmentBoard from '../../components/AlignmentBoard';
+import ItemCard from '../../components/ListItemArtwork';
+import { listTypeLabel } from '../../lib/listTypes';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { FaFacebookF, FaRedditAlien, FaTelegram, FaWhatsapp, FaXTwitter } from 'react-icons/fa6';
@@ -74,6 +78,8 @@ function collectListPreviewImages(content, max = 3) {
 
 async function imageToDataUrl(url) {
     if (!url) return '';
+    if (isMangaCover(url)) return mangaExportPlaceholder();
+    if (/^data:image\//i.test(url)) return url;
     try {
         const normalized = new URL(url, window.location.href).href;
         let blob = null;
@@ -200,6 +206,20 @@ function buildPreviewSvg(preview, imageSources, w, h) {
         if (!rr2.width || !rr2.height) return '';
         const fs = parseFloat(style.fontSize) || 14, lh = parseFloat(style.lineHeight) || fs * 1.2;
         const ff = style.fontFamily || 'sans-serif', fw = style.fontWeight || '400', fi = style.fontStyle || 'normal';
+        // Use the browser's line breaks for alignment labels, including long words.
+        if (parent.closest('.alignment-board')) {
+            const lines = [];
+            for (let index = 0; index < tn.length; index++) {
+                range.setStart(tn, index);
+                range.setEnd(tn, index + 1);
+                const rect = range.getBoundingClientRect();
+                if (!rect.width || !rect.height) continue;
+                const previous = lines[lines.length - 1];
+                if (previous && Math.abs(previous.top - rect.top) < 1) previous.text += tn.nodeValue[index];
+                else lines.push({ top: rect.top, left: rect.left, text: tn.nodeValue[index] });
+            }
+            return lines.map(line => `<text x="${line.left - origin.left}" y="${line.top - origin.top + fs * 0.9}" fill="${escapeSvg(style.color || '#fff')}" font-family="${escapeSvg(ff)}" font-size="${fs}" font-weight="${escapeSvg(fw)}">${escapeSvg(line.text)}</text>`).join('');
+        }
         mc.font = `${fi} ${fw} ${fs}px ${ff}`;
         const lp = parseFloat(style.paddingLeft) || 0, rp = parseFloat(style.paddingRight) || 0;
         const avail = Math.max(1, box.width - lp - rp);
@@ -269,10 +289,33 @@ function buildPreviewSvg(preview, imageSources, w, h) {
     return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><defs>${defs.join('')}</defs>${body.join('')}</svg>`;
 }
 
-export async function generateListImage(preview, listTitle, authorName, authorAvatar, authorThemeColor, authorUsername, bgCoverUrl, listType, includeAuthor = true) {
+export async function generateListImage(preview, ...options) {
+    if (!preview) throw new Error('No se encontró el preview');
+    const board = preview.matches('.alignment-board') ? preview : preview.querySelector('.alignment-board');
+    if (!board) return renderListImage(preview, ...options);
+    // Render at the natural matrix size, independently of mobile preview fitting/scroll.
+    const source = document.createElement('div');
+    source.setAttribute('aria-hidden', 'true');
+    source.style.cssText = 'position:fixed;left:-10000px;top:0;pointer-events:none;';
+    const computed = window.getComputedStyle(board);
+    source.style.fontFamily = computed.fontFamily;
+    for (const property of ['--bg-secondary', '--bg-tertiary', '--text-primary', '--text-secondary', '--border-default']) {
+        source.style.setProperty(property, computed.getPropertyValue(property));
+    }
+    const clone = board.cloneNode(true);
+    clone.classList.remove('is-fitted');
+    clone.style.width = `${100 + (Number(board.style.getPropertyValue('--alignment-columns')) || 3) * 120}px`;
+    clone.style.maxWidth = 'none';
+    source.appendChild(clone);
+    document.body.appendChild(source);
+    try { return await renderListImage(source, ...options); }
+    finally { source.remove(); }
+}
+
+async function renderListImage(preview, listTitle, authorName, authorAvatar, authorThemeColor, authorUsername, bgCoverUrl, listType, includeAuthor = true) {
     if (!preview) throw new Error('No se encontró el preview');
     await document.fonts?.ready;
-    const vc = preview.querySelector('.cl-tierlist, .vl-ranking-stack, .cl-grid-cells') || preview;
+    const vc = preview.querySelector('.cl-tierlist, .vl-ranking-stack, .cl-grid-cells, .alignment-board') || preview;
     const bounds = vc.getBoundingClientRect();
     const imgs = [...preview.querySelectorAll('img')];
     const imageSources = new Map();
@@ -289,7 +332,7 @@ export async function generateListImage(preview, listTitle, authorName, authorAv
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         canvas.width = 1200;
-        const dynamic = vc.matches('.cl-tierlist, .vl-ranking-stack');
+        const dynamic = vc.matches('.cl-tierlist, .vl-ranking-stack, .alignment-board');
         const imageMargin = includeAuthor ? 24 : 12;
         const contentTop = dynamic && !includeAuthor ? 112 : 180;
         const pa = { x: imageMargin, y: contentTop, width: canvas.width - imageMargin * 2, height: 920 };
@@ -878,7 +921,7 @@ export default function ViewList() {
                                     <span>{authorName}<small>@{authorUsername}</small></span>
                                 </div>
                                 <strong>{list.title || 'Lista'}</strong>
-                                <span>{list.list_type ? list.list_type.charAt(0).toUpperCase() + list.list_type.slice(1) : 'Lista'}</span>
+                                <span>{listTypeLabel(list.list_type)}</span>
                             </div>
                         </div>
                         <button className="review-share-link" type="button" onClick={copyShareLink} aria-label="Copiar enlace">
@@ -937,6 +980,7 @@ export default function ViewList() {
                                 {list.list_type === 'tierlist' && <TierlistView list={list} />}
                                 {list.list_type === 'ranking'  && <RankingView  list={list} />}
                                 {list.list_type === 'grid'     && <GridView     list={list} />}
+                                {list.list_type === 'alignment' && <AlignmentBoard config={list.type_config} content={list.content} />}
                             </div>
                         </div>
                     </div>
@@ -995,6 +1039,7 @@ export function ListPostPreview({ list, onClick, className = '', ariaLabel }) {
                         {list.list_type === 'tierlist' && <TierlistView list={list} />}
                         {list.list_type === 'ranking' && <RankingView list={list} />}
                         {list.list_type === 'grid' && <GridView list={list} />}
+                        {list.list_type === 'alignment' && <AlignmentBoard config={list.type_config} content={list.content} fit />}
                     </div>
                 </div>
             </div>
@@ -1073,17 +1118,6 @@ function GridView({ list }) {
                     </div>
                 );
             })}
-        </div>
-    );
-}
-
-function ItemCard({ item, hideName }) {
-    const imgUrl = item.image_url || item.cover_url || item.cover?.url;
-    return (
-        <div className="cl-item">
-            {imgUrl && <img src={imgUrl} alt={item.name} />}
-            {!imgUrl && hideName && <span className="cl-ranking-cover-fallback">{item.name?.charAt(0)}</span>}
-            {!hideName && <div className="cl-item-overlay"><span className="cl-item-name">{item.name}</span></div>}
         </div>
     );
 }

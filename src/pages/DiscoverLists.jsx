@@ -9,6 +9,8 @@ import CreateTemplateModal from './lists/CreateTemplateModal'
 import CatalogPicker from '../components/CatalogPicker'
 import { collectListPreviewImages, templatePreviewImages } from '../lib/discoverListPreview'
 import SEO from '../components/SEO'
+import { AlignmentIcon } from '../components/AlignmentBoard'
+import { listTypeLabel } from '../lib/listTypes'
 import '../components/LibraryGrid.css'
 import './DiscoverWorks.css'
 import './Search.css'
@@ -22,6 +24,7 @@ const TYPES = [
   { value: 'tierlist', label: 'Tierlist' },
   { value: 'ranking', label: 'Ranking' },
   { value: 'grid', label: 'Grid' },
+  { value: 'alignment', label: 'Alineamiento' },
 ]
 const MEDIA = [
   { value: '', label: 'Todo el contenido' },
@@ -30,10 +33,11 @@ const MEDIA = [
 ]
 
 function listTypeName(type) {
-  return type === 'ranking' ? 'Ranking' : type === 'grid' ? 'Grid' : 'Tierlist'
+  return listTypeLabel(type)
 }
 
 function ListTypeIcon({ type }) {
+  if (type === 'alignment') return <AlignmentIcon/>
   if (type === 'ranking') return <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
   if (type === 'grid') return <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
   return <svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>

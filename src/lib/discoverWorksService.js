@@ -1,5 +1,14 @@
 import { supabase } from './supabase'
 import { isPrimaryIGDBGame, gameCatalogDedupKey } from './igdb'
+import { normalizeCatalogWork } from './workTypes'
+
+export async function getDiscoverManga({ page = 1, pageSize = 24, genre = null, order = 'popular', signal } = {}) {
+  let request = supabase.rpc('discover_manga', { page_number: page, page_size: pageSize, genre_filter: genre === 'all' ? null : genre, sort_order: order })
+  if (signal) request = request.abortSignal(signal)
+  const { data, error } = await request
+  if (error) throw error
+  return { ...data, items: (data.items || []).map(row => normalizeCatalogWork('manga', row)) }
+}
 
 const PAGE_SIZE = 1000
 
@@ -50,6 +59,7 @@ function normalizeTitle(value) {
 
 /** Loads the catalog and registration ratings used by Discover. */
 export async function getDiscoverWorks(mediaType) {
+  if (mediaType === 'manga') return (await getDiscoverManga()).items
   if (!['anime', 'game'].includes(mediaType)) throw new Error('Tipo de obra no válido')
   const table = mediaType === 'game' ? 'games' : 'anime'
   const titleField = mediaType === 'game' ? 'name' : 'title'
@@ -94,6 +104,7 @@ export async function getDiscoverWorks(mediaType) {
       ratingCount: score.ratingCount,
       databaseRating: catalogRating(work, mediaType),
       databasePopularity: catalogPopularity(work),
+      externalScore: finiteNumber(work.external_score),
     }
   })
 

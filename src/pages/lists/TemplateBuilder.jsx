@@ -8,13 +8,15 @@ import {
     DEFAULT_TIER_CONFIG,
     TIER_COLORS_PALETTE
 } from '../../lib/listService';
-import { searchGames } from '../../lib/gameService';
-import { searchAnime } from '../../lib/animeService';
+import { searchWorks } from '../../lib/workAdapters';
+import { workType } from '../../lib/workTypes';
 import { getTierLabelFontSize } from '../../lib/tierLabel';
 import { navigatePwaRoute } from '../../lib/pwaRouteTransition';
 import { useAuth } from '../../context/AuthContext';
 import CustomItemGroupsPicker from '../../components/CustomItemGroupsPicker';
 import TierLabelEditor from './TierLabelEditor';
+import AlignmentConfigEditor from '../../components/AlignmentConfigEditor';
+import { createAlignmentConfig, validateAlignmentConfig } from '../../lib/alignment';
 import '../ReviewDetail.css';
 import './TemplateBuilder.css';
 
@@ -83,6 +85,7 @@ export default function TemplateBuilder() {
     const [maxItems, setMaxItems]         = useState(10);
     const [gridCells, setGridCells]       = useState([]);
     const [gridColumns, setGridColumns]   = useState(2);
+    const [alignmentConfig, setAlignmentConfig] = useState(createAlignmentConfig);
 
     // Items & covers
     const [itemsPool, setItemsPool]       = useState([]);
@@ -165,6 +168,8 @@ export default function TemplateBuilder() {
             } else if (tpl.list_type === 'grid') {
                 setGridCells(tpl.type_config?.cells || DEFAULT_TIER_CONFIG.grid.cells);
                 setGridColumns(tpl.type_config?.columns || DEFAULT_TIER_CONFIG.grid.columns);
+            } else if (tpl.list_type === 'alignment') {
+                setAlignmentConfig(validateAlignmentConfig(tpl.type_config));
             }
             setLoading(false);
         }).catch(err => {
@@ -178,15 +183,17 @@ export default function TemplateBuilder() {
     useEffect(() => {
         if (!template) return;
         if (searchQuery.trim().length < 2) { setSearchResults([]); return; }
+        const controller = new AbortController();
         setIsSearching(true);
         const t = setTimeout(async () => {
             try {
-                const fn = template.media_type === 'game' ? searchGames : searchAnime;
-                setSearchResults(await fn(searchQuery) || []);
-            } catch { setSearchResults([]); }
-            finally { setIsSearching(false); }
+                const fn = (query, limit, options) => searchWorks(template.media_type, query, limit, options);
+                const results = await fn(searchQuery, 20, { signal: controller.signal });
+                if (!controller.signal.aborted) setSearchResults(results || []);
+            } catch { if (!controller.signal.aborted) setSearchResults([]); }
+            finally { if (!controller.signal.aborted) setIsSearching(false); }
         }, 350);
-        return () => clearTimeout(t);
+        return () => { clearTimeout(t); controller.abort(); };
     }, [searchQuery, template]);
 
     // Búsqueda de carátulas para el dropdown
@@ -197,14 +204,16 @@ export default function TemplateBuilder() {
             return;
         }
         setIsSearchingCovers(true);
+        const controller = new AbortController();
         const t = setTimeout(async () => {
             try {
-                const fn = template.media_type === 'game' ? searchGames : searchAnime;
-                setCoverSearchResults(await fn(coverSearchQuery) || []);
-            } catch { setCoverSearchResults([]); }
-            finally { setIsSearchingCovers(false); }
+                const fn = (query, limit, options) => searchWorks(template.media_type, query, limit, options);
+                const results = await fn(coverSearchQuery, 20, { signal: controller.signal });
+                if (!controller.signal.aborted) setCoverSearchResults(results || []);
+            } catch { if (!controller.signal.aborted) setCoverSearchResults([]); }
+            finally { if (!controller.signal.aborted) setIsSearchingCovers(false); }
         }, 320);
-        return () => clearTimeout(t);
+        return () => { clearTimeout(t); controller.abort(); };
     }, [coverSearchQuery, template]);
 
     // Click outside y escape para el desplegable de portadas
@@ -233,7 +242,7 @@ export default function TemplateBuilder() {
     // ── Handlers ──────────────────────────────────────────────────────────────
     const addItem = (item) => {
         if (itemsPool.find(x => String(x.id) === String(item.id))) return;
-        setItemsPool(p => [...p, item]);
+        setItemsPool(p => [...p, { ...item, name: item.name || item.title, image_url: item.image_url || item.cover_url, media_type: item.media_type || template.media_type }]);
     };
     const addGroup = group => {
         const groupItems = (group.items || []).map((item, index) => ({
@@ -297,6 +306,7 @@ export default function TemplateBuilder() {
             if (template.list_type === 'tierlist') type_config.tiers = tiers;
             if (template.list_type === 'ranking')  type_config.max_items = maxItems;
             if (template.list_type === 'grid')     { type_config.cells = gridCells; type_config.columns = gridColumns; }
+            if (template.list_type === 'alignment') type_config = validateAlignmentConfig(alignmentConfig);
             const title = titleDraft.trim() || template.title;
             await updateTemplate(id, { title, type_config, default_items: itemsPool, cover_items: coverItems });
             navigatePwaRoute(navigate, `/templates/${id}`);
@@ -400,7 +410,7 @@ export default function TemplateBuilder() {
                                 <input
                                     className="tb-search-input"
                                     type="text"
-                                    placeholder={`Buscar carátula (${template.media_type === 'game' ? 'juegos' : 'anime'})...`}
+                                    placeholder={`Buscar carátula (${workType(template.media_type).plural.toLowerCase()})...`}
                                     value={coverSearchQuery}
                                     onChange={e => setCoverSearchQuery(e.target.value)}
                                     autoFocus
@@ -629,6 +639,8 @@ export default function TemplateBuilder() {
                             </section>
                         )}
 
+                        {template.list_type === 'alignment' && <AlignmentConfigEditor config={alignmentConfig} onChange={setAlignmentConfig} />}
+
                         {/* GRID */}
                         {template.list_type === 'grid' && (
                             <section className="tb-section">
@@ -786,7 +798,7 @@ export default function TemplateBuilder() {
                                         <input
                                             className="tb-search-input"
                                             type="text"
-                                            placeholder={`Buscar ${template.media_type === 'game' ? 'videojuego' : 'anime'}...`}
+                                            placeholder={`Buscar ${workType(template.media_type).label.toLowerCase()}...`}
                                             value={searchQuery}
                                             onChange={e => setSearchQuery(e.target.value)}
                                             autoFocus

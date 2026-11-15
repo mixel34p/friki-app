@@ -3,12 +3,14 @@ import { profileFavorites } from './invitations.js'
 import { getProfilePalette } from './colorContrast.js'
 import { getProfileFontStack } from './profileFonts.js'
 import { supabase } from './supabase.js'
+import { isMangaCover, mangaExportPlaceholder } from './artworkExport.js'
 
 const QR_OPTIONS = { errorCorrectionLevel: 'M', margin: 4, width: 360, color: { dark: '#101719', light: '#ffffff' } }
 export const invitationQr = url => QRCode.toDataURL(url, QR_OPTIONS)
 
 async function imageToDataUrl(url) {
     if (!url) return null
+    if (isMangaCover(url)) return mangaExportPlaceholder()
     let blob = null
     try {
         const normalized = new URL(url, window.location.href).href

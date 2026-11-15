@@ -25,10 +25,12 @@ export function compareDiscoverWorks(a, b, order = 'popular') {
     if (aRating !== bRating) return bRating - aRating
     if (a.ratingCount !== b.ratingCount) return b.ratingCount - a.ratingCount
     if (a.registrations !== b.registrations) return b.registrations - a.registrations
+    if (aRating === null && (a.externalScore ?? 0) !== (b.externalScore ?? 0)) return (b.externalScore ?? 0) - (a.externalScore ?? 0)
   } else {
     if (a.registrations !== b.registrations) return b.registrations - a.registrations
     if (a.databasePopularity !== b.databasePopularity) return b.databasePopularity - a.databasePopularity
     if (a.databaseRating !== b.databaseRating) return (b.databaseRating || 0) - (a.databaseRating || 0)
+    if ((a.externalScore ?? 0) !== (b.externalScore ?? 0)) return (b.externalScore ?? 0) - (a.externalScore ?? 0)
   }
   const yearDifference = (Number(releaseYear(b)) || 0) - (Number(releaseYear(a)) || 0)
   return yearDifference || a.title.localeCompare(b.title, 'es') || String(a.id).localeCompare(String(b.id))

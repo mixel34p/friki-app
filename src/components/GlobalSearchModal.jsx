@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback, memo } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
-import { searchGames } from '../lib/gameService'
-import { searchAnime } from '../lib/animeService'
+import { searchWorks } from '../lib/workAdapters'
+import { workKey, workType } from '../lib/workTypes'
+import MangaAvailability from './MangaAvailability'
 import { getWorkLog } from '../lib/libraryService'
 import { useAuth } from '../context/AuthContext'
 import LoadingSpinner from './LoadingSpinner'
@@ -16,7 +17,7 @@ const ResultGrid = memo(({ results, type, pendingSelection, onSelect, onResultCl
                 const title = type === 'game' ? item.name : item.title
                 const image = type === 'game' ? item.cover_url : item.image_url
                 const year = type === 'game' ? (item.first_release_date ? new Date(item.first_release_date * 1000).getFullYear() : '') : item.year
-                const isSelected = onSelect && pendingSelection.some(w => w.id === item.id);
+                const isSelected = onSelect && pendingSelection.some(w => workKey(w.type, w.id) === workKey(type, item.id));
                 
                 return (
                     <div key={item.id} className={`spotlight-card ${isSelected ? 'selected' : ''}`} onClick={() => onResultClick(item)}>
@@ -49,6 +50,10 @@ export default function GlobalSearchModal({ isOpen, onClose, onSelect }) {
     const [type, setType] = useState('game') // 'game' | 'anime'
     const [results, setResults] = useState([])
     const [loading, setLoading] = useState(false)
+    const [pagination, setPagination] = useState({ key: '', offset: 0, next: null })
+    const [searchError, setSearchError] = useState('')
+    const searchKey = `${type}:${debouncedQuery}`
+    const offset = pagination.key === searchKey ? pagination.offset : 0
     const [isClosing, setIsClosing] = useState(false)
     
     // Log Modal State
@@ -80,6 +85,7 @@ export default function GlobalSearchModal({ isOpen, onClose, onSelect }) {
     }, [query])
 
     useEffect(() => {
+        const controller = new AbortController()
         const fetchResults = async () => {
             if (!debouncedQuery || debouncedQuery.length < 2) {
                 setResults([])
@@ -87,24 +93,24 @@ export default function GlobalSearchModal({ isOpen, onClose, onSelect }) {
             }
             
             setLoading(true)
+            setSearchError('')
             try {
-                let data = []
-                if (type === 'game') {
-                    data = await searchGames(debouncedQuery)
-                } else {
-                    data = await searchAnime(debouncedQuery)
+                const data = await searchWorks(type, debouncedQuery, 20, { signal: controller.signal, offset })
+                if (!controller.signal.aborted) {
+                    setResults(previous => offset ? [...previous, ...data.filter(item => !previous.some(row => String(row.id) === String(item.id)))] : data || [])
+                    setPagination({ key: searchKey, offset, next: data.nextOffset ?? null })
                 }
-                setResults(data || [])
             } catch (err) {
                 console.error("Search error:", err)
-                setResults([])
+                if (!controller.signal.aborted) { setResults([]); setSearchError(type === 'manga' ? err.message : 'No se pudo buscar. Inténtalo de nuevo.') }
             } finally {
-                setLoading(false)
+                if (!controller.signal.aborted) setLoading(false)
             }
         }
         
         fetchResults()
-    }, [debouncedQuery, type])
+        return () => controller.abort()
+    }, [debouncedQuery, type, offset, searchKey])
 
     const handleResultClick = useCallback(async (item) => {
         const work = {
@@ -117,8 +123,8 @@ export default function GlobalSearchModal({ isOpen, onClose, onSelect }) {
         
         if (onSelect) {
             setPendingSelection(prev => {
-                const exists = prev.find(w => w.id === work.id);
-                if (exists) return prev.filter(w => w.id !== work.id);
+                const exists = prev.find(w => workKey(w.type, w.id) === workKey(work.type, work.id));
+                if (exists) return prev.filter(w => workKey(w.type, w.id) !== workKey(work.type, work.id));
                 return [...prev, work];
             });
             return;
@@ -165,7 +171,7 @@ export default function GlobalSearchModal({ isOpen, onClose, onSelect }) {
                     <div className="spotlight-header">
                         <div className="spotlight-tabs">
                             <button className={type === 'game' ? 'active' : ''} onClick={() => { setType('game'); setResults([]); setQuery(''); }}>Videojuegos</button>
-                            <button className={type === 'anime' ? 'active' : ''} onClick={() => { setType('anime'); setResults([]); setQuery(''); }}>Anime</button>
+                            <button className={type === 'anime' ? 'active' : ''} onClick={() => { setType('anime'); setResults([]); setQuery(''); }}>Anime</button><button className={type === 'manga' ? 'active' : ''} onClick={() => { setType('manga'); setResults([]); setQuery(''); }}>Manga</button>
                         </div>
                         <div className="spotlight-input-wrapper">
                             <svg className="spotlight-icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8"/><path d="M21 21L16.65 16.65"/></svg>
@@ -173,14 +179,15 @@ export default function GlobalSearchModal({ isOpen, onClose, onSelect }) {
                                 ref={inputRef}
                                 type="text" 
                                 className="spotlight-input" 
-                                placeholder={onSelect ? `¿Qué ${type === 'game' ? 'juegos' : 'animes'} quieres buscar?` : `¿Qué ${type === 'game' ? 'juego' : 'anime'} quieres registrar?`}
+                                placeholder={onSelect ? `¿Qué ${workType(type).plural.toLowerCase()} quieres buscar?` : `¿Qué ${workType(type).label.toLowerCase()} quieres registrar?`}
                                 value={query}
                                 onChange={(e) => setQuery(e.target.value)}
                             />
                         </div>
                     </div>
 
-                    <div className="spotlight-results">
+                    <div className="spotlight-results">{type === 'manga' && <MangaAvailability />}
+                        {searchError && <p role="alert">{searchError}</p>}
                         {loading && <div className="spotlight-loading"><LoadingSpinner size="lg" /></div>}
                         {!loading && query.length > 0 && query.length < 2 && (
                             <div className="spotlight-empty">Sigue escribiendo...</div>
@@ -198,6 +205,7 @@ export default function GlobalSearchModal({ isOpen, onClose, onSelect }) {
                                 onResultClick={handleResultClick} 
                             />
                         )}
+                        {type === 'manga' && pagination.key === searchKey && pagination.next != null && !loading && <button type="button" onClick={() => setPagination(previous => ({ ...previous, offset: previous.next }))}>Cargar más manga</button>}
                     </div>
                 </div>
 

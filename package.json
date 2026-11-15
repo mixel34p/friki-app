@@ -6,6 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "test:alignment": "node --test scripts/alignment.test.mjs scripts/discover-list-preview.test.mjs",
+    "test:manga": "node --test scripts/manga.test.mjs scripts/manga-database.test.mjs scripts/manga-edge.test.mjs",
+    "test:manga:browser": "node scripts/manga-browser.test.mjs",
+    "test:search-recommendations": "node --test scripts/search-recommendations.test.mjs",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -30,6 +34,7 @@
     "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.16",
     "@eslint/js": "^9.39.1",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",

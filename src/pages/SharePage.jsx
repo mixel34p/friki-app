@@ -12,14 +12,19 @@ import { supabase } from '../lib/supabase'
 import { deleteWorkLog, getUserLibrary, getWorkLog, logWork } from '../lib/libraryService'
 import { getAccentTextColor } from '../lib/colorContrast'
 import { useToast } from '../components/Toast'
-import { searchGames } from '../lib/gameService'
-import { searchAnime } from '../lib/animeService'
+import { searchWorks } from '../lib/workAdapters'
+import { WORK_TYPE_IDS } from '../lib/workTypes'
+import { getDiscoverManga } from '../lib/discoverWorksService'
+import MangaAvailability from '../components/MangaAvailability'
 import { createList, getTemplateById, getTemplates, incrementTemplateUses, DEFAULT_TIER_CONFIG } from '../lib/listService'
 import { createPost } from '../lib/postService'
 import { navigateBackOrHome } from '../lib/navigation'
 import { navigatePwaRoute, signalPwaRouteReady } from '../lib/pwaRouteTransition'
 import { uploadChatImage } from '../lib/socialDiscoveryService'
 import { ListPostPreview } from './lists/ViewList'
+import { alignmentToStored, createAlignmentConfig } from '../lib/alignment'
+import { AlignmentIcon } from '../components/AlignmentBoard'
+import { listTypeLabel } from '../lib/listTypes'
 import './SharePage.css'
 
 const PLACEHOLDERS = [
@@ -58,6 +63,8 @@ function makeEmptyTemplateList(template) {
     ;(config.tiers || []).forEach(tier => { content[tier.id] = [] })
   } else if (template?.list_type === 'ranking') {
     content = Array.from({ length: config.max_items || 10 }, () => null)
+  } else if (template?.list_type === 'alignment') {
+    content = alignmentToStored(config)
   } else if (template?.list_type === 'grid') {
     ;(config.cells || []).forEach((_, index) => { content[`c${index}`] = null })
   }
@@ -65,17 +72,19 @@ function makeEmptyTemplateList(template) {
 }
 
 function makeEmptyStandaloneList(type) {
-  const typeConfig = JSON.parse(JSON.stringify(DEFAULT_TIER_CONFIG[type] || DEFAULT_TIER_CONFIG.tierlist))
+  const typeConfig = type === 'alignment' ? createAlignmentConfig() : JSON.parse(JSON.stringify(DEFAULT_TIER_CONFIG[type] || DEFAULT_TIER_CONFIG.tierlist))
   let content = {}
   if (type === 'tierlist') {
     typeConfig.tiers.forEach(tier => { content[tier.id] = [] })
+  } else if (type === 'alignment') {
+    content = alignmentToStored(typeConfig)
   } else if (type === 'grid') {
     typeConfig.cells.forEach((_, index) => { content[`c${index}`] = null })
   } else {
     content = Array.from({ length: typeConfig.max_items }, () => null)
   }
   return {
-    title: type === 'ranking' ? 'Nuevo ranking' : type === 'grid' ? 'Nueva cuadrícula' : 'Nueva tierlist',
+    title: type === 'alignment' ? 'Nuevo alineamiento' : type === 'ranking' ? 'Nuevo ranking' : type === 'grid' ? 'Nueva cuadrícula' : 'Nueva tierlist',
     list_type: type,
     media_type: type === 'ranking' ? 'mixed' : 'game',
     type_config: typeConfig,
@@ -95,7 +104,7 @@ const TOOLS = [
   { id: 'camera', label: 'Hacer una foto', icon: <><path d="M14 4H9L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2-3Z"/><circle cx="12" cy="13" r="3"/></> },
   { id: 'image', label: 'Añadir imagen', icon: <><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></> },
   { id: 'gif', label: 'Añadir GIF', icon: <><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M10 9.5a2.5 2.5 0 1 0 0 5h1.5v-1.7H10M15 9.5v5M18 9.5h-2v5"/></> },
-  { id: 'review', label: 'Valorar un juego o anime', icon: <><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9L12 3Z"/></> },
+  { id: 'review', label: 'Valorar una obra', icon: <><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9L12 3Z"/></> },
   { id: 'list', label: 'Añadir lista', icon: <><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></> },
   { id: 'mention', label: 'Mencionar a alguien', icon: <><circle cx="12" cy="12" r="4"/><path d="M16 8v6a2 2 0 0 0 4 0v-2a8 8 0 1 0-3.3 6.5"/></> },
 ]
@@ -191,7 +200,7 @@ export default function SharePage() {
 
   useEffect(() => {
     const standaloneType = new URLSearchParams(location.search).get('listType')
-    setSelectedStandaloneType(['tierlist', 'grid', 'ranking'].includes(standaloneType) && !isListPublishingFlow ? standaloneType : null)
+    setSelectedStandaloneType(['tierlist', 'grid', 'ranking', 'alignment'].includes(standaloneType) && !isListPublishingFlow ? standaloneType : null)
   }, [location.search, isListPublishingFlow])
 
   useEffect(() => {
@@ -355,9 +364,7 @@ export default function SharePage() {
     const timer = window.setTimeout(async () => {
       setWorkLoading(true)
       try {
-        const results = workType === 'game'
-          ? await searchGames(workQuery.trim(), 8, { signal: controller.signal })
-          : await searchAnime(workQuery.trim(), 8, { signal: controller.signal })
+        const results = await searchWorks(workType, workQuery.trim(), 8, { signal: controller.signal })
         if (!controller.signal.aborted) setWorkResults(results || [])
       } catch (error) {
         if (error.name !== 'AbortError') setWorkResults([])
@@ -373,6 +380,11 @@ export default function SharePage() {
     const loadPopular = async () => {
       setRecommendedLoading(true)
       try {
+        if (registerCategory === 'manga') {
+          const result = await getDiscoverManga({ pageSize: 5 })
+          if (!cancelled) setRecommended(result.items.map(work => ({ ...work, count: work.registrations, type: 'manga' })))
+          return
+        }
         const { data: entries, error } = await supabase.from('library_entries').select('work_id, work_type').eq('work_type', registerCategory).limit(10000)
         if (error) throw error
         const counts = new Map()
@@ -405,9 +417,7 @@ export default function SharePage() {
     const timer = window.setTimeout(async () => {
       setRegisterLoading(true)
       try {
-        const results = registerCategory === 'game'
-          ? await searchGames(query, 20, { signal: controller.signal })
-          : await searchAnime(query, 20, { signal: controller.signal })
+        const results = await searchWorks(registerCategory, query, 20, { signal: controller.signal })
         if (!controller.signal.aborted) setRegisterResults((results || []).map(work => ({ ...work, title: work.name || work.title, image: work.cover_url || work.image_url, type: registerCategory })))
       } catch (error) { if (error.name !== 'AbortError') setRegisterResults([]) }
       finally { if (!controller.signal.aborted) setRegisterLoading(false) }
@@ -795,10 +805,10 @@ export default function SharePage() {
     getUserLibrary(user.id).then(async entries => {
       const rows = entries || []
       const coverMap = new Map()
-      for (const type of ['game', 'anime']) {
+      for (const type of WORK_TYPE_IDS) {
         const ids = rows.filter(entry => entry.work_type === type).map(entry => entry.work_id)
         if (!ids.length) continue
-        const { data } = await supabase.from(type === 'game' ? 'games' : 'anime').select(type === 'game' ? 'id, name, cover_url' : 'id, title, image_url').in('id', ids)
+        const { data } = await supabase.from(({ game: 'games', anime: 'anime', manga: 'manga' })[type]).select(`id, ${type === 'game' ? 'name, cover_url' : 'title, image_url'}`).in('id', ids)
         ;(data || []).forEach(work => coverMap.set(`${type}:${work.id}`, { title: work.name || work.title, image: work.cover_url || work.image_url }))
       }
       if (!cancelled) setDiaryEntries(rows.map(entry => ({ ...entry, ...coverMap.get(`${entry.work_type}:${entry.work_id}`) })))
@@ -873,7 +883,7 @@ export default function SharePage() {
               {avatar ? <img src={avatar} alt="" /> : <DefaultAvatar accent={accent} />}
             </span>
             <div className="share-list-attachment">
-              <ListPostPreview list={makeEmptyStandaloneList(selectedStandaloneType)} onClick={handleEditSelectedList} className="share-list-published-preview" ariaLabel={`Editar ${selectedStandaloneType === 'ranking' ? 'ranking' : selectedStandaloneType === 'grid' ? 'cuadrícula' : 'tierlist'}`} />
+              <ListPostPreview list={makeEmptyStandaloneList(selectedStandaloneType)} onClick={handleEditSelectedList} className="share-list-published-preview" ariaLabel={`Editar ${listTypeLabel(selectedStandaloneType).toLowerCase()}`} />
             </div>
           </div>
           <div className="share-list-publish-actions">
@@ -936,8 +946,8 @@ export default function SharePage() {
           {spoilerEnabled && (spoilerWork
             ? <button className="share-warning-selected" type="button" onClick={() => setSpoilerWork(null)}>{spoilerWork.title}<span>×</span></button>
             : <div className="share-warning-picker">
-              <div className="share-warning-tabs"><button type="button" className={workType === 'game' ? 'active' : ''} onClick={() => setWorkType('game')}>Juegos</button><button type="button" className={workType === 'anime' ? 'active' : ''} onClick={() => setWorkType('anime')}>Anime</button></div>
-              <input className="share-warning-search" value={workQuery} onChange={event => setWorkQuery(event.target.value)} placeholder={`Buscar ${workType === 'game' ? 'juego' : 'anime'}…`} />
+              <div className="share-warning-tabs"><button type="button" className={workType === 'game' ? 'active' : ''} onClick={() => setWorkType('game')}>Juegos</button><button type="button" className={workType === 'anime' ? 'active' : ''} onClick={() => setWorkType('anime')}>Anime</button><button type="button" className={workType === 'manga' ? 'active' : ''} onClick={() => setWorkType('manga')}>Manga</button></div>
+              <input className="share-warning-search" value={workQuery} onChange={event => setWorkQuery(event.target.value)} placeholder={`Buscar ${({ game: 'juego', anime: 'anime', manga: 'manga' })[workType]}…`} />
               {(workLoading || workResults.length > 0) && <div className="share-warning-results">{workLoading ? <span>Buscando…</span> : workResults.map(work => <button type="button" key={work.id} onClick={() => { setSpoilerWork({ id: work.id, type: workType, title: work.name || work.title }); setWorkQuery('') }}>{work.cover_url || work.image_url ? <img src={work.cover_url || work.image_url} alt="" /> : null}<span>{work.name || work.title}</span></button>)}</div>}
             </div>)}
         </div>}
@@ -1037,6 +1047,7 @@ export default function SharePage() {
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 3 6.2 6.8 1-4.9 4.8 1.2 6.8-6.1-3.2-6.1 3.2L7 14 2.1 9.2l6.8-1L12 2Z"/></svg>
               <span>Ranking</span>
             </button>
+            <button className="share-list-kind-pill" type="button" onClick={() => handleChooseStandaloneType('alignment')}><AlignmentIcon/><span>Alineamiento</span></button>
           </div> : <>
           <label className="share-template-picker-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="7.3"/><path d="m16.2 16.2 4.3 4.3"/></svg><input autoFocus type="search" value={templateQuery} onChange={event => setTemplateQuery(event.target.value)} placeholder="Buscar plantillas…" /></label>
           <div className="share-template-picker-results" aria-live="polite" aria-busy={templateLoading}>
@@ -1044,10 +1055,10 @@ export default function SharePage() {
             {!templateLoading && templateError && <div className="share-template-picker-state is-error">{templateError}</div>}
             {!templateLoading && !templateError && templateResults.map(template => {
               const covers = getTemplateCoverUrls(template, 2)
-              const type = template.list_type === 'ranking' ? 'Ranking' : template.list_type === 'grid' ? 'Grid' : 'Tierlist'
+              const type = listTypeLabel(template.list_type)
               const media = template.media_type === 'anime' ? 'Anime' : template.media_type === 'game' ? 'Videojuegos' : template.media_type || ''
               return <button className="share-template-result" type="button" key={template.id} onClick={() => handleChooseTemplate(template)}>
-                <span className={`share-template-result-art type-${template.list_type || 'tierlist'}`} aria-hidden="true">{covers.length ? covers.map((cover, index) => <img key={`${cover}-${index}`} src={cover} alt="" loading="lazy" />) : <svg viewBox="0 0 24 24">{template.list_type === 'ranking' ? <path d="m12 2 3 6.2 6.8 1-4.9 4.8 1.2 6.8-6.1-3.2-6.1 3.2L7 14 2.1 9.2l6.8-1L12 2Z"/> : template.list_type === 'grid' ? <><rect x="3" y="3" width="8" height="8"/><rect x="13" y="3" width="8" height="8"/><rect x="3" y="13" width="8" height="8"/><rect x="13" y="13" width="8" height="8"/></> : <><path d="M8 5h13M8 12h13M8 19h13"/><path d="M3 5h.01M3 12h.01M3 19h.01"/></>}</svg>}</span>
+                <span className={`share-template-result-art type-${template.list_type || 'tierlist'}`} aria-hidden="true">{covers.length ? covers.map((cover, index) => <img key={`${cover}-${index}`} src={cover} alt="" loading="lazy" />) : <svg viewBox="0 0 24 24">{template.list_type === 'ranking' ? <path d="m12 2 3 6.2 6.8 1-4.9 4.8 1.2 6.8-6.1-3.2-6.1 3.2L7 14 2.1 9.2l6.8-1L12 2Z"/> : template.list_type === 'alignment' ? <><rect x="5" y="5" width="16" height="16"/><path d="M10 5v16M16 5v16M5 10h16M5 16h16"/></> : template.list_type === 'grid' ? <><rect x="3" y="3" width="8" height="8"/><rect x="13" y="3" width="8" height="8"/><rect x="3" y="13" width="8" height="8"/><rect x="13" y="13" width="8" height="8"/></> : <><path d="M8 5h13M8 12h13M8 19h13"/><path d="M3 5h.01M3 12h.01M3 19h.01"/></>}</svg>}</span>
                 <span className="share-template-result-copy"><strong>{template.title}</strong><small>{type}{media ? ` · ${media}` : ''}</small><small className="share-template-result-author">por {template.profiles?.display_name || template.profiles?.username || 'Usuario'} · {template.uses_count || 0} usos</small></span>
                 <svg className="share-template-result-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
               </button>
@@ -1057,11 +1068,11 @@ export default function SharePage() {
           </>}
         </section>)}
         {reviewPickerOpen && renderMobileSheet(<section className="share-review-picker-sheet" role="dialog" aria-modal="true" aria-label="Valorar una obra" style={isMobileShareSheet ? { '--share-accent': accent } : undefined}>
-          <header className="share-sheet-header"><button type="button" onClick={() => setReviewPickerOpen(false)} aria-label="Volver a compartir"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button><div><h2>¿Qué vas a valorar?</h2><p>Elige un juego o un anime</p></div><button type="button" onClick={() => setReviewPickerOpen(false)} aria-label="Cerrar">×</button></header>
-          <div className="share-review-picker-content"><div className="share-list-kind-tabs" role="tablist" aria-label="Tipo de obra"><button type="button" role="tab" aria-selected={workType === 'game'} className={workType === 'game' ? 'active' : ''} onClick={() => { setWorkType('game'); setRegisterCategory('game') }}>Videojuegos</button><button type="button" role="tab" aria-selected={workType === 'anime'} className={workType === 'anime' ? 'active' : ''} onClick={() => { setWorkType('anime'); setRegisterCategory('anime') }}>Anime</button></div><label className="share-review-picker-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="7.3"/><path d="m16.2 16.2 4.3 4.3"/></svg><input value={workQuery} onChange={event => setWorkQuery(event.target.value)} placeholder={`Buscar ${workType === 'game' ? 'juego' : 'anime'}…`} /></label><div className="share-review-picker-results" aria-live="polite">{workQuery.trim().length < 2 ? <>
+          <header className="share-sheet-header"><button type="button" onClick={() => setReviewPickerOpen(false)} aria-label="Volver a compartir"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button><div><h2>¿Qué vas a valorar?</h2><p>Elige un juego, anime o manga</p></div><button type="button" onClick={() => setReviewPickerOpen(false)} aria-label="Cerrar">×</button></header>
+          <div className="share-review-picker-content"><div className="share-list-kind-tabs" role="tablist" aria-label="Tipo de obra"><button type="button" role="tab" aria-selected={workType === 'game'} className={workType === 'game' ? 'active' : ''} onClick={() => { setWorkType('game'); setRegisterCategory('game') }}>Videojuegos</button><button type="button" role="tab" aria-selected={workType === 'anime'} className={workType === 'anime' ? 'active' : ''} onClick={() => { setWorkType('anime'); setRegisterCategory('anime') }}>Anime</button><button type="button" role="tab" aria-selected={workType === 'manga'} className={workType === 'manga' ? 'active' : ''} onClick={() => { setWorkType('manga'); setRegisterCategory('manga') }}>Manga</button></div>{workType === 'manga' && <MangaAvailability />}<label className="share-review-picker-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="7.3"/><path d="m16.2 16.2 4.3 4.3"/></svg><input value={workQuery} onChange={event => setWorkQuery(event.target.value)} placeholder={`Buscar ${({ game: 'juego', anime: 'anime', manga: 'manga' })[workType]}…`} /></label><div className="share-review-picker-results" aria-live="polite">{workQuery.trim().length < 2 ? <>
             <h3>Más registrados</h3>
-            {recommendedLoading ? <p>Cargando recomendaciones…</p> : recommended.length === 0 ? <p>No hay recomendaciones disponibles.</p> : recommended.map(work => <button type="button" key={work.id} onClick={() => { setReviewPickerOpen(false); selectWorkForReview({ ...work, type: workType }) }}><img src={work.image || '/icons/logo.png'} alt=""/><span><strong>{work.title}</strong><small>{work.count} {work.count === 1 ? 'registro' : 'registros'}</small></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>)}
-          </> : workLoading ? <p>Buscando…</p> : workResults.map(work => <button type="button" key={work.id} onClick={() => { setReviewPickerOpen(false); selectWorkForReview({ ...work, title: work.name || work.title, image: work.cover_url || work.image_url, type: workType }) }}><img src={work.cover_url || work.image_url || '/icons/logo.png'} alt=""/><span><strong>{work.name || work.title}</strong><small>{workType === 'game' ? 'Videojuego' : 'Anime'}</small></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>)}</div></div>
+            {recommendedLoading ? <p>Cargando recomendaciones…</p> : recommended.length === 0 ? <p>No hay recomendaciones disponibles.</p> : recommended.map(work => <button type="button" key={work.id} onClick={() => { setReviewPickerOpen(false); selectWorkForReview({ ...work, type: workType }) }}><img src={work.image || '/icons/logo.png'} alt=""/><span><strong>{work.title}</strong><small>{work.type === 'manga' && work.external_score != null ? `Valoración MAL ${work.external_score}/10 · ` : ''}{work.count} {work.count === 1 ? 'registro' : 'registros'}</small></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>)}
+          </> : workLoading ? <p>Buscando…</p> : workResults.map(work => <button type="button" key={work.id} onClick={() => { setReviewPickerOpen(false); selectWorkForReview({ ...work, title: work.name || work.title, image: work.cover_url || work.image_url, type: workType }) }}><img src={work.cover_url || work.image_url || '/icons/logo.png'} alt=""/><span><strong>{work.name || work.title}</strong><small>{({ game: 'Videojuego', anime: 'Anime', manga: 'Manga' })[workType]}</small></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>)}</div></div>
         </section>, true)}
         {toolHint && <p className="share-tool-hint" role="status">{toolHint}</p>}
         </>}
@@ -1070,9 +1081,9 @@ export default function SharePage() {
       <section className="share-register" aria-label="Registrar obras">
         <h2>REGISTRAR</h2>
         <div className="share-register-controls">
-          <div className={`share-register-switch${registerCategory === 'anime' ? ' anime-selected' : ''}`} role="tablist" aria-label="Categoría"><button type="button" role="tab" aria-selected={registerCategory === 'game'} className={registerCategory === 'game' ? 'active' : ''} onClick={() => { setRegisterCategory('game'); setRegisterQuery(''); setRegisterResults([]); setRegisterLoading(false) }}>Juegos</button><button type="button" role="tab" aria-selected={registerCategory === 'anime'} className={registerCategory === 'anime' ? 'active' : ''} onClick={() => { setRegisterCategory('anime'); setRegisterQuery(''); setRegisterResults([]); setRegisterLoading(false) }}>Anime</button></div>
+          <div className={`share-register-switch${registerCategory === 'anime' ? ' anime-selected' : ''}`} role="tablist" aria-label="Categoría"><button type="button" role="tab" aria-selected={registerCategory === 'game'} className={registerCategory === 'game' ? 'active' : ''} onClick={() => { setRegisterCategory('game'); setRegisterQuery(''); setRegisterResults([]); setRegisterLoading(false) }}>Juegos</button><button type="button" role="tab" aria-selected={registerCategory === 'anime'} className={registerCategory === 'anime' ? 'active' : ''} onClick={() => { setRegisterCategory('anime'); setRegisterQuery(''); setRegisterResults([]); setRegisterLoading(false) }}>Anime</button><button type="button" role="tab" aria-selected={registerCategory === 'manga'} className={registerCategory === 'manga' ? 'active' : ''} onClick={() => { setRegisterCategory('manga'); setRegisterQuery(''); setRegisterResults([]); setRegisterLoading(false) }}>Manga</button></div>{registerCategory === 'manga' && <MangaAvailability />}
         </div>
-        <label className="share-register-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="7.3"/><path d="m16.2 16.2 4.3 4.3"/></svg><input value={registerQuery} onChange={event => { const query = event.target.value; setRegisterQuery(query); setRegisterResults([]); setRegisterLoading(query.trim().length >= 2) }} placeholder={`Buscar ${registerCategory === 'game' ? 'juegos' : 'anime'}…`} /></label>
+        <label className="share-register-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="7.3"/><path d="m16.2 16.2 4.3 4.3"/></svg><input value={registerQuery} onChange={event => { const query = event.target.value; setRegisterQuery(query); setRegisterResults([]); setRegisterLoading(query.trim().length >= 2) }} placeholder={`Buscar ${({ game: 'juegos', anime: 'anime', manga: 'manga' })[registerCategory]}…`} /></label>
         <h3>{registerQuery.trim().length >= 2 ? 'RESULTADOS' : 'LO MÁS REGISTRADO'}</h3>
         <div className="share-register-grid" aria-busy={registerQuery.trim().length >= 2 ? registerLoading : recommendedLoading}>
           {(registerQuery.trim().length >= 2 ? registerResults : recommended).map(work => <button className="share-register-card" type="button" key={work.id} onClick={() => handleRegisterWorkSelection(work)}>

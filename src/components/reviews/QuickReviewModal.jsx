@@ -86,7 +86,7 @@ export default function QuickReviewModal({
                                 borderRadius: '4px',
                                 color: 'var(--text-secondary)'
                             }}>
-                                {workType === 'game' ? 'Juego' : 'Anime'}
+                                {{ game: 'Juego', anime: 'Anime', manga: 'Manga' }[workType]}
                             </div>
                         </div>
                     )}

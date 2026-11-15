@@ -1,4 +1,5 @@
 ﻿import { supabase } from './supabase'
+import { validateWorkIdentity } from './workTypes'
 
 /**
  * Registra o actualiza una obra (juego/anime) en el diario del usuario
@@ -8,6 +9,7 @@
  * @param {Object} logData - Datos del log { rating, review_text, finished_date, contains_spoiler }
  */
 export async function logWork(userId, workId, workType, logData) {
+    validateWorkIdentity(workType, workId)
     const rating = logData.rating == null ? null : Number(logData.rating)
     if (rating != null && (!Number.isFinite(rating) || rating < 0.5 || rating > 5 || Math.round(rating * 2) !== rating * 2)) {
         throw new Error('La valoración debe estar entre 0,5 y 5 estrellas, en pasos de media estrella.')

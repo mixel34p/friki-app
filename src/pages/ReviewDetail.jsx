@@ -1,3 +1,4 @@
+import { isMangaCover } from '../lib/artworkExport'
 import useSystemBarColor from '../hooks/useSystemBarColor'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -71,6 +72,7 @@ function ProfileAvatar({ profile, size = 'normal' }) {
 }
 
 async function loadShareImage(source) {
+  if (isMangaCover(source)) return null
   if (!source) return null
   try {
     const normalizedSource = new URL(source, window.location.href).href
@@ -435,7 +437,7 @@ export default function ReviewDetail() {
       setExistingLog(null)
       return undefined
     }
-    getWorkLog(user.id, Number(review.work_id), review.work_type)
+    getWorkLog(user.id, review.work_id, review.work_type)
       .then(log => { if (active) setExistingLog(log) })
       .catch(err => console.error('Error loading user work entry:', err))
     return () => { active = false }
@@ -523,7 +525,7 @@ export default function ReviewDetail() {
   const reviewBackdrop = workCover
   const shareCover = getReviewShareCover(workCover)
   const workYear = getReleaseYear(review.work, review.work_type)
-  const workPath = `/${review.work_type === 'game' ? 'game' : 'anime'}/${review.work_id}`
+  const workPath = `/${review.work_type}/${review.work_id}`
   const authorName = author?.display_name || author?.username || 'Usuario'
   const authorPath = author?.username ? `/profile/${author.username}` : '/profile'
   const pageAccent = getVisibleAccentColor(author?.theme_color || '#14b8a6')
@@ -621,7 +623,7 @@ export default function ReviewDetail() {
       return
     }
     navigatePwaRoute(navigate, '/share', { state: { reviewWork: {
-      id: Number(review.work_id),
+      id: review.work_id,
       type: review.work_type,
       title: workName || 'Obra',
       image: workCover,
@@ -760,7 +762,7 @@ export default function ReviewDetail() {
               <div className="review-share-preview-copy">
                 <div className="review-share-preview-author"><ProfileAvatar profile={author} size="small" /><span>{authorName}<small>@{author?.username || 'usuario'}</small></span></div>
                 <strong>{workName || 'Review'}</strong>
-                <span>{review.work_type === 'game' ? 'Videojuego' : 'Anime'}{workYear ? ` · ${workYear}` : ''}</span>
+                <span>{{ game: 'Videojuego', anime: 'Anime', manga: 'Manga' }[review.work_type]}{workYear ? ` · ${workYear}` : ''}</span>
                 <ReviewStars rating={review.rating} />
               </div>
             </div>
@@ -788,7 +790,7 @@ export default function ReviewDetail() {
       {showLogModal && <LogModal
         isOpen={showLogModal}
         onClose={() => setShowLogModal(false)}
-        work={{ id: Number(review.work_id), type: review.work_type, title: workName, image: workCover, banner_url: review.work?.banner_url }}
+        work={{ id: review.work_id, type: review.work_type, title: workName, image: workCover, banner_url: review.work?.banner_url }}
         existingLog={existingLog}
         onSaveComplete={handleLogSaved}
       />}

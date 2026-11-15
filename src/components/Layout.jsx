@@ -224,7 +224,7 @@ export default function Layout() {
   const active = path => location.pathname === path || (path !== '/home' && location.pathname.startsWith(path))
   const isAuthEntry = ['/login', '/register', '/forgot-password', '/confirm-email', '/update-password'].includes(location.pathname)
   const isProfilePage = location.pathname === '/profile' || /^\/profile\/[^/]+$/.test(location.pathname)
-  const isWorkPage = /^\/(game|anime)\/[^/]+(\/reviews)?$/.test(location.pathname)
+  const isWorkPage = /^\/(game|anime|manga)\/[^/]+(\/reviews)?$/.test(location.pathname)
   const mobileNavIndex = active('/home') ? 0 : active('/search') ? 1 : active('/share') ? 2 : active('/spaces') ? 3 : -1
 
   return (
@@ -310,7 +310,7 @@ export default function Layout() {
         </>}
       </nav>
 
-      <main className={`main ${['/terms', '/privacy', '/community-guidelines'].includes(location.pathname) ? 'legal-main' : ''} ${location.pathname === '/onboarding' ? 'onboarding-main' : ''} ${location.pathname === '/invite' ? 'invite-main' : ''} ${isProfilePage ? 'profile-main' : ''} ${isWorkPage ? 'work-main' : ''} ${['/discover/anime', '/discover/games', '/discover/lists'].includes(location.pathname) ? 'discover-works-main' : ''} ${location.pathname === '/discover/spaces' || location.pathname === '/spaces/explore' ? 'spaces-explore-main' : ''} ${location.pathname === '/spaces' ? 'my-spaces-main' : ''} ${/^\/reviews\/[^/]+/.test(location.pathname) ? 'review-detail-main' : ''} ${/^\/posts\/[^/]+$/.test(location.pathname) ? 'post-detail-main' : ''} ${/^\/lists\/[^/]+$/.test(location.pathname) ? 'list-detail-main' : ''} ${location.pathname === '/share' ? 'share-main' : ''}`}><Outlet /></main>
+      <main className={`main ${['/terms', '/privacy', '/community-guidelines'].includes(location.pathname) ? 'legal-main' : ''} ${location.pathname === '/onboarding' ? 'onboarding-main' : ''} ${location.pathname === '/invite' ? 'invite-main' : ''} ${isProfilePage ? 'profile-main' : ''} ${isWorkPage ? 'work-main' : ''} ${['/discover/anime', '/discover/games', '/discover/manga', '/discover/lists'].includes(location.pathname) ? 'discover-works-main' : ''} ${location.pathname === '/discover/spaces' || location.pathname === '/spaces/explore' ? 'spaces-explore-main' : ''} ${location.pathname === '/spaces' ? 'my-spaces-main' : ''} ${/^\/reviews\/[^/]+/.test(location.pathname) ? 'review-detail-main' : ''} ${/^\/posts\/[^/]+$/.test(location.pathname) ? 'post-detail-main' : ''} ${/^\/lists\/[^/]+$/.test(location.pathname) ? 'list-detail-main' : ''} ${location.pathname === '/share' ? 'share-main' : ''}`}><Outlet /></main>
 
       {listsOpen && <ListsEntryModal onClose={() => setListsOpen(false)} />}
       {moreOpen && isDesktop && createPortal(

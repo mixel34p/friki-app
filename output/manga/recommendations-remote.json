@@ -1,0 +1,42 @@
+{
+  "readonly": true,
+  "personalized": false,
+  "items": [
+    {
+      "id": "mal:manga:2",
+      "type": "manga",
+      "title": "Berserk",
+      "year": "1989"
+    },
+    {
+      "id": "mal:manga:13",
+      "type": "manga",
+      "title": "One Piece",
+      "year": "1997"
+    },
+    {
+      "id": 338072,
+      "type": "game",
+      "title": "The Legend of Zelda: Breath of the Wild - Nintendo Switch 2 Edition",
+      "year": "2025"
+    },
+    {
+      "id": 136482,
+      "type": "game",
+      "title": "Undertale Yellow",
+      "year": "2023"
+    },
+    {
+      "id": 154587,
+      "type": "anime",
+      "title": "Frieren: Beyond Journey’s End",
+      "year": "2023"
+    },
+    {
+      "id": 5114,
+      "type": "anime",
+      "title": "Fullmetal Alchemist: Brotherhood",
+      "year": "2009"
+    }
+  ]
+}

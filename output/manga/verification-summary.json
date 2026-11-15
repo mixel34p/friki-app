@@ -1,0 +1,40 @@
+{
+  "before": {
+    "errors": 519,
+    "warnings": 27
+  },
+  "after": {
+    "errors": 519,
+    "warnings": 27
+  },
+  "newFindings": 0,
+  "unitAndSqlTestsPassed": 62,
+  "browserWorkflowsPassed": 6,
+  "browserFixturesOnly": true,
+  "buildPassed": true,
+  "frontendDeployed": false,
+  "appliedMigrations": [
+    "20261115115020_add_manga_support",
+    "20261115115216_manga_server_policies"
+  ],
+  "deployedFunctions": {
+    "manga-catalog": 8,
+    "secure-sync": 7
+  },
+  "externalProviderEnabled": true,
+  "remoteTransactionTest": "passed; rolled back",
+  "persistentRemoteFixtureCount": 0,
+  "exploreFix": {
+    "mangaTestsPassed": 21,
+    "browserFixtureWorkflows": 8,
+    "realBrowserWidths": [
+      1360,
+      390,
+      360
+    ],
+    "popularMangaImported": 12,
+    "remoteCatalogCountAtCheck": 30,
+    "newLintDiagnostics": 0,
+    "buildPassed": true
+  }
+}

@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { parseMangaIdentity } from '../_shared/manga-contract.js'
 
 const TWITCH_CLIENT_ID = Deno.env.get('TWITCH_CLIENT_ID')!
 const TWITCH_CLIENT_SECRET = Deno.env.get('TWITCH_CLIENT_SECRET')!
@@ -96,6 +97,7 @@ async function syncAnime(ids: number[]) {
               description
               genres
               studios(isMain: true) { nodes { name } }
+              relations { edges { relationType(version: 2) } }
             }
           }
         }
@@ -122,7 +124,9 @@ async function syncAnime(ids: number[]) {
             synopsis: a.description || '',
             status: a.status || null,
             episodes: a.episodes || null,
-            studios: a.studios?.nodes?.map((n: any) => n.name) || []
+            studios: a.studios?.nodes?.map((n: any) => n.name) || [],
+            anilist_is_sequel: a.relations?.edges?.some((edge: any) => edge.relationType === 'PREQUEL') || false,
+            anilist_metadata_checked_at: new Date().toISOString()
         }
     })
 
@@ -147,11 +151,23 @@ serve(async (req) => {
         if (authError || !user) throw new Error('Unauthorized')
 
         const { type, ids } = await req.json()
-        if (!type || !ids || !Array.isArray(ids)) throw new Error('Invalid body')
+        if (!['game', 'anime', 'manga'].includes(type) || !Array.isArray(ids) || !ids.length || ids.length > 50) throw new Error('Invalid body')
+        if (type === 'manga') ids.forEach(parseMangaIdentity)
+        else if (!ids.every((id: unknown) => typeof id === 'number' && Number.isSafeInteger(id) && id > 0)) throw new Error('Invalid IDs')
+        const { data: allowed, error: quotaError } = await supabase.rpc('take_manga_quota', { bucket_key: 'secure-sync:' + user.id, max_hits: 30, window_seconds: 60 })
+        if (quotaError) throw quotaError
+        if (!allowed) return new Response(JSON.stringify({ error: 'Demasiadas solicitudes' }), { status: 429, headers: { ...corsHeaders, 'Retry-After': '60', 'Content-Type': 'application/json' } })
 
         let result = []
         if (type === 'game') result = await syncGames(ids)
         else if (type === 'anime') result = await syncAnime(ids)
+        else if (type === 'manga') {
+            // Manga search already imports server-verified rows. Never fetch arbitrary client metadata.
+            const { data, error } = await supabase.from('manga').select('id').in('id', [...new Set(ids)])
+            if (error) throw error
+            if (data.length !== new Set(ids).size) throw new Error('Manga no disponible: importa la obra mediante manga-catalog')
+            result = data
+        }
         else throw new Error('Invalid type')
 
         return new Response(JSON.stringify({ success: true, count: result.length }), {

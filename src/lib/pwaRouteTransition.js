@@ -1,7 +1,7 @@
 import { navigateBackOrHome } from './navigation'
 
-const SCREEN_ROUTE = /^\/(?:game|anime)\/[^/?#]+\/?$|^\/discover\/(?:anime|games|lists)\/?$/
-const TRANSITION_ROUTE = /^\/share(?:[?#].*)?$|^\/(?:posts|reviews)\/[^/?#]+(?:[?#].*)?$|^\/(?:game|anime)\/[^/?#]+\/?(?:[?#].*)?$|^\/discover\/(?:anime|games|lists)\/?(?:[?#].*)?$|^\/(?:lists|templates)\/(?!new(?:[/?#]|$))[^/?#]+(?:[?#].*)?$/
+const SCREEN_ROUTE = /^\/(?:game|anime|manga)\/[^/?#]+\/?$|^\/discover\/(?:anime|games|manga|lists)\/?$/
+const TRANSITION_ROUTE = /^\/share(?:[?#].*)?$|^\/(?:posts|reviews)\/[^/?#]+(?:[?#].*)?$|^\/(?:game|anime|manga)\/[^/?#]+\/?(?:[?#].*)?$|^\/discover\/(?:anime|games|manga|lists)\/?(?:[?#].*)?$|^\/(?:lists|templates)\/(?!new(?:[/?#]|$))[^/?#]+(?:[?#].*)?$/
 let pendingRoute = null
 let pendingHistory = null
 let currentPath = null

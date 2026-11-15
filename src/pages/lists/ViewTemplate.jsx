@@ -1,3 +1,4 @@
+import { listTypeLabel } from '../../lib/listTypes';
 import useSystemBarColor from '../../hooks/useSystemBarColor'
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -109,7 +110,7 @@ export default function ViewTemplate() {
   const accent = profile.theme_color || 'var(--brand-primary)';
   const previewList = useMemo(() => template ? ({ ...template, content: {} }) : null, [template]);
   const backdrop = template?.default_items?.find(item => item?.image_url)?.image_url;
-  const listType = template?.list_type === 'grid' ? 'Grid' : 'Tierlist';
+  const listType = listTypeLabel(template?.list_type);
   const shareUrl = template ? new URL(`/lists/new?template=${encodeURIComponent(template.id)}`, window.location.origin).toString() : '';
   const encodedShareUrl = encodeURIComponent(shareUrl);
   const encodedShareTitle = encodeURIComponent(template?.title || 'Crea tu lista con esta plantilla');

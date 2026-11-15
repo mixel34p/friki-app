@@ -8,7 +8,7 @@ const IconClose = ({ size = 16 }) => (
     </svg>
 )
 
-export function SortableFavoriteItem({ item, onRemove, onClick }) {
+export function SortableFavoriteItem({ item, onRemove, onClick, sortableId = item.id }) {
     const {
         attributes,
         listeners,
@@ -16,7 +16,7 @@ export function SortableFavoriteItem({ item, onRemove, onClick }) {
         transform,
         transition,
         isDragging
-    } = useSortable({ id: item.id });
+    } = useSortable({ id: sortableId });
 
     const style = {
         transform: CSS.Transform.toString(transform),

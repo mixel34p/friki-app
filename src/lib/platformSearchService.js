@@ -1,6 +1,9 @@
 import { supabase } from './supabase'
-import { searchGames, searchGamesLocal } from './gameService'
-import { searchAnime, searchAnimeLocal } from './animeService'
+import { searchGamesLocal } from './gameService'
+import { searchAnimeLocal } from './animeService'
+import { searchMangaLocal } from './mangaService'
+import { workAdapter } from './workAdapters'
+import { WORK_TYPE_IDS, normalizeCatalogWork } from './workTypes'
 import { getUsersByCommonWorks } from './discoverUsersService'
 import { normalizeSearchText, rankSearchResults, searchMatchScore } from './searchRanking'
 
@@ -12,33 +15,33 @@ const normalized = normalizeSearchText
 const sortByMatch = (items, term, getName) => rankSearchResults(items, term, item => [getName(item), ...(item.search_terms || [])], item => item.rating || item.score || item.member_count || 0)
 
 /** Search existing work catalogs and Supabase spaces/profiles. */
-export async function searchPlatform(query, limit = 8, signal, workFilter = 'all') {
+export async function searchPlatform(query, limit = 8, signal, workFilter = 'all', offset = 0) {
   const term = query.trim()
   if (term.length < 2) return { works: [], spaces: [], users: [], lists: [], errors: {} }
 
-  const gameSearch = workFilter === 'anime' || ['spaces', 'lists', 'users'].includes(workFilter)
-    ? Promise.resolve([]) : searchGames(term, limit, { signal })
-  const animeSearch = workFilter === 'game' || ['spaces', 'lists', 'users'].includes(workFilter)
-    ? Promise.resolve([]) : searchAnime(term, limit, { signal })
+  const types = WORK_TYPE_IDS.filter(type => workFilter === 'all' || workFilter === type)
+  const workSearch = Promise.allSettled(types.map(type => workAdapter(type).search(term, limit, { signal, offset })))
   const results = await Promise.allSettled([
-    Promise.all([gameSearch, animeSearch]),
+    workSearch,
     supabase.from('spaces').select(`${spaceFields}, space_members(count)`).ilike('name', `%${term}%`).order('created_at', { ascending: false }).limit(limit).abortSignal(signal),
     supabase.from('profiles').select(profileFields).or(`username.ilike.%${term}%,display_name.ilike.%${term}%`).limit(limit).abortSignal(signal),
     supabase.from('user_lists').select(listFields).eq('visibility', 'public').ilike('title', `%${term}%`).order('created_at', { ascending: false }).limit(limit).abortSignal(signal),
   ])
 
   const errors = {}
+  let nextOffset = null
   let works = []
   let spaces = []
   let users = []
   let lists = []
 
   if (results[0].status === 'fulfilled') {
-    const [games, anime] = results[0].value
-    works = sortByMatch([
-      ...(games || []).map(item => ({ ...item, type: 'game', title: item.name, image: item.cover_url || item.image_url })),
-      ...(anime || []).map(item => ({ ...item, type: 'anime', title: item.title, image: item.image_url || item.cover_url })),
-    ], term, item => item.title)
+    const matches = results[0].value.flatMap((result, index) => {
+      if (result.status === 'rejected') { errors[types[index]] = result.reason; return [] }
+      if (workFilter === 'manga') nextOffset = result.value.nextOffset ?? null
+      return (result.value || []).map(item => normalizeCatalogWork(types[index], item))
+    })
+    works = sortByMatch(matches, term, item => item.title)
       .filter(item => searchMatchScore(term, [item.title, ...(item.search_terms || [])]) > 0)
       .slice(0, limit)
   } else errors.works = results[0].reason
@@ -66,16 +69,18 @@ export async function searchPlatform(query, limit = 8, signal, workFilter = 'all
     } else lists = lists.map(list => ({ ...list, type: 'list' }))
   } else errors.lists = results[3].status === 'rejected' ? results[3].reason : results[3].value.error
 
-  return { works, spaces, users, lists, errors }
+  return { works, spaces, users, lists, errors, nextOffset }
 }
 
 /** Small real-image samples used to decorate the category entry cards. */
 export async function getSearchHighlights(userId) {
-  const [minecraft, zelda, naruto, attackOnTitan, spaces, users] = await Promise.allSettled([
+  const [minecraft, zelda, naruto, attackOnTitan, berserk, onePiece, spaces, users] = await Promise.allSettled([
     searchGamesLocal('Minecraft', 8),
     searchGamesLocal('The Legend of Zelda: Breath of the Wild', 8),
     searchAnimeLocal('Naruto', 8),
     searchAnimeLocal('Attack on Titan', 8),
+    searchMangaLocal('Berserk', 8),
+    searchMangaLocal('One Piece', 8),
     supabase.from('spaces').select('id, name, description, avatar_url, banner_url, theme_color, space_members(count)').order('created_at', { ascending: false }).limit(12),
     userId ? getUsersByCommonWorks(userId) : supabase.from('profiles').select('id, username, display_name, avatar_url, theme_color').limit(12),
   ])
@@ -100,6 +105,7 @@ export async function getSearchHighlights(userId) {
   return {
     games: [selectTitle(minecraft, 'Minecraft'), selectTitle(zelda, 'The Legend of Zelda: Breath of the Wild')].filter(Boolean),
     anime: [selectTitle(naruto, 'Naruto'), selectTitle(attackOnTitan, 'Attack on Titan')].filter(Boolean),
+    manga: [selectTitle(berserk, 'Berserk'), selectTitle(onePiece, 'One Piece')].filter(Boolean),
     spaces: spaces.status === 'fulfilled' ? (spaces.value.data || []).map(space => ({ ...space, member_count: space.space_members?.[0]?.count || 0 })).sort((a, b) => b.member_count - a.member_count) : [],
     users: usersList.map((person, index) => ({ ...person, registeredWorks: registeredCounts[index] })),
   }

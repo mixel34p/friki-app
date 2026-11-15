@@ -11,8 +11,8 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { IoSettingsSharp } from 'react-icons/io5';
 import { getTemplateById, createList, updateList, getListById, incrementTemplateUses, DEFAULT_TIER_CONFIG, TIER_COLORS_PALETTE } from '../../lib/listService';
-import { searchGames } from '../../lib/gameService';
-import { searchAnime } from '../../lib/animeService';
+import { searchWorks } from '../../lib/workAdapters';
+import { workType } from '../../lib/workTypes';
 import { getDiscoverWorks } from '../../lib/discoverWorksService';
 import { getTierLabelFontSize } from '../../lib/tierLabel';
 import { navigateBackOrHome } from '../../lib/navigation';
@@ -21,6 +21,10 @@ import CustomItemGroupsPicker from '../../components/CustomItemGroupsPicker';
 import { ListPostPreview, generateListImage } from './ViewList';
 import { requestGuestListRegistration, saveGuestListDraft } from '../../lib/guestListDraft';
 import TierLabelEditor from './TierLabelEditor';
+import AlignmentBoard from '../../components/AlignmentBoard';
+import AlignmentEditCell from '../../components/AlignmentEditCell';
+import AlignmentConfigEditor from '../../components/AlignmentConfigEditor';
+import { alignmentCells, alignmentItem, alignmentToEditor, alignmentToStored, moveAlignmentItem, validateAlignmentConfig, createAlignmentConfig, reconcileAlignmentContent } from '../../lib/alignment';
 import '../ReviewDetail.css';
 import './CreateList.css';
 
@@ -104,6 +108,7 @@ export default function CreateList() {
     const { user, profile } = useAuth();
 
     const [template, setTemplate] = useState(null);
+    const [linkedTemplateId, setLinkedTemplateId] = useState(templateId);
     const [listType, setListType] = useState('tierlist');
     const [mediaType, setMediaType] = useState('game');
     const [title, setTitle] = useState('');
@@ -143,6 +148,7 @@ export default function CreateList() {
     const guestPreviewRef = useRef(null);
     const guestPreviewContent = listType === 'ranking'
         ? Array.from({ length: typeConfig.max_items || 3 }, (_, index) => content?.[`r${index}`]?.[0] || null)
+        : listType === 'alignment' ? Object.fromEntries(Object.entries(content || {}).map(([key, value]) => [key, alignmentItem(value)]))
         : listType === 'grid'
             ? Object.fromEntries((typeConfig.cells || []).map((_, index) => [`c${index}`, content?.[`c${index}`]?.[0] || null]))
             : content || {};
@@ -179,6 +185,11 @@ export default function CreateList() {
                 setTitle(profile ? `Nuevo ranking (${profile.display_name || profile.username || 'Usuario'})` : 'Nuevo ranking');
                 setDefaultTitleSet(true);
             }
+        } else if (standaloneType === 'alignment') {
+            if (!defaultTitleSet) {
+                setTitle(profile ? `Nuevo alineamiento (${profile.display_name || profile.username || 'Usuario'})` : 'Nuevo alineamiento');
+                setDefaultTitleSet(true);
+            }
         } else if (standaloneType) {
             if (!defaultTitleSet) {
                 const label = standaloneType === 'grid' ? 'cuadrícula' : 'tierlist';
@@ -202,10 +213,12 @@ export default function CreateList() {
                 const draft = JSON.parse(stored);
                 const editor = draft.editor;
                 if (!editor?.content || !editor?.typeConfig) throw new Error('El borrador de la lista está incompleto.');
+                if (editor.listType === 'alignment') alignmentToStored(editor.typeConfig, editor.content);
                 setTitle(editor.title || '');
                 setListType(editor.listType || 'tierlist');
                 setMediaType(editor.mediaType || 'game');
                 setTypeConfig(editor.typeConfig);
+                setLinkedTemplateId(editor.templateId || null);
                 setContent(editor.content);
                 setPool(editor.pool || []);
                 setVisibility(editor.visibility || 'public');
@@ -217,6 +230,7 @@ export default function CreateList() {
         } else if (standaloneType === 'ranking' && !templateId) {
             const config = { ...DEFAULT_TIER_CONFIG.ranking, max_items: 3 };
             setTemplate(null);
+            setLinkedTemplateId(null);
             setListType('ranking');
             setMediaType('game');
             setTypeConfig(config);
@@ -224,18 +238,21 @@ export default function CreateList() {
             setPool([]);
             setDefaultTitleSet(false);
         } else if (standaloneType && standaloneType !== 'ranking' && !templateId && !fromListId && !id) {
-            const config = JSON.parse(JSON.stringify(DEFAULT_TIER_CONFIG[standaloneType] || DEFAULT_TIER_CONFIG.tierlist));
+            const config = standaloneType === 'alignment' ? createAlignmentConfig() : JSON.parse(JSON.stringify(DEFAULT_TIER_CONFIG[standaloneType] || DEFAULT_TIER_CONFIG.tierlist));
             setTemplate(null);
+            setLinkedTemplateId(null);
             setListType(standaloneType);
             setMediaType('game');
             setTypeConfig(config);
-            if (standaloneType === 'grid') setContent(Object.fromEntries(config.cells.map((_, index) => [`c${index}`, []])));
+            if (standaloneType === 'alignment') setContent(alignmentToEditor(config));
+            else if (standaloneType === 'grid') setContent(Object.fromEntries(config.cells.map((_, index) => [`c${index}`, []])));
             else setContent(Object.fromEntries(config.tiers.map(tier => [tier.id, []])));
             setPool([]);
             setDefaultTitleSet(false);
         } else if (!templateId && !fromListId && !id) {
             const config = JSON.parse(JSON.stringify(DEFAULT_TIER_CONFIG.tierlist));
             setTemplate(null);
+            setLinkedTemplateId(null);
             setListType('tierlist');
             setMediaType('game');
             setTypeConfig(config);
@@ -245,6 +262,7 @@ export default function CreateList() {
         } else if (templateId) {
             getTemplateById(templateId).then(data => {
                 setTemplate(data);
+                setLinkedTemplateId(data.id);
                 setListType(data.list_type);
                 setMediaType(data.media_type);
                 setTypeConfig(data.type_config);
@@ -255,14 +273,17 @@ export default function CreateList() {
                     for (let i = 0; i < data.type_config.max_items; i++) initialContent[`r${i}`] = [];
                 } else if (data.list_type === 'grid') {
                     data.type_config.cells.forEach((_, i) => (initialContent[`c${i}`] = []));
+                } else if (data.list_type === 'alignment') {
+                    initialContent = alignmentToEditor(data.type_config);
                 }
                 setContent(initialContent);
                 setPool(data.default_items || []);
             }).catch(err => setError(err.message));
         } else if (fromListId) {
             getListById(fromListId).then(data => {
+                setLinkedTemplateId(data.template_id || null);
                 if (data.template_id) {
-                    getTemplateById(data.template_id).then(t => setTemplate(t));
+                    getTemplateById(data.template_id).then(t => setTemplate(t)).catch(() => {});
                 }
                 setListType(data.list_type);
                 setMediaType(data.media_type);
@@ -275,6 +296,8 @@ export default function CreateList() {
                     for (let i = 0; i < max; i++) initialContent[`r${i}`] = [];
                 } else if (data.list_type === 'grid') {
                     (data.type_config?.cells || []).forEach((_, i) => (initialContent[`c${i}`] = []));
+                } else if (data.list_type === 'alignment') {
+                    initialContent = alignmentToEditor(data.type_config);
                 }
                 setContent(initialContent);
 
@@ -306,6 +329,7 @@ export default function CreateList() {
             }).catch(err => setError(err.message));
         } else if (id) {
             getListById(id).then(data => {
+                setLinkedTemplateId(data.template_id || null);
                 setTitle(data.title);
                 setListType(data.list_type);
                 setMediaType(data.media_type);
@@ -319,16 +343,18 @@ export default function CreateList() {
                     data.type_config.cells.forEach((_, i) => {
                         loadedContent[`c${i}`] = data.content[`c${i}`] ? [data.content[`c${i}`]] : [];
                     });
+                } else if (data.list_type === 'alignment') {
+                    loadedContent = alignmentToEditor(data.type_config, data.content);
                 }
                 setContent(loadedContent);
                 setVisibility(data.visibility || 'public');
                 setPool(data.pool || []);
                 if (data.template_id) {
-                    getTemplateById(data.template_id).then(t => setTemplate(t));
+                    getTemplateById(data.template_id).then(t => setTemplate(t)).catch(() => {});
                 }
             }).catch(err => setError(err.message));
         }
-    }, [templateId, fromListId, id, profile, standaloneType]);
+    }, [templateId, fromListId, id, profile, standaloneType, publishDraftKey, navigate]);
 
     useEffect(() => {
         if (!guestFinishOpen) return undefined;
@@ -360,20 +386,31 @@ export default function CreateList() {
     useEffect(() => {
         const query = searchQuery.trim();
         const controller = new AbortController();
+        const searchTypes = !template ? ['game', 'anime', 'manga'] : [mediaType];
         if (!query) {
             const cachedResults = defaultResultsCache.current[mediaType];
-            if (cachedResults) {
+            if (template && cachedResults) {
                 setSearchResults(cachedResults);
                 setIsSearching(false);
                 return () => controller.abort();
             }
             setIsSearching(true);
-            getDiscoverWorks(mediaType).then(works => {
-                const popular = [...works]
-                    .sort((a, b) => b.registrations - a.registrations || b.databasePopularity - a.databasePopularity || (b.databaseRating || 0) - (a.databaseRating || 0) || a.title.localeCompare(b.title, 'es'))
+            Promise.allSettled(searchTypes.map(async type => {
+                const works = await getDiscoverWorks(type);
+                return [...works]
+                    .sort((a, b) => b.registrations - a.registrations || b.databasePopularity - a.databasePopularity || (b.externalScore || 0) - (a.externalScore || 0) || a.title.localeCompare(b.title, 'es'))
                     .slice(0, 24)
-                    .map(work => ({ ...work, name: work.title, image_url: work.image, release_date: work.release_date || work.first_release_date || work.start_date }));
-                defaultResultsCache.current[mediaType] = popular;
+                    .map(work => ({ ...work, media_type: type, name: work.title, image_url: work.image, release_date: work.release_date || work.first_release_date || work.start_date }));
+            })).then(results => {
+                const byType = Object.fromEntries(searchTypes.map((type, index) => [
+                    type,
+                    results[index]?.status === 'fulfilled' ? results[index].value : [],
+                ]));
+                const popular = [];
+                for (let offset = 0; searchTypes.some(type => offset < byType[type].length); offset += 3) {
+                    searchTypes.forEach(type => popular.push(...byType[type].slice(offset, offset + 3)));
+                }
+                if (template) defaultResultsCache.current[mediaType] = popular;
                 if (!controller.signal.aborted) setSearchResults(popular);
             }).catch(error => {
                 if (!controller.signal.aborted) {
@@ -389,10 +426,18 @@ export default function CreateList() {
         const timer = setTimeout(async () => {
             setIsSearching(true);
             try {
-                const results = mediaType === 'game'
-                    ? await searchGames(query, 24, { signal: controller.signal })
-                    : await searchAnime(query, 24, { signal: controller.signal });
-                if (!controller.signal.aborted) setSearchResults(results);
+                const results = await Promise.allSettled(searchTypes.map(type => searchWorks(type, query, 24, { signal: controller.signal })));
+                const byType = Object.fromEntries(searchTypes.map((type, index) => [
+                    type,
+                    results[index]?.status === 'fulfilled'
+                        ? results[index].value.map(work => ({ ...work, media_type: type }))
+                        : [],
+                ]));
+                const allResults = [];
+                for (let offset = 0; searchTypes.some(type => offset < byType[type].length); offset += 3) {
+                    searchTypes.forEach(type => allResults.push(...byType[type].slice(offset, offset + 3)));
+                }
+                if (!controller.signal.aborted) setSearchResults(allResults);
             } catch (err) {
                 if (!controller.signal.aborted) console.error(err);
             } finally {
@@ -400,16 +445,18 @@ export default function CreateList() {
             }
         }, 350);
         return () => { clearTimeout(timer); controller.abort(); };
-    }, [searchQuery, mediaType]);
+    }, [searchQuery, mediaType, template]);
 
     const handleAddToPool = useCallback((item) => {
-        const itemId = String(item.id);
+        const itemType = item.media_type || mediaType;
+        const itemId = !template && !String(item.id).startsWith('catalog:') ? `catalog:${itemType}:${item.id}` : String(item.id);
         const newItem = {
             ...item,
             id: itemId,
-            name: item.name,
+            name: item.name || item.title,
+            catalog_id: item.catalog_id || String(item.id),
             image_url: item.image_url || item.cover_url || item.cover?.url,
-            ...(listType === 'ranking' && !template ? { media_type: item.media_type || mediaType } : {}),
+            ...(!template ? { media_type: itemType } : {}),
         };
         if (listType === 'ranking' && !template) {
             const alreadySelected = Object.values(content || {}).flat().some(existing => String(existing?.id) === itemId)
@@ -457,10 +504,25 @@ export default function CreateList() {
         });
     };
 
-    const handleModalItemSelect = useCallback((item) => {
-        const itemId = String(item.id);
-        const newItem = { id: itemId, name: item.name, image_url: item.image_url || item.cover_url || item.cover?.url };
-        if (modalTarget === 'pool') {
+    const replaceAlignmentItem = (cellId, item) => {
+        const displaced = alignmentItem(content[cellId]);
+        setContent(previous => ({ ...previous, [cellId]: item ? [item] : [] }));
+        setPool(previous => {
+            const next = [...previous];
+            for (const value of [displaced, item].filter(Boolean)) {
+                if (!next.some(existing => String(existing.id) === String(value.id))) next.push(value);
+            }
+            return next;
+        });
+    };
+
+    const handleModalItemSelect = (item) => {
+        const itemType = item.media_type || mediaType;
+        const itemId = !template && !String(item.id).startsWith('catalog:') ? `catalog:${itemType}:${item.id}` : String(item.id);
+        const newItem = { id: itemId, catalog_id: item.catalog_id || String(item.id), media_type: itemType, name: item.name || item.title, image_url: item.image_url || item.cover_url || item.cover?.url };
+        if (listType === 'alignment' && modalTarget?.startsWith('a:')) {
+            replaceAlignmentItem(modalTarget, newItem);
+        } else if (modalTarget === 'pool') {
             setPool(prev => {
                 if (prev.find(i => i.id === itemId)) return prev;
                 return [...prev, newItem];
@@ -476,12 +538,14 @@ export default function CreateList() {
             setPool(prev => prev.filter(existing => String(existing.id) !== itemId));
         }
         setModalTarget(null);
-    }, [modalTarget]);
+    };
 
     const handleAddCustom = () => {
         if (!customName || !customImageUrl) return;
         const newItem = { id: `custom_${Date.now()}`, name: customName, image_url: customImageUrl, ...(listType === 'ranking' && !template ? { media_type: mediaType } : {}) };
-        if (modalTarget === 'pool') {
+        if (listType === 'alignment' && modalTarget?.startsWith('a:')) {
+            replaceAlignmentItem(modalTarget, newItem);
+        } else if (modalTarget === 'pool') {
             setPool(prev => [...prev, newItem]);
         } else if (modalTarget && modalTarget.startsWith('c')) {
             setContent(prev => ({ ...prev, [modalTarget]: [newItem] }));
@@ -499,7 +563,7 @@ export default function CreateList() {
 
     const handleDragStart = useCallback((event) => {
         const { active } = event;
-        const item = pool.find(i => i.id === active.id)
+        const item = active.data.current?.item || pool.find(i => i.id === active.id)
             || Object.values(content).flat().find(i => i?.id === active.id);
         setActiveItem(item || { id: active.id });
     }, [pool, content]);
@@ -508,6 +572,24 @@ export default function CreateList() {
         setActiveItem(null);
         const { active, over } = event;
         if (!over) return;
+        if (listType === 'alignment') {
+            const source = active.data.current?.alignmentCell;
+            const target = over.data.current?.sortable?.containerId || over.id;
+            const item = source ? alignmentItem(content[source]) : pool.find(value => value.id === active.id);
+            if (!item || source === target) return;
+            if (target === 'pool') {
+                if (source) setContent(previous => ({ ...previous, [source]: [] }));
+                setPool(previous => previous.some(value => String(value.id) === String(item.id)) ? previous : [...previous, item]);
+            } else if (Object.hasOwn(content, target)) {
+                if (source) setContent(previous => moveAlignmentItem(typeConfig, previous, source, target));
+                else {
+                    const displaced = alignmentItem(content[target]);
+                    setContent(previous => ({ ...previous, [target]: [item] }));
+                    if (displaced) setPool(previous => previous.some(value => String(value.id) === String(displaced.id)) ? previous : [...previous, displaced]);
+                }
+            }
+            return;
+        }
         const sourceContainer = active.data.current?.sortable?.containerId || 'pool';
         const targetContainer = over.data.current?.sortable?.containerId || over.id;
         if (sourceContainer === targetContainer) return;
@@ -550,7 +632,7 @@ export default function CreateList() {
                 [targetContainer]: [...(prev[targetContainer] || []), item]
             }));
         }
-    }, [pool, content, listType]);
+    }, [pool, content, listType, typeConfig]);
 
     const changeRankingSize = delta => {
         const current = Number(typeConfig.max_items) || DEFAULT_TIER_CONFIG.ranking.max_items;
@@ -570,7 +652,7 @@ export default function CreateList() {
     };
 
     const changeStandaloneType = nextType => {
-        const config = JSON.parse(JSON.stringify(DEFAULT_TIER_CONFIG[nextType]));
+        const config = nextType === 'alignment' ? createAlignmentConfig() : JSON.parse(JSON.stringify(DEFAULT_TIER_CONFIG[nextType]));
         const allItems = [...pool, ...Object.values(content || {}).flatMap(value => Array.isArray(value) ? value.filter(Boolean) : value ? [value] : [])];
         const seen = new Set();
         setPool(allItems.filter(item => {
@@ -581,7 +663,8 @@ export default function CreateList() {
         }));
         setListType(nextType);
         setTypeConfig(config);
-        if (nextType === 'tierlist') setContent(Object.fromEntries(config.tiers.map(tier => [tier.id, []])));
+        if (nextType === 'alignment') setContent(alignmentToEditor(config));
+        else if (nextType === 'tierlist') setContent(Object.fromEntries(config.tiers.map(tier => [tier.id, []])));
         else if (nextType === 'grid') setContent(Object.fromEntries(config.cells.map((_, index) => [`c${index}`, []])));
         else setContent(Object.fromEntries(Array.from({ length: config.max_items }, (_, index) => [`r${index}`, []])));
     };
@@ -591,6 +674,22 @@ export default function CreateList() {
     // existing standalone lists to retain that flexibility when edited later.
     const isEditableTemplateTierlist = Boolean(listType === 'tierlist' && (!id || !template?.id));
     const isEditableStandaloneGrid = Boolean(listType === 'grid' && (!id || !template?.id));
+    const isEditableStandaloneAlignment = listType === 'alignment' && !linkedTemplateId;
+    const AlignmentSurface = isEditableStandaloneAlignment ? AlignmentConfigEditor : AlignmentBoard;
+
+    const updateAlignmentConfig = nextConfig => {
+        const next = reconcileAlignmentContent(content, nextConfig);
+        setPool(previous => {
+            const known = new Set(previous.map(item => String(item.id)));
+            return [...previous, ...next.removed.filter(item => {
+                if (known.has(String(item.id))) return false;
+                known.add(String(item.id));
+                return true;
+            })];
+        });
+        setContent(next.content);
+        setTypeConfig(nextConfig);
+    };
 
     const updateGridCell = (cellIndex, updates) => {
         setTypeConfig(previous => ({
@@ -664,7 +763,7 @@ export default function CreateList() {
         const draftKey = saveGuestListDraft({
             templateTitle: template?.title || '',
             baseTitle: title.trim(),
-            editor: { title: title.trim(), listType, mediaType, typeConfig, content, pool, visibility, templateId: template?.id || null },
+            editor: { title: title.trim(), listType, mediaType, typeConfig, content, pool, visibility, templateId: template?.id || linkedTemplateId || null },
             payload,
         });
         setGuestDraftKey(draftKey);
@@ -695,7 +794,10 @@ export default function CreateList() {
         setSaving(true);
         try {
             let dbContent = content;
-            if (listType === 'ranking') {
+            if (listType === 'alignment') {
+                validateAlignmentConfig(typeConfig);
+                dbContent = alignmentToStored(typeConfig, content);
+            } else if (listType === 'ranking') {
                 dbContent = Array.from({ length: typeConfig.max_items }).map((_, i) => (content[`r${i}`] && content[`r${i}`][0]) || null);
             } else if (listType === 'grid') {
                 dbContent = {};
@@ -704,7 +806,7 @@ export default function CreateList() {
                 });
             }
             const rankingMediaType = listType === 'ranking' && !template
-                ? dbContent.find(item => item?.media_type === 'game' || item?.media_type === 'anime')?.media_type || mediaType
+                ? dbContent.find(item => ['game', 'anime', 'manga'].includes(item?.media_type))?.media_type || mediaType
                 : mediaType;
             const payload = {
                 title: title.trim(),
@@ -713,7 +815,7 @@ export default function CreateList() {
                 type_config: typeConfig,
                 content: dbContent,
                 visibility,
-                template_id: template?.id || null,
+                template_id: template?.id || linkedTemplateId || null,
                 user_id: user?.id
             };
             if (!user) {
@@ -729,7 +831,7 @@ export default function CreateList() {
                     templateTitle: template?.title || '',
                     editor: {
                         title: title.trim(), listType, mediaType, typeConfig, content,
-                        pool, visibility, templateId: template?.id || null,
+                        pool, visibility, templateId: template?.id || linkedTemplateId || null,
                     },
                     payload,
                 };
@@ -782,6 +884,7 @@ export default function CreateList() {
                                 <option value="tierlist">Tierlist</option>
                                 <option value="grid">Cuadrícula</option>
                                 <option value="ranking">Ranking</option>
+                                <option value="alignment">Alineamiento</option>
                             </select>
                         )}
                         {editingTitle ? (
@@ -835,6 +938,7 @@ export default function CreateList() {
                         collisionDetection={pointerWithin}
                         onDragStart={handleDragStart}
                         onDragEnd={handleDragEnd}
+                        onDragCancel={() => setActiveItem(null)}
                     >
                         {/* TIERLIST */}
                         {listType === 'tierlist' && (
@@ -892,6 +996,24 @@ export default function CreateList() {
                             </div>
                             </>
                         )}
+
+                        {listType === 'alignment' && <section aria-label="Rellenar alineamiento">
+                            <AlignmentSurface config={typeConfig} onChange={updateAlignmentConfig} content={content} renderCell={cell => <AlignmentEditCell cell={cell}
+                                onPick={() => { setModalTarget(cell.id); setActiveTab(pool.length ? 'pool' : 'search'); setSearchQuery(''); }}
+                                onRemove={() => replaceAlignmentItem(cell.id, null)}
+                                onMove={(source, direction) => {
+                                    const cells = alignmentCells(typeConfig);
+                                    const index = cells.findIndex(value => value.id === source);
+                                    const columns = typeConfig.axes.x.entries.length;
+                                    const offset = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -columns, ArrowDown: columns }[direction];
+                                    if ((direction === 'ArrowLeft' && index % columns === 0) || (direction === 'ArrowRight' && index % columns === columns - 1)) return;
+                                    const target = cells[index + offset];
+                                    if (target) {
+                                        setContent(previous => moveAlignmentItem(typeConfig, previous, source, target.id));
+                                        window.requestAnimationFrame(() => document.getElementById(`alignment-pick-${target.id}`)?.focus());
+                                    }
+                                }} />}/>
+                        </section>}
 
                         {/* GRID */}
                         {isGrid && (
@@ -1023,14 +1145,14 @@ export default function CreateList() {
                                     <>
                                         {listType === 'ranking' && !template && <div className="cl-ranking-media-control in-search" role="group" aria-label="Filtrar la búsqueda por categoría">
                                             <button type="button" className={mediaType === 'game' ? 'active' : ''} aria-pressed={mediaType === 'game'} onClick={() => { setMediaType('game'); setSearchQuery(''); }}>Juegos</button>
-                                            <button type="button" className={mediaType === 'anime' ? 'active' : ''} aria-pressed={mediaType === 'anime'} onClick={() => { setMediaType('anime'); setSearchQuery(''); }}>Anime</button>
+                                            <button type="button" className={mediaType === 'anime' ? 'active' : ''} aria-pressed={mediaType === 'anime'} onClick={() => { setMediaType('anime'); setSearchQuery(''); }}>Anime</button><button type="button" className={mediaType === 'manga' ? 'active' : ''} aria-pressed={mediaType === 'manga'} onClick={() => { setMediaType('manga'); setSearchQuery(''); }}>Manga</button>
                                         </div>}
                                         <div className="cl-search-wrap">
                                             <span className="cl-search-icon"><IconSearch /></span>
                                             <input
                                                 className="cl-search-input"
                                                 type="text"
-                                                placeholder={mediaType === 'game' ? 'Buscar juegos (Zelda, Elden Ring...)' : 'Buscar anime (One Piece, Naruto...)'}
+                                                placeholder={`Buscar ${workType(mediaType).plural.toLowerCase()}…`}
                                                 value={searchQuery}
                                                 onChange={e => setSearchQuery(e.target.value)}
                                             />
@@ -1070,11 +1192,13 @@ export default function CreateList() {
                                             )}
                                             {!isSearching && searchResults.map(item => {
                                                 const imgUrl = item.image_url || item.cover_url || item.cover?.url;
-                                                const isAdded = pool.some(p => p.id === String(item.id))
-                                                    || Object.values(content || {}).flat().some(placed => String(placed?.id) === String(item.id));
+                                                const itemType = item.media_type || mediaType;
+                                                const itemId = !template ? `catalog:${itemType}:${item.id}` : String(item.id);
+                                                const isAdded = pool.some(p => p.id === itemId)
+                                                    || Object.values(content || {}).flat().some(placed => String(placed?.id) === itemId);
                                                 return (
                                                     <button
-                                                        key={item.id}
+                                                        key={itemId}
                                                         className={`cl-result-item ${isAdded ? 'is-added' : ''}`}
                                                     onClick={() => !isAdded && handleAddToPool(item)}
                                                         disabled={isAdded}
@@ -1089,6 +1213,7 @@ export default function CreateList() {
                                                         <div className="cl-result-info">
                                                             <span className="cl-result-name">{item.name}</span>
                                                             <div className="cl-result-meta">
+                                                                {!template && <span className="cl-result-year">{{ game: 'Juego', anime: 'Anime', manga: 'Manga' }[itemType]}</span>}
                                                                 {item.release_date && (
                                                                     <span className="cl-result-year">{item.release_date.substring(0, 4)}</span>
                                                                 )}
@@ -1193,7 +1318,7 @@ export default function CreateList() {
                                         <input
                                             className="cl-search-input"
                                             type="text"
-                                            placeholder={`Buscar ${mediaType === 'game' ? 'juegos' : 'anime'}...`}
+                                            placeholder={`Buscar ${workType(mediaType).plural.toLowerCase()}...`}
                                             value={searchQuery}
                                             onChange={e => setSearchQuery(e.target.value)}
                                         />

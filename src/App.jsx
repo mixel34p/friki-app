@@ -59,7 +59,7 @@ function getPageTitle(pathname) {
   }
   if (section === 'groups' && subpage === 'edit') return 'Editar grupo'
   if (section === 'groups' && identifier) return 'Grupo de elementos'
-  if (section === 'game' || section === 'anime') return identifier && parts[2] === 'reviews' ? `Reseñas de ${section === 'game' ? 'videojuegos' : 'anime'}` : section === 'game' ? 'Videojuego' : 'Anime'
+  if (['game', 'anime', 'manga'].includes(section)) return identifier && parts[2] === 'reviews' ? `Reseñas de ${section === 'game' ? 'videojuegos' : 'anime'}` : { game: 'Videojuego', anime: 'Anime', manga: 'Manga' }[section]
   if (section === 'spaces' && identifier) return 'Espacio'
   if (section === 'posts' && identifier) return 'Publicación'
   if (section === 'lists' && identifier) return parts[2] === 'edit' ? 'Editar lista' : 'Lista'
@@ -67,7 +67,7 @@ function getPageTitle(pathname) {
   if (section === 'tierlist' && identifier) return 'Tierlist'
   if (section === 'compare') return 'Comparar perfiles'
   if (section === 'discover') {
-    const labels = { anime: 'animes', games: 'juegos', users: 'usuarios', spaces: 'espacios', lists: 'listas' }
+    const labels = { anime: 'animes', manga: 'manga', games: 'juegos', users: 'usuarios', spaces: 'espacios', lists: 'listas' }
     return identifier === 'users' && subpage === 'all' ? 'Todos los usuarios' : `Descubrir ${labels[identifier] || ''}`.trim()
   }
   if (section === 'chat') return 'Chat'
@@ -170,13 +170,13 @@ function Placeholder({ title }) {
 
 function DiscoverCategoryPlaceholder() {
   const { category } = useParams()
-  const labels = { anime: 'Animes', games: 'Juegos', users: 'Usuarios', spaces: 'Espacios', lists: 'Listas' }
+  const labels = { anime: 'Animes', manga: 'Manga', games: 'Juegos', users: 'Usuarios', spaces: 'Espacios', lists: 'Listas' }
   return <Placeholder title={`Descubrir ${labels[category] || ''}`} />
 }
 
 function DiscoverCategoryRoute() {
   const { category } = useParams()
-  if (category === 'anime' || category === 'games') return <DiscoverWorks />
+  if (['anime', 'games', 'manga'].includes(category)) return <DiscoverWorks />
   if (category === 'users') return <Navigate to="/search?filter=users" replace />
   if (category === 'spaces') return <SpacesExplore />
   if (category === 'lists') return <DiscoverLists />
@@ -277,6 +277,8 @@ function App() {
             {/* Work Page Routes */}
             <Route path="/game/:id" element={<WorkPage mediaType="game" />} />
             <Route path="/anime/:id" element={<WorkPage mediaType="anime" />} />
+            <Route path="/manga/:id" element={<WorkPage mediaType="manga" />} />
+            <Route path="/manga/:id/reviews" element={<WorkReviewsRedirect mediaType="manga" />} />
             <Route path="/game/:id/reviews" element={<WorkReviewsRedirect mediaType="game" />} />
             <Route path="/anime/:id/reviews" element={<WorkReviewsRedirect mediaType="anime" />} />
             <Route path="/profile/:username/wishlist" element={<WishlistPage />} />

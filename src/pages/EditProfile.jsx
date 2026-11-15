@@ -1,3 +1,4 @@
+import FavoriteWorksEditor from '../components/profile/FavoriteWorksEditor'
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
@@ -313,6 +314,12 @@ export default function EditProfile({ onClose, standalone = false }) {
         platforms:       profile?.platforms       || [],
         favorite_games:  profile?.favorite_games  || [],
         favorite_animes: profile?.favorite_animes || [],
+        favorite_manga: profile?.favorite_manga || [],
+        favorite_works: Array.isArray(profile?.favorite_works) && profile.favorite_works.length > 0 ? profile.favorite_works : [
+            ...(profile?.favorite_games || []).map(item => ({ id: String(item.id), type: 'game', title: item.title || item.name, cover_url: item.cover_url || item.image_url })),
+            ...(profile?.favorite_animes || []).map(item => ({ id: String(item.id), type: 'anime', title: item.title || item.name, cover_url: item.cover_url || item.image_url })),
+            ...(profile?.favorite_manga || []).map(item => ({ id: String(item.id), type: 'manga', title: item.title || item.name, cover_url: item.cover_url || item.image_url })),
+        ].slice(0, 4),
         social_links:    profile?.social_links    || {},
         theme_color:     profile?.theme_color     || '#14b8a6',
         name_font:       normalizeProfileFont(profile?.name_font),
@@ -665,9 +672,16 @@ export default function EditProfile({ onClose, standalone = false }) {
                 let url = await uploadImage(bannerFile, 'avatars', `banners/${user.id}.${uniqueSuffix}.${ext}`, { upsert: false })
                 bannerUrl = `${url}?t=${Date.now()}`
             }
-            const savedProfile = await updateProfile({ ...formData, avatar_url: avatarUrl, banner_url: bannerUrl })
+            const favoriteWorks = Array.isArray(formData.favorite_works) ? formData.favorite_works : []
+            const legacyFavorites = {
+                favorite_games: favoriteWorks.filter(item => item.type === 'game').map(item => ({ id: item.id, name: item.title, title: item.title, cover_url: item.cover_url })),
+                favorite_animes: favoriteWorks.filter(item => item.type === 'anime').map(item => ({ id: item.id, title: item.title, cover_url: item.cover_url })),
+                favorite_manga: favoriteWorks.filter(item => item.type === 'manga').map(item => ({ id: item.id, title: item.title, cover_url: item.cover_url })),
+            }
+            const profileUpdates = { ...formData, ...legacyFavorites, avatar_url: avatarUrl, banner_url: bannerUrl }
+            const savedProfile = await updateProfile(profileUpdates)
             const savedData = {
-                ...formData,
+                ...profileUpdates,
                 name_font: normalizeProfileFont(savedProfile?.name_font || formData.name_font),
                 bio_font: savedProfile?.bio_font || formData.bio_font
             }
@@ -855,35 +869,7 @@ export default function EditProfile({ onClose, standalone = false }) {
                                     <ProfileFontControls nameFont={formData.name_font} bioFont={formData.bio_font} onApply={applyProfileFont} onPreview={previewProfileFont} idPrefix="settings" />
                                 </div>
 
-                                <div className="ep-settings-row">
-                                    <label htmlFor="settings-game-search">Juegos favoritos <small>{formData.favorite_games.length}/4</small></label>
-                                    <div className="ep-settings-selected-works">
-                                        {formData.favorite_games.map((game, index) => <div className="ep-settings-selected-work" key={game.id}>
-                                            {game.cover_url && <img src={game.cover_url} alt="" />}
-                                            <span>{game.name}</span>
-                                            <button type="button" onClick={() => removeGame(index)} aria-label={`Quitar ${game.name}`}>×</button>
-                                        </div>)}
-                                    </div>
-                                    {formData.favorite_games.length < 4 && <div className="ep-settings-search-wrap">
-                                        <input id="settings-game-search" className="ep-settings-control" value={gameSearchQuery} onChange={e => setGameSearchQuery(e.target.value)} placeholder="Buscar juegos…" />
-                                        {renderWorkSearchResults('game')}
-                                    </div>}
-                                </div>
-                                <div className="ep-settings-row">
-                                    <label htmlFor="settings-anime-search">Animes favoritos <small>{formData.favorite_animes.length}/4</small></label>
-                                    <div className="ep-settings-selected-works">
-                                        {formData.favorite_animes.map((anime, index) => <div className="ep-settings-selected-work" key={anime.id}>
-                                            {anime.cover_url && <img src={anime.cover_url} alt="" />}
-                                            <span>{anime.title}</span>
-                                            <button type="button" onClick={() => removeAnime(index)} aria-label={`Quitar ${anime.title}`}>×</button>
-                                        </div>)}
-                                    </div>
-                                    {formData.favorite_animes.length < 4 && <div className="ep-settings-search-wrap">
-                                        <input id="settings-anime-search" className="ep-settings-control" value={animeSearchQuery} onChange={e => setAnimeSearchQuery(e.target.value)} placeholder="Buscar anime…" />
-                                        {renderWorkSearchResults('anime')}
-                                    </div>}
-                                </div>
-
+                                <FavoriteWorksEditor value={formData.favorite_works} onChange={value => handleChange('favorite_works', value)} />
                                 <div className="ep-settings-row">
                                     <label>Canción del perfil</label>
                                     {formData.profile_song && typeof formData.profile_song === 'object' ? <div className="ep-settings-song-selected">
@@ -1342,87 +1328,7 @@ export default function EditProfile({ onClose, standalone = false }) {
 
                         {/* ── FAVORITOS ── */}
                         {showProfileSections && standalone && <div className="ep-settings-section-divider" aria-hidden="true" />}
-                        {(activeSection === 'favorites' || standalone && activeSection !== 'blocked') && (
-                            <>
-                                {/* Favorite Games */}
-                                <div className="ep-field">
-                                    <label className="ep-label">
-                                        <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                            <IconGamepad /> Juegos favoritos (Top 4)
-                                        </span>
-                                    </label>
-                                    
-                                    <div className="ep-favorites-grid">
-                                        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEndGames}>
-                                            <SortableContext items={formData.favorite_games.map(g => g.id)} strategy={rectSortingStrategy}>
-                                                {formData.favorite_games.map((g, idx) => (
-                                                    <SortableFavoriteItem 
-                                                        key={g.id} 
-                                                        item={g} 
-                                                        onRemove={() => removeGame(idx)} 
-                                                        onClick={() => setActiveGameSlot(idx)}
-                                                    />
-                                                ))}
-                                            </SortableContext>
-                                        </DndContext>
-                                        {Array.from({ length: 4 - formData.favorite_games.length }).map((_, idx) => {
-                                            const actualSlot = formData.favorite_games.length + idx;
-                                            return (
-                                                <button 
-                                                    key={`empty-${idx}`} 
-                                                    type="button" 
-                                                    className={`ep-empty-slot ${activeGameSlot === actualSlot ? 'active' : ''}`}
-                                                    onClick={() => setActiveGameSlot(actualSlot)}
-                                                >
-                                                    <IconPlus size={24} />
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-
-
-                                </div>
-
-                                {/* Favorite Anime */}
-                                <div className="ep-field" style={{ marginTop: '32px' }}>
-                                    <label className="ep-label">
-                                        <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                            <IconTV /> Animes favoritos (Top 4)
-                                        </span>
-                                    </label>
-                                    
-                                    <div className="ep-favorites-grid">
-                                        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEndAnimes}>
-                                            <SortableContext items={formData.favorite_animes.map(a => a.id)} strategy={rectSortingStrategy}>
-                                                {formData.favorite_animes.map((a, idx) => (
-                                                    <SortableFavoriteItem 
-                                                        key={a.id} 
-                                                        item={{...a, name: a.title}} 
-                                                        onRemove={() => removeAnime(idx)} 
-                                                        onClick={() => setActiveAnimeSlot(idx)}
-                                                    />
-                                                ))}
-                                            </SortableContext>
-                                        </DndContext>
-                                        {Array.from({ length: 4 - formData.favorite_animes.length }).map((_, idx) => {
-                                            const actualSlot = formData.favorite_animes.length + idx;
-                                            return (
-                                                <button 
-                                                    key={`empty-${idx}`} 
-                                                    type="button" 
-                                                    className={`ep-empty-slot ${activeAnimeSlot === actualSlot ? 'active' : ''}`}
-                                                    onClick={() => setActiveAnimeSlot(actualSlot)}
-                                                >
-                                                    <IconPlus size={24} />
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-
-
-                                </div>
-                            </>
-                        )}
+                        {(activeSection === 'favorites' || standalone && activeSection !== 'blocked') && <FavoriteWorksEditor value={formData.favorite_works} onChange={value => handleChange('favorite_works', value)} />}
 
                         {/* ── REDES SOCIALES ── */}
                         {showProfileSections && standalone && <div className="ep-settings-section-divider" aria-hidden="true" />}

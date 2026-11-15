@@ -1,0 +1,261 @@
+{
+  "checks": [
+    {
+      "width": 1360,
+      "route": "diary",
+      "selected": "Anime",
+      "entries": 1,
+      "aligned": true,
+      "overflow": false
+    },
+    {
+      "width": 1360,
+      "route": "diary",
+      "selected": "Manga",
+      "entries": 1,
+      "aligned": true,
+      "overflow": false
+    },
+    {
+      "width": 1360,
+      "route": "diary",
+      "selected": "Juegos",
+      "entries": 1,
+      "aligned": true,
+      "overflow": false
+    },
+    {
+      "width": 1360,
+      "route": "diary",
+      "selected": "Todos",
+      "entries": 3,
+      "aligned": true,
+      "overflow": false
+    },
+    {
+      "width": 1360,
+      "route": "reviews",
+      "selected": "Anime",
+      "entries": 1,
+      "aligned": true,
+      "overflow": false
+    },
+    {
+      "width": 1360,
+      "route": "reviews",
+      "selected": "Manga",
+      "entries": 1,
+      "aligned": true,
+      "overflow": false
+    },
+    {
+      "width": 1360,
+      "route": "reviews",
+      "selected": "Juegos",
+      "entries": 1,
+      "aligned": true,
+      "overflow": false
+    },
+    {
+      "width": 1360,
+      "route": "reviews",
+      "selected": "Todos",
+      "entries": 3,
+      "aligned": true,
+      "overflow": false
+    },
+    {
+      "width": 820,
+      "route": "diary",
+      "selected": "Anime",
+      "entries": 1,
+      "aligned": true,
+      "overflow": false
+    },
+    {
+      "width": 820,
+      "route": "diary",
+      "selected": "Manga",
+      "entries": 1,
+      "aligned": true,
+      "overflow": false
+    },
+    {
+      "width": 820,
+      "route": "diary",
+      "selected": "Juegos",
+      "entries": 1,
+      "aligned": true,
+      "overflow": false
+    },
+    {
+      "width": 820,
+      "route": "diary",
+      "selected": "Todos",
+      "entries": 3,
+      "aligned": true,
+      "overflow": false
+    },
+    {
+      "width": 820,
+      "route": "reviews",
+      "selected": "Anime",
+      "entries": 1,
+      "aligned": true,
+      "overflow": false
+    },
+    {
+      "width": 820,
+      "route": "reviews",
+      "selected": "Manga",
+      "entries": 1,
+      "aligned": true,
+      "overflow": false
+    },
+    {
+      "width": 820,
+      "route": "reviews",
+      "selected": "Juegos",
+      "entries": 1,
+      "aligned": true,
+      "overflow": false
+    },
+    {
+      "width": 820,
+      "route": "reviews",
+      "selected": "Todos",
+      "entries": 3,
+      "aligned": true,
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "route": "diary",
+      "selected": "Anime",
+      "entries": 1,
+      "aligned": true,
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "route": "diary",
+      "selected": "Manga",
+      "entries": 1,
+      "aligned": true,
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "route": "diary",
+      "selected": "Juegos",
+      "entries": 1,
+      "aligned": true,
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "route": "diary",
+      "selected": "Todos",
+      "entries": 3,
+      "aligned": true,
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "route": "reviews",
+      "selected": "Anime",
+      "entries": 1,
+      "aligned": true,
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "route": "reviews",
+      "selected": "Manga",
+      "entries": 1,
+      "aligned": true,
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "route": "reviews",
+      "selected": "Juegos",
+      "entries": 1,
+      "aligned": true,
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "route": "reviews",
+      "selected": "Todos",
+      "entries": 3,
+      "aligned": true,
+      "overflow": false
+    },
+    {
+      "width": 360,
+      "route": "diary",
+      "selected": "Anime",
+      "entries": 1,
+      "aligned": true,
+      "overflow": false
+    },
+    {
+      "width": 360,
+      "route": "diary",
+      "selected": "Manga",
+      "entries": 1,
+      "aligned": true,
+      "overflow": false
+    },
+    {
+      "width": 360,
+      "route": "diary",
+      "selected": "Juegos",
+      "entries": 1,
+      "aligned": true,
+      "overflow": false
+    },
+    {
+      "width": 360,
+      "route": "diary",
+      "selected": "Todos",
+      "entries": 3,
+      "aligned": true,
+      "overflow": false
+    },
+    {
+      "width": 360,
+      "route": "reviews",
+      "selected": "Anime",
+      "entries": 1,
+      "aligned": true,
+      "overflow": false
+    },
+    {
+      "width": 360,
+      "route": "reviews",
+      "selected": "Manga",
+      "entries": 1,
+      "aligned": true,
+      "overflow": false
+    },
+    {
+      "width": 360,
+      "route": "reviews",
+      "selected": "Juegos",
+      "entries": 1,
+      "aligned": true,
+      "overflow": false
+    },
+    {
+      "width": 360,
+      "route": "reviews",
+      "selected": "Todos",
+      "entries": 3,
+      "aligned": true,
+      "overflow": false
+    }
+  ],
+  "errors": []
+}

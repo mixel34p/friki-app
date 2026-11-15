@@ -92,7 +92,7 @@ export default function WishlistPage() {
                                                 padding: '2px 6px', 
                                                 borderRadius: '4px' 
                                             }}>
-                                                {item.type === 'game' ? 'JUEGO' : 'ANIME'}
+                                                {{ game: 'JUEGO', anime: 'ANIME', manga: 'MANGA' }[item.type]}
                                             </span>
                                         </div>
                                     </div>

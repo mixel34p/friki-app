@@ -37,7 +37,7 @@ export default function LegalPage() {
           <header className="legal-heading"><h1>{doc.title}</h1>{doc.updated ? <p>Última actualización: {doc.updated}</p> : <p>{doc.intro}</p>}</header>
           {key === 'credits' ? <div className="credits-list">
             <div className="credits-group"><h2>Fuentes y servicios</h2>
-              <p><a href="https://anilist.co" target="_blank" rel="noreferrer">AniList</a> para el catálogo de anime; <a href="https://www.igdb.com" target="_blank" rel="noreferrer">IGDB</a> para videojuegos; <a href="https://giphy.com" target="_blank" rel="noreferrer">GIPHY</a> para GIFs; y <a href="https://mymemory.translated.net" target="_blank" rel="noreferrer">MyMemory</a> para traducciones.</p>
+              <p><a href="https://anilist.co" target="_blank" rel="noreferrer">AniList</a> para el catálogo de anime; <a href="https://www.igdb.com" target="_blank" rel="noreferrer">IGDB</a> para videojuegos; <a href="https://myanimelist.net" target="_blank" rel="noreferrer">MyAnimeList</a> es la fuente prevista para manga, pendiente de activación y autorización; <a href="https://giphy.com" target="_blank" rel="noreferrer">GIPHY</a> para GIFs; y <a href="https://mymemory.translated.net" target="_blank" rel="noreferrer">MyMemory</a> para traducciones.</p>
               <p><a href="https://fonts.google.com" target="_blank" rel="noreferrer">Google Fonts</a> (Space Grotesk e Inter), <a href="https://supabase.com" target="_blank" rel="noreferrer">Supabase</a>, <a href="https://vercel.com" target="_blank" rel="noreferrer">Vercel</a> e <a href="https://imgbb.com" target="_blank" rel="noreferrer">ImgBB</a>.</p>
             </div>
             <div className="credits-group"><h2>Librerías y herramientas</h2>

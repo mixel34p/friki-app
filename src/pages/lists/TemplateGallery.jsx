@@ -6,12 +6,14 @@ import { useAuth } from '../../context/AuthContext';
 import CreateTemplateModal from './CreateTemplateModal';
 import SEO from '../../components/SEO';
 import DefaultAvatar from '../../components/DefaultAvatar';
+import { AlignmentIcon } from '../../components/AlignmentBoard';
+import { LIST_TYPE_LABELS } from '../../lib/listTypes';
 import '../DiscoverWorks.css';
 import '../Search.css';
 import '../DiscoverLists.css';
 
-const TYPE_LABELS = { tierlist: 'Tierlist', grid: 'Grid' };
-const MEDIA_LABELS = { game: 'Juegos', anime: 'Anime' };
+const TYPE_LABELS = LIST_TYPE_LABELS;
+const MEDIA_LABELS = { game: 'Juegos', anime: 'Anime', manga: 'Manga' };
 
 function templateImages(template) {
     const source = template.cover_items?.length ? template.cover_items : template.default_items || [];
@@ -22,6 +24,7 @@ function templateImages(template) {
 }
 
 function TemplateIcon({ type }) {
+    if (type === 'alignment') return <AlignmentIcon/>;
     if (type === 'grid') return <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>;
     return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>;
 }
@@ -68,7 +71,7 @@ export default function TemplateGallery() {
     const [searchParams] = useSearchParams();
     const [templates, setTemplates] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [filterType, setFilterType] = useState(null);
+    const [filterType, setFilterType] = useState(() => ['tierlist', 'grid', 'alignment'].includes(searchParams.get('type')) ? searchParams.get('type') : null);
     const [filterMedia, setFilterMedia] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [showModal, setShowModal] = useState(searchParams.get('new') === '1');
@@ -109,10 +112,10 @@ export default function TemplateGallery() {
         <div className="discover-list-controls template-gallery-controls">
             <div className="discover-list-filter-row">
                 <div className="discover-genre-list" role="group" aria-label="Filtrar por formato">
-                    {[null, 'tierlist', 'grid'].map(type => <button key={type || 'all'} type="button" className={`discover-chip${filterType === type ? ' active' : ''}`} aria-pressed={filterType === type} onClick={() => setFilterType(type)}>{type ? TYPE_LABELS[type] : 'Todos'}</button>)}
+                    {[null, 'tierlist', 'grid', 'alignment'].map(type => <button key={type || 'all'} type="button" className={`discover-chip${filterType === type ? ' active' : ''}`} aria-pressed={filterType === type} onClick={() => setFilterType(type)}>{type ? TYPE_LABELS[type] : 'Todos'}</button>)}
                 </div>
                 <div className="discover-genre-list media" role="group" aria-label="Filtrar por tipo de obra">
-                    {[null, 'anime', 'game'].map(media => <button key={media || 'all'} type="button" className={`discover-chip${filterMedia === media ? ' active' : ''}`} aria-pressed={filterMedia === media} onClick={() => setFilterMedia(media)}>{media ? MEDIA_LABELS[media] : 'Cualquiera'}</button>)}
+                    {[null, 'anime', 'game', 'manga'].map(media => <button key={media || 'all'} type="button" className={`discover-chip${filterMedia === media ? ' active' : ''}`} aria-pressed={filterMedia === media} onClick={() => setFilterMedia(media)}>{media ? MEDIA_LABELS[media] : 'Cualquiera'}</button>)}
                 </div>
                 <div className="discover-list-filter-actions">
                     <label className="discover-list-search">

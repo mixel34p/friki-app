@@ -1,3 +1,4 @@
+import { WORK_TYPE_IDS, workType } from '../lib/workTypes'
 import { createPostgresChannel } from '../lib/postgresChannel'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -391,14 +392,14 @@ export default function ActivityPage() {
     if (reviewIds.length) {
       const { data } = await supabase.from('library_entries').select('id, work_id, work_type').in('id', reviewIds)
       const entries = data || []
-      const mediaByType = { game: new Set(), anime: new Set() }
+      const mediaByType = { game: new Set(), anime: new Set(), manga: new Set() }
       entries.forEach(entry => { if (mediaByType[entry.work_type]) mediaByType[entry.work_type].add(String(entry.work_id)) })
       const workMaps = {}
-      for (const type of ['game', 'anime']) {
+      for (const type of WORK_TYPE_IDS) {
         const ids = [...mediaByType[type]]
         if (!ids.length) continue
-        const table = type === 'game' ? 'games' : 'anime'
-        const fields = type === 'game' ? 'id, name, cover_url' : 'id, title, image_url'
+        const table = workType(type).table
+        const fields = `id, ${workType(type).titleField}, ${workType(type).imageField}`
         const { data: works } = await supabase.from(table).select(fields).in('id', ids)
         workMaps[type] = Object.fromEntries((works || []).map(work => [String(work.id), work]))
       }
@@ -416,16 +417,16 @@ export default function ActivityPage() {
     if (tierlistIds.length) {
       const { data } = await supabase.from('tierlists').select('id, title, media_type, tierlist_items(tier, media_id)').in('id', tierlistIds)
       const lists = data || []
-      const mediaByType = { game: new Set(), anime: new Set() }
+      const mediaByType = { game: new Set(), anime: new Set(), manga: new Set() }
       lists.forEach(list => (list.tierlist_items || []).forEach(item => {
         if (mediaByType[list.media_type] && item.media_id) mediaByType[list.media_type].add(String(item.media_id))
       }))
       const workMaps = {}
-      for (const type of ['game', 'anime']) {
+      for (const type of WORK_TYPE_IDS) {
         const ids = [...mediaByType[type]]
         if (!ids.length) continue
-        const table = type === 'game' ? 'games' : 'anime'
-        const fields = type === 'game' ? 'id, cover_url' : 'id, image_url'
+        const table = workType(type).table
+        const fields = `id, ${workType(type).imageField}`
         const { data: works } = await supabase.from(table).select(fields).in('id', ids)
         workMaps[type] = Object.fromEntries((works || []).map(work => [String(work.id), work]))
       }

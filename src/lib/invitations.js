@@ -62,9 +62,10 @@ export function invitationFromSearch(search) {
 export function profileFavorites(profile, limit = 6) {
     const anime = Array.isArray(profile?.favorite_animes) ? profile.favorite_animes : []
     const games = Array.isArray(profile?.favorite_games) ? profile.favorite_games : []
+    const manga = Array.isArray(profile?.favorite_manga) ? profile.favorite_manga : []
     const result = []
-    for (let i = 0; i < Math.max(anime.length, games.length); i++) {
-        for (const item of [anime[i], games[i]]) {
+    for (let i = 0; i < Math.max(anime.length, games.length, manga.length); i++) {
+        for (const item of [anime[i], games[i], manga[i]]) {
             if (!item || typeof item !== 'object') continue
             const image = item.cover_url || item.image_url || item.image || item.images?.jpg?.large_image_url || item.cover?.url
             if (typeof image !== 'string' || !/^https?:\/\//i.test(image)) continue

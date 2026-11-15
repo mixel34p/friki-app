@@ -9,8 +9,8 @@
  */
 
 import { supabase } from './supabase'
-import { getGameById, getSimilarGames } from './gameService'
-import { getAnimeById, getSimilarAnime } from './animeService'
+import { workAdapter } from './workAdapters'
+import { workType } from './workTypes'
 import { summarizeWorkRatings } from './workRatings'
 
 // ═══════════════════════════════════════════════════════
@@ -25,12 +25,7 @@ import { summarizeWorkRatings } from './workRatings'
  */
 export async function getWorkById(mediaType, id) {
     try {
-        if (mediaType === 'game') {
-            return await getGameById(id)
-        } else if (mediaType === 'anime') {
-            return await getAnimeById(id)
-        }
-        return null
+        return await workAdapter(mediaType).detail(id)
     } catch (error) {
         console.error('getWorkById error:', error)
         return null
@@ -63,9 +58,9 @@ export async function getTierlistsWithWork(mediaType, mediaId, { limit = 20 } = 
     try {
         // Use RPC to search inside JSON content
         const { data: tierlistsData, error } = await supabase
-            .rpc('get_tierlists_containing_media', {
-                media_id_input: mediaId,
-                media_type_input: mediaType,
+            .rpc('get_lists_containing_work', {
+                work_id_input: String(mediaId),
+                work_type_input: mediaType,
                 limit_count: limit
             })
 
@@ -78,10 +73,10 @@ export async function getTierlistsWithWork(mediaType, mediaId, { limit = 20 } = 
         const userIds = [...new Set(tierlistsData.map(t => t.user_id))]
         const { data: profiles } = await supabase
             .from('profiles')
-            .select('user_id, username, display_name, avatar_url, color_primary')
-            .in('user_id', userIds)
+            .select('id, username, display_name, avatar_url, theme_color')
+            .in('id', userIds)
 
-        const profilesMap = (profiles || []).reduce((acc, p) => ({ ...acc, [p.user_id]: p }), {})
+        const profilesMap = (profiles || []).reduce((acc, p) => ({ ...acc, [p.id]: p }), {})
 
         // Process data and calculate stats
         const tierScores = { 'S': 5, 'A': 4, 'B': 3, 'C': 2, 'D': 1 }
@@ -93,7 +88,7 @@ export async function getTierlistsWithWork(mediaType, mediaId, { limit = 20 } = 
             if (t.content) {
                 for (const [key, items] of Object.entries(t.content)) {
                     if (key === 'pool') continue
-                    if (Array.isArray(items) && items.some(i => i.id === mediaId)) {
+                    if (Array.isArray(items) && items.some(i => String(i.id) === String(mediaId))) {
                         myTier = key
                         break
                     }
@@ -157,9 +152,9 @@ export async function getUsersWhoInteractedWithWork(mediaType, mediaId, currentU
 
         // Get users from tierlists (via RPC)
         const { data: tierlists } = await supabase
-            .rpc('get_tierlists_containing_media', {
-                media_id_input: mediaId,
-                media_type_input: mediaType,
+            .rpc('get_lists_containing_work', {
+                work_id_input: String(mediaId),
+                work_type_input: mediaType,
                 limit_count: limit * 2 // Fetch a bit more to filter duplicates
             })
 
@@ -174,8 +169,8 @@ export async function getUsersWhoInteractedWithWork(mediaType, mediaId, currentU
         // Get profiles for these users
         const { data: profiles, error } = await supabase
             .from('profiles')
-            .select('user_id, username, display_name, avatar_url, color_primary, color_secondary')
-            .in('user_id', Array.from(userIds).slice(0, limit))
+            .select('id, username, display_name, avatar_url, theme_color')
+            .in('id', Array.from(userIds).slice(0, limit))
 
         if (error) throw error
         return profiles || []
@@ -200,18 +195,13 @@ export async function getUsersWhoInteractedWithWork(mediaType, mediaId, currentU
 export async function getSimilarWorks(mediaType, mediaId, genres = [], { limit = 8 } = {}) {
     try {
         const results = []
-        const seenIds = new Set([parseInt(mediaId)])
+        const seenIds = new Set([String(mediaId)])
 
         // ── STEP 1: Official API recommendations (most accurate source) ──────
         // IGDB similar_games / AniList recommendations are curated by the platform
         // itself and are far more reliable than co-occurrence in user tierlists.
-        let apiRecs = []
-        if (mediaType === 'game') {
-            apiRecs = await getSimilarGames(mediaId, limit)
-        } else {
-            apiRecs = await getSimilarAnime(mediaId, limit)
-        }
-
+        if (mediaType === 'manga') return workAdapter('manga').similar(String(mediaId), limit, genres)
+        const apiRecs = await workAdapter(mediaType).similar(mediaId, limit)
         for (const rec of apiRecs) {
             if (!seenIds.has(rec.id)) {
                 seenIds.add(rec.id)
@@ -265,7 +255,7 @@ async function getSimilarByGenre(mediaType, excludeId, genres, limit, seenIds = 
     if (!genres || genres.length === 0) return []
 
     try {
-        const table = mediaType === 'game' ? 'games' : 'anime'
+        const table = workType(mediaType).table
         const nameColumn = mediaType === 'game' ? 'name' : 'title'
         const imageColumn = mediaType === 'game' ? 'cover_url' : 'image_url'
 
@@ -338,7 +328,7 @@ async function getSimilarFromTierlists(mediaType, mediaId, limit, seenIds = new 
 
         if (sortedIds.length === 0) return []
 
-        const table = mediaType === 'game' ? 'games' : 'anime'
+        const table = workType(mediaType).table
         const nameColumn = mediaType === 'game' ? 'name' : 'title'
         const imageColumn = mediaType === 'game' ? 'cover_url' : 'image_url'
 
@@ -373,6 +363,11 @@ async function getSimilarFromTierlists(mediaType, mediaId, limit, seenIds = new 
  * @returns {Promise<Object>}
  */
 export async function getWorkStats(mediaType, mediaId) {
+    if (mediaType === 'manga') {
+        const { data, error } = await supabase.rpc('get_work_rating_summary', { work_type_input: mediaType, work_id_input: String(mediaId) })
+        if (error) throw error
+        return data
+    }
     const workId = String(mediaId)
     const filter = query => query.eq('work_type', mediaType).eq('work_id', workId)
     const pageSize = 500
@@ -411,7 +406,7 @@ export async function getWorkStats(mediaType, mediaId) {
  */
 export async function getTrendingWorks(mediaType, limit = 6) {
     try {
-        const table = mediaType === 'game' ? 'games' : 'anime'
+        const table = workType(mediaType).table
 
         // 1. Get a batch of candidates
         // Ideally we'd have a 'popularity' column.

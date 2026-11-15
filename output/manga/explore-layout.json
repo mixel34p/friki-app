@@ -1,0 +1,80 @@
+[
+  {
+    "viewport": 1360,
+    "width": 574.625,
+    "columns": "183.531px 183.547px 183.547px",
+    "cards": [
+      {
+        "top": 151.6875,
+        "width": 183.53125,
+        "height": 126,
+        "text": "▣\nAnimes"
+      },
+      {
+        "top": 151.6875,
+        "width": 183.546875,
+        "height": 126,
+        "text": "◈\nManga"
+      },
+      {
+        "top": 151.6875,
+        "width": 183.546875,
+        "height": 126,
+        "text": "▤\nJuegos"
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "viewport": 390,
+    "width": 330.8125,
+    "columns": "102.266px 102.266px 102.281px",
+    "cards": [
+      {
+        "top": 434.09375,
+        "width": 102.265625,
+        "height": 126,
+        "text": "▣\nAnimes"
+      },
+      {
+        "top": 434.09375,
+        "width": 102.265625,
+        "height": 126,
+        "text": "◈\nManga"
+      },
+      {
+        "top": 434.09375,
+        "width": 102.28125,
+        "height": 126,
+        "text": "▤\nJuegos"
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "viewport": 360,
+    "width": 300.8125,
+    "columns": "92.2656px 92.2656px 92.2812px",
+    "cards": [
+      {
+        "top": 429.7767333984375,
+        "width": 92.265625,
+        "height": 126,
+        "text": "▣\nAnimes"
+      },
+      {
+        "top": 429.7767333984375,
+        "width": 92.265625,
+        "height": 126,
+        "text": "◈\nManga"
+      },
+      {
+        "top": 429.7767333984375,
+        "width": 92.28125,
+        "height": 126,
+        "text": "▤\nJuegos"
+      }
+    ],
+    "overflow": false
+  }
+]

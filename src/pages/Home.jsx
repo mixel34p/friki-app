@@ -200,7 +200,7 @@ export default function Home() {
           <Link className="home-mobile-daily-card" to={workPath(snapshot.daily.work)}>
             <span className="home-mobile-daily-cover">{snapshot.daily.work.image ? <img src={snapshot.daily.work.image} alt="" loading="lazy" /> : '✦'}</span>
             <span className="home-mobile-daily-copy">
-              <small className="home-summary-eyebrow">{snapshot.daily.work.type === 'anime' ? 'Anime' : 'Videojuego'} más registrado hoy</small>
+              <small className="home-summary-eyebrow">{{ anime: 'Anime', game: 'Videojuego', manga: 'Manga' }[snapshot.daily.work.type]} más registrado hoy</small>
               <strong>{snapshot.daily.work.title}</strong>
               <small className={`home-summary-daily-rating${snapshot.daily.ratingAverage == null ? ' is-unrated' : ''}`}>
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
@@ -261,7 +261,7 @@ export default function Home() {
               ? <Link className="home-summary-daily-link" to={workPath(snapshot.daily.work)}>
                   <span className="home-summary-daily-cover">{snapshot.daily.work.image ? <img src={snapshot.daily.work.image} alt="" loading="lazy" /> : '✦'}</span>
                   <span>
-                    <small className="home-summary-eyebrow">{snapshot.daily.work.type === 'anime' ? 'Anime' : 'Videojuego'} más registrado hoy</small>
+                    <small className="home-summary-eyebrow">{{ anime: 'Anime', game: 'Videojuego', manga: 'Manga' }[snapshot.daily.work.type]} más registrado hoy</small>
                     <strong>{snapshot.daily.work.title}</strong>
                     <small className={`home-summary-daily-rating${snapshot.daily.ratingAverage == null ? ' is-unrated' : ''}`}>
                       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>

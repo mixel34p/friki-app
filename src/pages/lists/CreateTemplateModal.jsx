@@ -9,6 +9,8 @@ import {
     DEFAULT_TIER_CONFIG,
 } from '../../lib/listService';
 import './CreateTemplateModal.css';
+import { AlignmentIcon } from '../../components/AlignmentBoard';
+import { createAlignmentConfig } from '../../lib/alignment';
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 const IconGlobe = () => (
@@ -51,6 +53,7 @@ const IconGamepad = () => (
         <line x1="18" y1="11" x2="18.01" y2="11"/>
     </svg>
 );
+const IconBook = ({ size = 20 }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v16M12 5C8 2 3 3 2 4v16c3-2 7-2 10 1 3-3 7-3 10-1V4c-3-2-7-2-10 1Z"/></svg>;
 const IconTv = () => (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
         <rect x="2" y="7" width="20" height="15" rx="2" ry="2"/>
@@ -114,6 +117,7 @@ export default function CreateTemplateModal({ templateId, onClose, onSuccess }) 
             if (listType === 'tierlist') type_config.tiers = DEFAULT_TIER_CONFIG.tierlist.tiers;
             if (listType === 'ranking')  type_config.max_items = DEFAULT_TIER_CONFIG.ranking.max_items;
             if (listType === 'grid')     { type_config.cells = DEFAULT_TIER_CONFIG.grid.cells; type_config.columns = DEFAULT_TIER_CONFIG.grid.columns; }
+            if (listType === 'alignment') type_config = createAlignmentConfig();
         }
 
         const payload = {
@@ -198,6 +202,7 @@ export default function CreateTemplateModal({ templateId, onClose, onSuccess }) 
                             {[
                                 { key: 'tierlist', Icon: IconTierlist, name: 'Tierlist', desc: 'Niveles S/A/B/C/D' },
                                 { key: 'grid',     Icon: IconGrid,     name: 'Grid',     desc: 'Celdas etiquetadas' },
+                                { key: 'alignment', Icon: AlignmentIcon, name: 'Alineamiento', desc: 'Filas y ejes personalizados' },
                             ].map(({ key, Icon, name, desc }) => (
                                 <div
                                     key={key}
@@ -218,7 +223,8 @@ export default function CreateTemplateModal({ templateId, onClose, onSuccess }) 
                         <div className="ctm-segment" style={{ width: '100%', display: 'flex' }}>
                             {[
                                 { key: 'game', label: 'Videojuegos', Icon: IconGamepad },
-                                { key: 'anime', label: 'Anime', Icon: IconTv }
+                                { key: 'anime', label: 'Anime', Icon: IconTv },
+                                { key: 'manga', label: 'Manga', Icon: IconBook }
                             ].map(({ key, label, Icon }) => (
                                 <button 
                                     key={key} 

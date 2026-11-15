@@ -121,7 +121,7 @@ export default function UserReviews() {
                 
                 // Get fully populated logs that have text
                 const populatedLogs = await Promise.all(logs.map(async (log) => {
-                    const workDetails = await getWorkById(log.work_type, parseInt(log.work_id))
+                    const workDetails = await getWorkById(log.work_type, log.work_id)
                     return {
                         ...log,
                         work: workDetails
@@ -158,7 +158,7 @@ export default function UserReviews() {
 
     const reviewAccent = profile?.theme_color || '#14b8a6'
     const visibleReviews = reviews.filter(review => workFilter === 'all' || review.work_type === workFilter)
-    const selectedLabel = workFilter === 'anime' ? 'anime' : 'juegos'
+    const selectedLabel = { anime: 'anime', game: 'juegos', manga: 'manga' }[workFilter]
 
     return (
         <div
@@ -189,6 +189,7 @@ export default function UserReviews() {
                     {[
                         { id: 'all', label: 'Todos' },
                         { id: 'anime', label: 'Anime' },
+                        { id: 'manga', label: 'Manga' },
                         { id: 'game', label: 'Juegos' },
                     ].map(option => (
                         <button

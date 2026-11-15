@@ -1,4 +1,12 @@
 import { supabase } from './supabase'
+import { workType } from './workTypes'
+import { validateAlignmentConfig, validateAlignmentContent } from './alignment'
+
+function validateAlignmentRecord(record) {
+    if (record?.list_type !== 'alignment' && !record?.type_config?.axes) return
+    validateAlignmentConfig(record.type_config)
+    if ('content' in record) validateAlignmentContent(record.type_config, record.content)
+}
 
 // --- TEMPLATES ---
 export async function getTemplates({ type = null, mediaType = null, query = '', limit = 30 } = {}) {
@@ -120,13 +128,13 @@ export async function getDiscoverTemplates({ type = null, mediaType = null, quer
 }
 
 export async function getRandomTemplatePreviewCovers(mediaType, limit = 30) {
-    const table = mediaType === 'game' ? 'games' : mediaType === 'anime' ? 'anime' : null;
+    const { table, imageField } = workType(mediaType);
     if (!table || limit <= 0) return [];
 
     const { count, error: countError } = await supabase
         .from(table)
         .select('id', { count: 'exact', head: true })
-        .not('cover_url', 'is', null);
+        .not(imageField, 'is', null);
     if (countError) throw countError;
     if (!count) return [];
 
@@ -135,13 +143,13 @@ export async function getRandomTemplatePreviewCovers(mediaType, limit = 30) {
     const start = Math.floor(Math.random() * (maxStart + 1));
     const { data, error } = await supabase
         .from(table)
-        .select('id, cover_url')
-        .not('cover_url', 'is', null)
+        .select(`id, ${imageField}`)
+        .not(imageField, 'is', null)
         .order('id', { ascending: true })
         .range(start, start + sampleSize - 1);
     if (error) throw error;
 
-    const covers = (data || []).map(item => item.cover_url).filter(Boolean);
+    const covers = (data || []).map(item => item[imageField]).filter(Boolean);
     for (let i = covers.length - 1; i > 0; i -= 1) {
         const j = Math.floor(Math.random() * (i + 1));
         [covers[i], covers[j]] = [covers[j], covers[i]];
@@ -157,6 +165,7 @@ export async function getTemplateById(id) {
         .single()
     if (error) throw error
     if (data?.list_type === 'ranking') throw new Error('Las plantillas de ranking ya no están disponibles.')
+    validateAlignmentRecord(data)
     
     if (data && data.user_id) {
         const { data: profile } = await supabase.from('profiles').select('username, avatar_url, display_name, featured_badge, theme_color').eq('id', data.user_id).single();
@@ -184,6 +193,7 @@ export async function getUserTemplates(userId) {
 }
 
 export async function createTemplate(templateData) {
+    validateAlignmentRecord(templateData)
     if (templateData?.list_type === 'ranking') {
         throw new Error('Los rankings se crean como listas y no admiten plantillas.')
     }
@@ -197,6 +207,7 @@ export async function createTemplate(templateData) {
 }
 
 export async function updateTemplate(id, updates) {
+    validateAlignmentRecord(updates)
     if (updates?.list_type === 'ranking') {
         throw new Error('Los rankings se crean como listas y no admiten plantillas.')
     }
@@ -251,6 +262,7 @@ export async function getListById(id) {
         .eq('id', id)
         .single()
     if (error) throw error
+    validateAlignmentRecord(data)
     
     if (data && data.user_id) {
         const { data: profile } = await supabase.from('profiles').select('username, avatar_url, display_name, featured_badge, theme_color').eq('id', data.user_id).single();
@@ -260,6 +272,7 @@ export async function getListById(id) {
 }
 
 export async function createList(listData) {
+    validateAlignmentRecord(listData)
     const { data, error } = await supabase
         .from('user_lists')
         .insert(listData)
@@ -270,6 +283,7 @@ export async function createList(listData) {
 }
 
 export async function updateList(id, updates) {
+    validateAlignmentRecord(updates)
     const { data, error } = await supabase
         .from('user_lists')
         .update({ ...updates, updated_at: new Date().toISOString() })

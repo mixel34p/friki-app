@@ -4,6 +4,8 @@ import { createPortal } from 'react-dom'
 import { useParams, Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import DefaultAvatar from '../components/DefaultAvatar'
+import { AlignmentIcon } from '../components/AlignmentBoard'
+import { listTypeLabel } from '../lib/listTypes'
 import { hasCustomAvatar } from '../lib/avatar'
 import { supabase } from '../lib/supabase'
 import { getAccentTextColor, getProfilePalette, getVisibleAccentColor } from '../lib/colorContrast'
@@ -21,6 +23,7 @@ import { PostCard } from './Home'
 
 import LoadingSpinner from '../components/LoadingSpinner'
 import './Profile.css'
+import { workHref } from '../lib/workTypes'
 import { SocialIcons } from '../components/SocialIcons'
 import SEO from '../components/SEO'
 
@@ -158,7 +161,6 @@ export default function Profile() {
     const [selectedBadge, setSelectedBadge] = useState(null)
     const [isPlaying, setIsPlaying] = useState(false)
     const audioRef = useRef(null)
-    const [activeFavTab, setActiveFavTab] = useState('games')
     const [activeProfileTab, setActiveProfileTab] = useState('actividad')
     const [userLists, setUserLists] = useState([])
     const [userTemplates, setUserTemplates] = useState([])
@@ -171,6 +173,13 @@ export default function Profile() {
 
     const { toast } = useToast()
     const isOwnProfile = !username || username === myProfile?.username
+    const profileFavorites = Array.isArray(profile?.favorite_works) && profile.favorite_works.length > 0
+        ? profile.favorite_works
+        : [
+            ...(profile?.favorite_games || []).map(item => ({ ...item, id: String(item.id), type: 'game', title: item.title || item.name, cover_url: item.cover_url || item.image_url })),
+            ...(profile?.favorite_animes || []).map(item => ({ ...item, id: String(item.id), type: 'anime', title: item.title || item.name, cover_url: item.cover_url || item.image_url })),
+            ...(profile?.favorite_manga || []).map(item => ({ ...item, id: String(item.id), type: 'manga', title: item.title || item.name, cover_url: item.cover_url || item.image_url })),
+        ].slice(0, 4)
 
     useEffect(() => {
         let active = true
@@ -393,13 +402,6 @@ export default function Profile() {
 
 
             setProfile(profileData)
-            if (profileData) {
-                if (profileData.favorite_games && profileData.favorite_games.length > 0) {
-                    setActiveFavTab('games')
-                } else if (profileData.favorite_animes && profileData.favorite_animes.length > 0) {
-                    setActiveFavTab('anime')
-                }
-            }
 
             if (!userId) { setLoading(false); return }
 
@@ -641,7 +643,7 @@ export default function Profile() {
                     {/* Fila 2: Identidad — nombre, @user, bio, stats, plataformas, socials */}
                     
                     
-                    <div className={`profile-header-columns ${profile?.favorite_animes?.length || profile?.favorite_games?.length ? 'has-favorites' : 'without-favorites'}`}>
+                    <div className={`profile-header-columns ${profileFavorites.length ? 'has-favorites' : 'without-favorites'}`}>
                         <div className={`profile-identity ${profile.location ? 'has-location' : 'no-location'}`}>
                             
                         <div className="profile-name-row" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
@@ -742,75 +744,29 @@ export default function Profile() {
                         
                                                 <div className="profile-header-favorites">
                             <div className="profile-favorites-section">
-
-
-                                
-                                {(profile?.favorite_animes?.length > 0 || profile?.favorite_games?.length > 0) && (
-                                    <div className="profile-favorites-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: '12px' }}>
-                                    <h3 className="profile-favorites-title" style={{ margin: 0, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '8px', fontFamily: 'var(--font-display)' }}>
-                                        <>
+                                {profileFavorites.length > 0 && <>
+                                    <div className="profile-favorites-header">
+                                        <h3 className="profile-favorites-title">
                                             <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
                                                 <path d="m12 2.8 2.86 5.8 6.4.93-4.63 4.51 1.09 6.37L12 17.4l-5.72 3.01 1.09-6.37-4.63-4.51 6.4-.93L12 2.8z" />
                                             </svg>
                                             FAVORITOS
-                                        </>
-                                    </h3>
-
-                                    {(profile.favorite_animes?.length > 0 && profile.favorite_games?.length > 0) && (
-                                        <div className={`fav-tab-switch ${activeFavTab === 'games' ? 'games-active' : ''}`}>
-                                            <button 
-                                                className={`tab-btn ${activeFavTab === 'anime' ? 'active' : ''}`}
-                                                type="button"
-                                                onClick={() => setActiveFavTab('anime')}
-                                                title="Animes"
-                                                aria-pressed={activeFavTab === 'anime'}
-                                            >
-                                                Anime
-                                            </button>
-                                            <button 
-                                                className={`tab-btn ${activeFavTab === 'games' ? 'active' : ''}`}
-                                                type="button"
-                                                onClick={() => setActiveFavTab('games')}
-                                                title="Videojuegos"
-                                                aria-pressed={activeFavTab === 'games'}
-                                            >
-                                                Juegos
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-                                )}
-
-                                
-                                {activeFavTab === 'anime' && profile.favorite_animes && profile.favorite_animes.length > 0 && (
+                                        </h3>
+                                    </div>
                                     <div className="profile-favorites-block">
-                                        <div className={`profile-favorites-grid profile-favorites-grid--count-${profile.favorite_animes.length}`}>
-                                            {profile.favorite_animes.map((a, idx) => (
-                                                <div key={idx} className="profile-favorite-poster">
-                                                    {a.cover_url ? <img src={a.cover_url} alt={a.title} /> : <div className="no-cover">{a.title}</div>}
-                                                    <div className="profile-favorite-overlay">
-                                                        <span>{a.title}</span>
-                                                    </div>
-                                                </div>
-                                            ))}
+                                        <div className={`profile-favorites-grid profile-favorites-grid--count-${profileFavorites.length}`}>
+                                            {profileFavorites.map((item, index) => <Link
+                                                key={`${item.type}:${item.id}:${index}`}
+                                                to={workHref(item.type, item.id)}
+                                                className="profile-favorite-poster"
+                                                aria-label={`Ver ${item.title}`}
+                                            >
+                                                {item.cover_url ? <img src={item.cover_url} alt={item.title} /> : <div className="no-cover">{item.title}</div>}
+                                                <div className="profile-favorite-overlay"><span>{item.title}</span></div>
+                                            </Link>)}
                                         </div>
                                     </div>
-                                )}
-
-                                {activeFavTab === 'games' && profile.favorite_games && profile.favorite_games.length > 0 && (
-                                    <div className="profile-favorites-block">
-                                        <div className={`profile-favorites-grid profile-favorites-grid--count-${profile.favorite_games.length}`}>
-                                            {profile.favorite_games.map((g, idx) => (
-                                                <div key={idx} className="profile-favorite-poster">
-                                                    {g.cover_url ? <img src={g.cover_url} alt={g.name} /> : <div className="no-cover">{g.name}</div>}
-                                                    <div className="profile-favorite-overlay">
-                                                        <span>{g.name}</span>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
+                                </>}
                             </div>
                         </div>
 
@@ -939,8 +895,8 @@ export default function Profile() {
                                                                 <span className={'search-list-tag type-' + t.list_type}>
                                                                     {t.list_type === 'tierlist' && <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>}
                                                                     {t.list_type === 'ranking' && <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>}
-                                                                    {t.list_type === 'grid' && <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>}
-                                                                    {t.list_type === 'ranking' ? 'Ranking' : t.list_type === 'grid' ? 'Grid' : 'Tierlist'}
+                                                                    {t.list_type === 'alignment' && <AlignmentIcon/>}{t.list_type === 'grid' && <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>}
+                                                                    {listTypeLabel(t.list_type)}
                                                                 </span>
                                                             )}
                                                             {t.list_type !== 'ranking' && t.media_type && (
@@ -978,7 +934,7 @@ export default function Profile() {
                                                 <div className="diary-micro-poster" style={{ background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
                                                     {t.list_type === 'tierlist' || !t.list_type ? <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> : null}
                                                     {t.list_type === 'ranking' && <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>}
-                                                    {t.list_type === 'grid' && <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>}
+                                                    {t.list_type === 'alignment' && <AlignmentIcon/>}{t.list_type === 'grid' && <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>}
                                                 </div>
                                             </Link>
                                             <div className="diary-entry-info">

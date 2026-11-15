@@ -12,6 +12,8 @@
     padding-bottom: 1rem;
     position: relative;
     display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
     justify-content: space-between;
     align-items: flex-end;
 }
@@ -89,8 +91,8 @@
 .user-diary-filter {
     position: relative;
     display: grid;
-    width: min(100%, 286px);
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: min(100%, 320px);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 2px;
     padding: 3px;
     isolation: isolate;
@@ -105,7 +107,7 @@
     top: 3px;
     bottom: 3px;
     left: 3px;
-    width: calc((100% - 8px) / 3);
+    width: calc((100% - 12px) / 4);
     border: 1px solid color-mix(in srgb, var(--profile-accent-visible, var(--brand-primary)) 62%, transparent);
     border-radius: 999px;
     background: var(--profile-accent-visible, var(--brand-primary));
@@ -114,7 +116,8 @@
 }
 
 .user-diary-filter.is-anime .user-diary-filter-indicator { transform: translateX(calc(100% + 2px)); }
-.user-diary-filter.is-game .user-diary-filter-indicator { transform: translateX(calc(200% + 4px)); }
+.user-diary-filter.is-manga .user-diary-filter-indicator { transform: translateX(calc(200% + 4px)); }
+.user-diary-filter.is-game .user-diary-filter-indicator { transform: translateX(calc(300% + 6px)); }
 
 .user-diary-filter button {
     position: relative;

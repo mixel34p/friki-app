@@ -1,0 +1,15 @@
+{
+  "fixtureOnly": true,
+  "checks": [
+    "Three equal Explore cards, local manga covers and correctly selected manga tab at 1360px",
+    "Search, direct reload, metadata, no-cover and discovery at 1360px",
+    "Three equal Explore cards, local manga covers and correctly selected manga tab at 390px",
+    "Search, direct reload, metadata, no-cover and discovery at 390px",
+    "Authenticated log, half star review, spoiler, wishlist and diary preserve text identity after reload (mock persistence)",
+    "Manga alignment template selection, publication and reload (mock persistence)",
+    "Favorite manga saves, appears in profile and own review can be deleted (mock persistence)",
+    "Manga failure preserves valid anime/game search results",
+    "Favorites change the first similar recommendation, exclude the favorite and include anime, games and manga"
+  ],
+  "errors": []
+}
