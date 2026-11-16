@@ -96,6 +96,7 @@ try {
     assert.equal(await page.locator('.pwa-more-overlay').count(), 1)
     assert.equal(await page.locator('.sidebar-popover').count(), 0)
     assert.equal(await page.locator('.pwa-more-overlay').evaluate(node => node.parentElement === document.body), true)
+    assert.equal(await page.locator('.pwa-more-toolbar, .pwa-more-close').count(), 0)
     const geometry = await page.locator('.pwa-more-drawer').evaluate(node => {
       const box = node.getBoundingClientRect()
       return { width: box.width, right: box.right, height: box.height, overflow: node.scrollWidth > node.clientWidth }
@@ -104,6 +105,8 @@ try {
     assert.equal(geometry.right, width)
     assert.equal(geometry.height, height)
     assert.equal(geometry.overflow, false)
+    assert.equal(await page.locator('.pwa-more-drawer').evaluate(node => getComputedStyle(node).boxShadow), 'none')
+    assert.equal(await page.locator('.pwa-more-profile').evaluate(node => node.getBoundingClientRect().top), 24)
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
     assert.equal(await page.evaluate(() => document.body.style.overflow), 'hidden')
     assert.equal(await page.evaluate(() => document.documentElement.style.overflow), 'hidden')
@@ -116,7 +119,7 @@ try {
     assert.equal(await page.evaluate(() => scrollY), scrollBefore)
     await page.getByRole('link', { name: 'Créditos', exact: true }).focus()
     await page.keyboard.press('Tab')
-    assert.equal(await page.getByRole('button', { name: 'Cerrar menú' }).evaluate(node => node === document.activeElement), true)
+    assert.equal(await page.locator('.pwa-more-profile').evaluate(node => node === document.activeElement), true)
     await page.keyboard.press('Shift+Tab')
     assert.equal(await page.getByRole('link', { name: 'Créditos', exact: true }).evaluate(node => node === document.activeElement), true)
     await page.locator('.mobile-brand').evaluate(node => node.focus())
@@ -131,7 +134,7 @@ try {
     assert.equal(await page.locator('.pwa-more-overlay').count(), 0)
     assert.equal(await page.evaluate(() => globalThis.__backgroundClicked), undefined)
     await open()
-    await page.getByRole('button', { name: 'Cerrar menú' }).click()
+    await page.keyboard.press('Escape')
     assert.equal(await trigger().getAttribute('aria-expanded'), 'false')
     checks++
     await context.close()
@@ -217,6 +220,19 @@ try {
   await ios.page.goto(base + '/home?accent=%23ffffff')
   await ios.open()
   assert.equal(await ios.page.locator('.pwa-more-drawer').evaluate(node => getComputedStyle(node).animationDuration), '0.22s')
+  const positions = await ios.page.locator('.pwa-more-drawer').evaluate(node => {
+    const animation = node.getAnimations()[0]
+    animation.pause()
+    const positions = [0, 110, 220].map(time => {
+      animation.currentTime = time
+      return node.getBoundingClientRect().left
+    })
+    animation.finish()
+    return positions
+  })
+  assert.equal(positions[0], 390, JSON.stringify({ positions, scroll: await ios.page.locator('.pwa-more-overlay').evaluate(node => node.scrollLeft) }))
+  assert.ok(positions[0] > positions[1] && positions[1] > positions[2])
+  assert.ok(Math.abs(positions[2] - 390 * .12) < 1)
   await ios.page.waitForFunction(() => document.querySelector('.pwa-more-drawer').getBoundingClientRect().right <= innerWidth + 1)
   await ios.page.touchscreen.tap(8, 400)
   assert.equal(await ios.page.locator('.pwa-more-overlay').count(), 0)

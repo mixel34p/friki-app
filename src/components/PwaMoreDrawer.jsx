@@ -1,10 +1,8 @@
-import { useLayoutEffect, useRef } from 'react'
+import { useLayoutEffect } from 'react'
 import { createPortal } from 'react-dom'
 import './PwaMoreDrawer.css'
 
 export default function PwaMoreDrawer({ children, contentRef, returnFocusRef, onClose, style }) {
-  const closeRef = useRef(null)
-
   useLayoutEffect(() => {
     const dialog = contentRef.current
     const trigger = returnFocusRef.current
@@ -13,7 +11,7 @@ export default function PwaMoreDrawer({ children, contentRef, returnFocusRef, on
     document.body.style.overflow = 'hidden'
     document.documentElement.style.overflow = 'hidden'
     dialog.showModal()
-    closeRef.current.focus({ preventScroll: true })
+    dialog.querySelector('a[href], button:not(:disabled)')?.focus({ preventScroll: true })
     return () => {
       dialog.close()
       document.body.style.overflow = previousOverflow
@@ -52,12 +50,6 @@ export default function PwaMoreDrawer({ children, contentRef, returnFocusRef, on
       }}
     >
       <section className="pwa-more-drawer">
-        <div className="pwa-more-toolbar">
-          <span>GeekSphere</span>
-          <button ref={closeRef} className="pwa-more-close" type="button" aria-label="Cerrar menú" onClick={onClose}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
-          </button>
-        </div>
         <div className="pwa-more-content">{children}</div>
       </section>
     </dialog>,

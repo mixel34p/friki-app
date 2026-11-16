@@ -8,40 +8,40 @@
   max-height: none;
   margin: 0;
   padding: 0;
-  overflow: hidden;
+  overflow: clip;
   border: 0;
   color: var(--text-primary);
   background: transparent;
   font-family: var(--font-sans);
 }
 
-.pwa-more-overlay[open] { display: flex; justify-content: flex-end; }
+.pwa-more-overlay[open] { display: block; }
 .pwa-more-overlay::backdrop { background: rgba(0, 0, 0, .64); animation: pwa-more-dim 220ms ease both; }
 
 .pwa-more-drawer {
+  position: absolute;
+  inset: 0 0 0 auto;
   display: flex;
   box-sizing: border-box;
   width: min(88vw, 380px);
   height: 100%;
   flex-direction: column;
-  padding: env(safe-area-inset-top, 0px) max(20px, env(safe-area-inset-right, 0px)) env(safe-area-inset-bottom, 0px) 20px;
+  margin: 0;
+  padding: calc(24px + env(safe-area-inset-top, 0px)) max(20px, env(safe-area-inset-right, 0px)) env(safe-area-inset-bottom, 0px) 20px;
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
   background: var(--bg-primary);
-  border-left: 1px solid var(--border-default);
-  box-shadow: -18px 0 64px rgba(0, 0, 0, .35);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
   animation: pwa-more-arrive 220ms cubic-bezier(.22, .8, .24, 1) both;
 }
 
-.pwa-more-toolbar { display: flex; min-height: 64px; flex-shrink: 0; align-items: center; justify-content: space-between; gap: 12px; }
-.pwa-more-toolbar > span { color: var(--text-secondary); font: 700 .8rem var(--font-display); letter-spacing: -.025em; }
-.pwa-more-close,
 .pwa-more-account-toggle { display: grid; box-sizing: border-box; width: 44px; height: 44px; flex: 0 0 44px; place-items: center; padding: 0; border: 1px solid var(--border-default); border-radius: 50%; color: var(--text-primary); background: transparent; cursor: pointer; }
-.pwa-more-close:hover,
 .pwa-more-account-toggle:hover { background: var(--bg-hover); }
 .pwa-more-content { display: flex; min-height: min-content; flex: 1; flex-direction: column; padding-bottom: 20px; }
-.pwa-more-identity { position: relative; margin: 8px 0 24px; padding-right: 52px; }
+.pwa-more-identity { position: relative; margin: 0 0 24px; padding-right: 52px; }
 .pwa-more-profile { display: flex; min-width: 0; flex-direction: column; align-items: flex-start; color: var(--text-primary); text-decoration: none; }
 .pwa-more-profile > img { box-sizing: border-box; width: 76px; height: 76px; margin-bottom: 16px; border: 2px solid var(--profile-accent-visible, var(--brand-primary)); border-radius: 50%; object-fit: cover; }
 .pwa-more-profile > strong { display: -webkit-box; max-width: 100%; overflow: hidden; font-size: 24px; font-weight: 750; line-height: 1.25; overflow-wrap: anywhere; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
@@ -74,7 +74,7 @@
 .pwa-more-drawer .more-account-signout:hover { color: var(--error); }
 .pwa-more-drawer :is(a, button):focus-visible { outline: 2px solid var(--profile-accent-visible, var(--brand-primary)); outline-offset: 2px; }
 
-@keyframes pwa-more-arrive { from { transform: translateX(100%); } to { transform: translateX(0); } }
+@keyframes pwa-more-arrive { from { transform: translate3d(100%, 0, 0); } to { transform: translate3d(0, 0, 0); } }
 @keyframes pwa-more-dim { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) {
   .pwa-more-drawer,
