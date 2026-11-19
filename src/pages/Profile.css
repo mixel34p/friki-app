@@ -1557,11 +1557,15 @@
 
     .profile-page .profile-identity > .profile-bio {
         order: -1;
-        margin-top: 0;
+        margin-top: var(--space-xs);
     }
 
     .profile-identity > .profile-identity-heading + :is(.profile-socials, .profile-song-pill) {
         margin-top: 0;
+    }
+
+    .profile-identity > .profile-socials:has(+ .profile-song-pill) {
+        margin-bottom: var(--space-xs);
     }
 
     .profile-additional-info { margin-left: 0; }
