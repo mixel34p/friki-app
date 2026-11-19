@@ -40,15 +40,6 @@
   margin-top: .45rem;
 }
 
-.template-featured-badge {
-  display: inline-flex;
-  width: 15px;
-  height: 15px;
-  align-items: center;
-  margin-left: .35rem;
-  vertical-align: -2px;
-}
-
 .template-defaults {
   margin: .15rem 0 .35rem;
   padding: .7rem 0 .35rem;

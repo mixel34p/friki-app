@@ -12,13 +12,12 @@ export async function getProfileInvitation(code) {
 export async function getMyInvitation(userId) {
     const { data, error } = await supabase.rpc('get_or_create_profile_invitation')
     if (error) throw error
-    const [completed, pending, rewards] = await Promise.all([
+    const [completed, pending] = await Promise.all([
         supabase.from('profile_referrals').select('invited_user_id', { count: 'exact', head: true }).eq('inviter_id', userId).not('completed_at', 'is', null),
         supabase.from('profile_referrals').select('invited_user_id', { count: 'exact', head: true }).eq('inviter_id', userId).is('completed_at', null),
-        supabase.from('invitation_rewards').select('badge').eq('owner_id', userId),
     ])
-    for (const result of [completed, pending, rewards]) if (result.error) throw result.error
-    return { code: data, completed: completed.count || 0, pending: pending.count || 0, rewards: rewards.data.map(reward => reward.badge) }
+    for (const result of [completed, pending]) if (result.error) throw result.error
+    return { code: data, completed: completed.count || 0, pending: pending.count || 0 }
 }
 
 export async function claimInvitation(invitation) {

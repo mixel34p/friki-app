@@ -86,12 +86,6 @@ function getYear(item) {
   return typeof date === 'number' ? new Date(date * 1000).getFullYear() : date ? String(date).slice(0, 4) : ''
 }
 
-function VerifiedBadge({ className = 'search-space-verified' }) {
-  return <span className={className} title="Espacio verificado" aria-label="Espacio verificado">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#1d9bf0" d="M22.5 12.5l-2.43 2.8.57 3.65-3.6.86-2.07 3.14-3.47-1.5-3.47 1.5-2.07-3.14-3.6-.86.57-3.65L.5 12.5l2.43-2.8-.57-3.65 3.6-.86 2.07-3.14 3.47 1.5 3.47-1.5 2.07 3.14 3.6.86-.57 3.65 2.43 2.8z"/><path fill="#fff" d="M10.1 17.6l7.7-7.7-1.4-1.4-6.3 6.3-3-3-1.4 1.4 4.4 4.4z"/></svg>
-  </span>
-}
-
 function SearchIcon() {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="7.3"/><path d="m16.2 16.2 4.3 4.3"/></svg>
 }
@@ -129,15 +123,14 @@ function ResultLink({ item, active, id, onClick, display = 'row' }) {
   const title = nameOf(item)
   const imageType = item.type || (item.username ? 'user' : 'space')
   const artwork = image ? <img className={`search-result-image ${imageType}`} src={image} alt="" loading="lazy" /> : item.username ? <DefaultAvatar className="search-result-fallback user" accent={item.theme_color} /> : <span className={`search-result-fallback ${imageType}`} aria-hidden="true">{item.type === 'anime' ? '▣' : item.type === 'game' ? '▤' : '◈'}</span>
-  const titleContent = item.owner_id ? <span className="search-space-title-line"><strong>{title}</strong>{item.is_verified && <VerifiedBadge />}</span> : <strong>{title}</strong>
   const profileAccent = item.username ? { '--search-user-accent': item.theme_color || 'var(--brand-primary)' } : undefined
   return <Link id={id} role="option" aria-selected={active} to={resultHref(item)} className={`search-result${active ? ' is-active' : ''}${isCard ? ' search-result-card' : ''}`} onClick={onClick} style={profileAccent}>
     {isCard ? <>
       <span className={`search-result-artwork${item.type ? ' work-artwork' : ' space-artwork'}`}>{artwork}</span>
-      <span className="search-result-copy">{titleContent}{item.type && getYear(item) && <small>{getYear(item)}</small>}{item.owner_id && <small>{getSecondary(item)}</small>}</span>
+      <span className="search-result-copy"><strong>{title}</strong>{item.type && getYear(item) && <small>{getYear(item)}</small>}{item.owner_id && <small>{getSecondary(item)}</small>}</span>
     </> : <>
       {artwork}
-      <span className="search-result-copy">{titleContent}{getSecondary(item) && <small>{getSecondary(item)}</small>}</span>
+      <span className="search-result-copy"><strong>{title}</strong>{getSecondary(item) && <small>{getSecondary(item)}</small>}</span>
       {(['game', 'anime', 'manga'].includes(item.type)) && <span className={`search-kind ${item.type}`}>{{ game: 'VIDEOJUEGO', anime: 'ANIME', manga: 'MANGA' }[item.type]}</span>}
     </>}
   </Link>

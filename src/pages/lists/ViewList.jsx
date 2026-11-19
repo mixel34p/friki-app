@@ -14,7 +14,6 @@ import {
     getListById, getMoreListsByUser, deleteList,
     getListComments, addListComment, updateListComment, deleteListComment,
 } from '../../lib/listService';
-import { BADGES_MAP } from '../../lib/badges';
 import DefaultAvatar, { getDefaultAvatarDataUrl } from '../../components/DefaultAvatar';
 import { getTierLabelFontSize } from '../../lib/tierLabel';
 import { formatRelativeDate } from '../../lib/formatRelativeDate';
@@ -760,14 +759,7 @@ export default function ViewList() {
                     <Link to={`/profile/${authorUsername}`} className="review-post-author">
                         <ProfileAvatar profile={authorProfile} />
                         <span className="review-post-author-copy">
-                            <strong>
-                                {authorName}
-                                {list.author?.featured_badge && BADGES_MAP[list.author.featured_badge] && (
-                                    <span style={{ color: BADGES_MAP[list.author.featured_badge].color, display: 'inline-flex', alignItems: 'center', width: 14, height: 14, marginLeft: 4, verticalAlign: 'middle' }} title={BADGES_MAP[list.author.featured_badge].title}>
-                                        {BADGES_MAP[list.author.featured_badge].icon}
-                                    </span>
-                                )}
-                            </strong>
+                            <strong>{authorName}</strong>
                             <span>@{authorUsername} · {formatRelativeDate(list.created_at)}</span>
                         </span>
                     </Link>

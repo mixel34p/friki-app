@@ -1189,11 +1189,7 @@ img.square-cover { height: auto !important; aspect-ratio: 1/1 !important; }
 .ep-settings-preview-name-row { display: flex; min-width: 0; align-items: baseline; gap: 8px; }
 .ep-settings-preview-name-row > strong { flex: 0 1 auto; min-width: 0; color: var(--text-primary); font-size: 1.3rem; }
 .ep-settings-preview-pronouns { flex: 0 0 auto; color: var(--text-muted); font-size: .75rem; }
-.ep-settings-preview-identity-row { display: flex; min-width: 0; align-items: center; gap: 9px; margin-top: 2px; }
 .ep-settings-preview-username { margin-top: 2px; color: var(--text-muted); font-size: .9rem; }
-.ep-settings-preview-badge { display: inline-flex; min-width: 0; align-items: center; gap: 4px; color: var(--badge-accent, var(--text-secondary)); font-size: .7rem; }
-.ep-settings-preview-badge svg { width: 14px; height: 14px; flex: 0 0 14px; }
-.ep-settings-preview-badge > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ep-settings-preview-content p { margin: 14px 0; color: var(--text-secondary); font-size: .87rem; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
 .ep-settings-preview-favorites { margin-bottom: 14px; color: var(--text-secondary); font-size: .8rem; }
 .ep-settings-preview-content > small { color: var(--text-muted); font-size: .66rem; font-weight: 800; line-height: 1.6; letter-spacing: .04em; }
@@ -1465,10 +1461,9 @@ img.square-cover { height: auto !important; aspect-ratio: 1/1 !important; }
 .ep-settings-song-selected strong { overflow: hidden; color: var(--text-primary); font-size: .78rem; text-overflow: ellipsis; white-space: nowrap; }
 .ep-settings-song-selected small { color: var(--text-muted); font-size: .7rem; }
 .ep-settings-song-selected > button { margin-left: auto; }
-.ep-settings-badges,.ep-settings-pills { display: flex; flex-wrap: wrap; gap: 7px; }
-.ep-settings-badges button,.ep-settings-pills button { display: inline-flex; min-height: 30px; align-items: center; gap: 6px; padding: 5px 10px; border: 1px solid rgba(255,255,255,.1); border-radius: 999px; color: var(--text-secondary); background: rgba(255,255,255,.035); font: 550 .7rem var(--font-sans); cursor: pointer; transition: background .14s ease, border-color .14s ease, color .14s ease; }
-.ep-settings-badges button svg { width: 14px; height: 14px; }
-.ep-settings-badges button.selected,.ep-settings-pills button.selected { border-color: color-mix(in srgb, var(--brand-primary) 48%, rgba(255,255,255,.12)); color: var(--brand-primary); background: color-mix(in srgb, var(--brand-primary) 9%, transparent); }
+.ep-settings-pills { display: flex; flex-wrap: wrap; gap: 7px; }
+.ep-settings-pills button { display: inline-flex; min-height: 30px; align-items: center; gap: 6px; padding: 5px 10px; border: 1px solid rgba(255,255,255,.1); border-radius: 999px; color: var(--text-secondary); background: rgba(255,255,255,.035); font: 550 .7rem var(--font-sans); cursor: pointer; transition: background .14s ease, border-color .14s ease, color .14s ease; }
+.ep-settings-pills button.selected { border-color: color-mix(in srgb, var(--brand-primary) 48%, rgba(255,255,255,.12)); color: var(--brand-primary); background: color-mix(in srgb, var(--brand-primary) 9%, transparent); }
 .ep-settings-custom-interest { display: flex; gap: 8px; }
 .ep-settings-custom-interest .ep-settings-control { flex: 1; }
 .ep-settings-custom-interest > button { padding: 0 15px; border: 1px solid rgba(255,255,255,.12); border-radius: 13px; color: var(--text-secondary); background: rgba(255,255,255,.045); font: 600 .75rem var(--font-sans); cursor: pointer; }

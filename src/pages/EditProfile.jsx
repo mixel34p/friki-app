@@ -10,7 +10,6 @@ import { PROFILE_FONT_OPTIONS, getProfileFontStack, normalizeProfileFont } from 
 import { hasCustomAvatar } from '../lib/avatar'
 import { searchGames } from '../lib/gameService'
 import { getBlockedUsers, unblockUser } from '../lib/socialDiscoveryService'
-import { BADGES_MAP } from '../lib/badges'
 import './EditProfile.css'
 import { navigateWorkBack, signalPwaRouteReady } from '../lib/pwaRouteTransition'
 import { SocialIcons } from '../components/SocialIcons'
@@ -326,8 +325,7 @@ export default function EditProfile({ onClose, standalone = false, pwaPage = fal
         social_links:    profile?.social_links    || {},
         theme_color:     profile?.theme_color     || '#14b8a6',
         name_font:       normalizeProfileFont(profile?.name_font),
-        bio_font:        profile?.bio_font        || 'sans',
-        featured_badge:  profile?.featured_badge  || null
+        bio_font:        profile?.bio_font        || 'sans'
     })
     const [fontPreview, setFontPreview] = useState(null)
     const savedFormDataRef = useRef(JSON.stringify(formData))
@@ -888,14 +886,6 @@ export default function EditProfile({ onClose, standalone = false, pwaPage = fal
                                         {songSearchResults.length > 0 && <div className="ep-settings-work-results">{songSearchResults.map(track => <button type="button" className="ep-settings-work-result" key={track.trackId} onClick={() => { handleChange('profile_song', track); setSongSearchQuery(''); setSongSearchResults([]) }}><img src={track.cover} alt="" /><span>{track.name}<small>{track.artist}</small></span><span className="ep-settings-result-add">Añadir</span></button>)}</div>}
                                     </div>}
                                 </div>
-
-                                {profile?.badges?.length > 0 && <div className="ep-settings-row">
-                                    <label>Insignia destacada</label>
-                                    <div className="ep-settings-badges">
-                                        <button type="button" className={!formData.featured_badge ? 'selected' : ''} onClick={() => handleChange('featured_badge', null)}>Ninguna</button>
-                                        {profile.badges.map(badge => BADGES_MAP[badge] && <button type="button" key={badge} className={formData.featured_badge === badge ? 'selected' : ''} onClick={() => handleChange('featured_badge', badge)}>{BADGES_MAP[badge].icon}{BADGES_MAP[badge].title}</button>)}
-                                    </div>
-                                </div>}
                             </section>
 
                             <h2 className="ep-settings-card-kicker">ENLACES</h2>
@@ -977,7 +967,7 @@ export default function EditProfile({ onClose, standalone = false, pwaPage = fal
                             <div className="ep-settings-preview-content">
                                 <div className="ep-settings-preview-avatar">{avatarPreview ? <img src={avatarPreview} alt="" /> : <DefaultAvatar accent={formData.theme_color} />}</div>
                                 <div className="ep-settings-preview-name-row"><strong style={{ fontFamily: getProfileFontStack(fontPreview?.name_font || formData.name_font) }}>{formData.display_name || 'Tu nombre'}</strong>{formData.pronouns && <span className="ep-settings-preview-pronouns">{formData.pronouns}</span>}</div>
-                                <div className="ep-settings-preview-identity-row"><span className="ep-settings-preview-username">@{formData.username || 'usuario'}</span>{formData.featured_badge && BADGES_MAP[formData.featured_badge] && <span className="ep-settings-preview-badge" style={{ '--badge-accent': BADGES_MAP[formData.featured_badge].color }} aria-label={BADGES_MAP[formData.featured_badge].title} title={BADGES_MAP[formData.featured_badge].title}>{BADGES_MAP[formData.featured_badge].icon}</span>}</div>
+                                <div className="ep-settings-preview-username">@{formData.username || 'usuario'}</div>
                                 <p style={{ fontFamily: (fontPreview?.bio_font || formData.bio_font) === 'inherit' ? getProfileFontStack(fontPreview?.name_font || formData.name_font) : getProfileFontStack(fontPreview?.bio_font || formData.bio_font) }}>{formData.bio || 'Tu biografía aparecerá aquí.'}</p>
                                 {formData.profile_song && typeof formData.profile_song === 'object' && <div className="ep-settings-preview-song"><img src={formData.profile_song.cover} alt="" /><span><strong>{formData.profile_song.name}</strong><small>{formData.profile_song.artist}</small></span></div>}
                             </div>
@@ -1283,52 +1273,6 @@ export default function EditProfile({ onClose, standalone = false, pwaPage = fal
                                         </div>
                                     )}
                                 </div>
-
-                                {/* Featured Badge */}
-                                {profile?.badges && profile.badges.length > 0 && (
-                                    <div className="ep-field" style={{ marginTop: '24px' }}>
-                                        <label className="ep-label">Insignia Destacada</label>
-                                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
-                                            <button
-                                                type="button"
-                                                onClick={() => handleChange('featured_badge', null)}
-                                                style={{
-                                                    padding: '8px 16px',
-                                                    borderRadius: '20px',
-                                                    border: `1px solid ${!formData.featured_badge ? 'var(--brand-primary)' : 'var(--border-subtle)'}`,
-                                                    background: !formData.featured_badge ? 'rgba(20, 184, 166, 0.1)' : 'transparent',
-                                                    color: !formData.featured_badge ? 'var(--brand-primary)' : 'var(--text-primary)',
-                                                    cursor: 'pointer'
-                                                }}
-                                            >
-                                                Ninguna
-                                            </button>
-                                            {profile.badges.map(b => BADGES_MAP[b] && (
-                                                <button
-                                                    key={b}
-                                                    type="button"
-                                                    onClick={() => handleChange('featured_badge', b)}
-                                                    style={{
-                                                        padding: '8px 16px',
-                                                        borderRadius: '20px',
-                                                        border: `1px solid ${formData.featured_badge === b ? BADGES_MAP[b].color : 'var(--border-subtle)'}`,
-                                                        background: formData.featured_badge === b ? `${BADGES_MAP[b].color}20` : 'transparent',
-                                                        color: formData.featured_badge === b ? BADGES_MAP[b].color : 'var(--text-primary)',
-                                                        cursor: 'pointer',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        gap: '6px'
-                                                    }}
-                                                >
-                                                    {BADGES_MAP[b].icon} {BADGES_MAP[b].title}
-                                                </button>
-                                            ))}
-                                        </div>
-                                        <p style={{ marginTop: '8px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                                            Elige qué insignia quieres que aparezca junto a tu nombre en listas y comentarios.
-                                        </p>
-                                    </div>
-                                )}
                             </>
                         )}
 

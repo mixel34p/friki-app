@@ -517,12 +517,6 @@ export default function SpaceLayout() {
           
           <div className="space-header" onClick={() => setIsHeaderMenuOpen(!isHeaderMenuOpen)}>
             <div className="space-header-content">
-              {space?.is_verified && (
-                <svg className="space-verified-badge" title="Comunidad Verificada" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24">
-                  <path fill="#1d9bf0" d="M22.5 12.5l-2.43 2.8.57 3.65-3.6.86-2.07 3.14-3.47-1.5-3.47 1.5-2.07-3.14-3.6-.86.57-3.65L.5 12.5l2.43-2.8-.57-3.65 3.6-.86 2.07-3.14 3.47 1.5 3.47-1.5 2.07 3.14 3.6.86-.57 3.65 2.43 2.8z" />
-                  <path fill="#ffffff" d="M10.1 17.6l7.7-7.7-1.4-1.4-6.3 6.3-3-3-1.4 1.4 4.4 4.4z" />
-                </svg>
-              )}
               <h2>{space?.name || 'Espacio'}</h2>
               <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round" className="space-header-icon">
                 {isHeaderMenuOpen ? <polyline points="18 15 12 9 6 15"></polyline> : <polyline points="6 9 12 15 18 9"></polyline>}

@@ -1,11 +1,5 @@
 export const INVITATION_KEY = 'geeksphere.pending-invitation'
 export const INVITATION_TTL = 7 * 24 * 60 * 60 * 1000
-export const INVITATION_REWARDS = [
-    { count: 1, badge: 'connector', title: 'Conector', description: 'Tu primera persona invitada.' },
-    { count: 5, badge: 'host', title: 'Anfitrión', description: 'Cinco personas nuevas en tu esfera.' },
-    { count: 10, badge: 'ambassador', title: 'Embajador', description: 'Diez personas nuevas en la comunidad.' },
-]
-
 export function isInvitationCode(code) {
     return typeof code === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(code)
 }

@@ -3,7 +3,6 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { Link, useLocation, useNavigationType } from 'react-router-dom'
 import { getWorkRatings, getWorkReviews } from '../lib/libraryService'
 import { formatRelativeDate } from '../lib/formatRelativeDate'
-import { BADGES_MAP } from '../lib/badges'
 import DefaultAvatar from './DefaultAvatar'
 import ReviewLikeButton from './ReviewLikeButton'
 import SpoilerNotice from './reviews/SpoilerNotice'
@@ -25,7 +24,6 @@ function WorkReview({ review }) {
   const [revealed, setRevealed] = useState(false)
   const [expanded, setExpanded] = useState(false)
   const author = review.profiles
-  const badge = BADGES_MAP[author?.featured_badge]
   const text = (review.review_text || '').trim()
   const excerpt = !expanded && text.length > 340 ? `${text.slice(0, 340)}…` : text
   return <article className="work-review">
@@ -33,7 +31,6 @@ function WorkReview({ review }) {
       {author?.username ? <Link className="work-review-author" to={`/profile/${author.username}`}>
         <AuthorAvatar author={author} className="work-review-avatar" />
         <span>{author.display_name || author.username}</span>
-        {badge && <span className="work-review-badge" style={{ color: badge.color }} title={badge.title}>{badge.icon}</span>}
       </Link> : <span className="work-review-author">Usuario</span>}
       <time dateTime={review.created_at}>{formatRelativeDate(review.created_at)}</time>
     </header>

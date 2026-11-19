@@ -10,7 +10,6 @@ import Twemoji from 'react-twemoji';
 import EmojiPicker from '../../components/EmojiPicker';
 import './LiveChat.css';
 import './LiveChatGrid.css';
-import { BADGES_MAP } from '../../lib/badges';
 import { getDefaultAvatarDataUrl } from '../../components/DefaultAvatar';
 
 function toCodePoint(unicodeSurrogates, sep) {
@@ -547,14 +546,14 @@ export default function LiveChat() {
                     .from('space_messages')
                     .select(`
                         *,
-                        user:profiles (username, display_name, avatar_url, featured_badge, theme_color),
+                        user:profiles (username, display_name, avatar_url, theme_color),
                         reactions:space_message_reactions (
                             id, emoji, user_id,
-                            user:profiles (username, display_name, avatar_url, featured_badge, theme_color)
+                            user:profiles (username, display_name, avatar_url, theme_color)
                         ),
                         reply_to:space_messages (
                             id, content,
-                            user:profiles (username, display_name, avatar_url, featured_badge, theme_color)
+                            user:profiles (username, display_name, avatar_url, theme_color)
                         )
                     `)
                     .eq('id', payload.new.id)
@@ -594,7 +593,7 @@ export default function LiveChat() {
                 if (payload.eventType === 'INSERT') {
                     const { data: reaction } = await supabase
                         .from('space_message_reactions')
-                        .select('id, emoji, user_id, user:profiles(username, display_name, avatar_url, featured_badge, theme_color)')
+                        .select('id, emoji, user_id, user:profiles(username, display_name, avatar_url, theme_color)')
                         .eq('id', payload.new.id)
                         .single();
                     if (reaction) {
@@ -1081,13 +1080,6 @@ export default function LiveChat() {
                                                 <div className="chat-message-header">
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                                         <span className="chat-username">{msg.user?.display_name || msg.user?.username || 'Usuario'}</span>
-                                                        {msg.user?.featured_badge && BADGES_MAP[msg.user.featured_badge] && (
-                                                            <span style={{ color: BADGES_MAP[msg.user.featured_badge].color, display: 'inline-flex', alignItems: 'center' }} title={BADGES_MAP[msg.user.featured_badge].title}>
-                                                                <div style={{ width: '16px', height: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                                    {BADGES_MAP[msg.user.featured_badge].icon}
-                                                                </div>
-                                                            </span>
-                                                        )}
                                                     </div>
                                                     <span className="chat-timestamp">{fullTimeString}</span>
                                                 </div>
@@ -1482,13 +1474,6 @@ export default function LiveChat() {
                                 <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                                     <div style={{ display: 'flex', alignItems: 'center' }}>
                                         <span style={{ color: '#fff', fontWeight: '600', fontSize: '14px' }}>{zoomedImage.user.display_name || zoomedImage.user.username || 'Usuario'}</span>
-                                        {zoomedImage.user.featured_badge && BADGES_MAP[zoomedImage.user.featured_badge] && (
-                                            <span style={{ color: BADGES_MAP[zoomedImage.user.featured_badge].color, display: 'inline-flex', alignItems: 'center', marginLeft: '6px' }} title={BADGES_MAP[zoomedImage.user.featured_badge].title}>
-                                                <div style={{ width: '14px', height: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                    {BADGES_MAP[zoomedImage.user.featured_badge].icon}
-                                                </div>
-                                            </span>
-                                        )}
                                     </div>
                                     <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '11px', marginTop: '2px', textAlign: 'left' }}>{fullTimeString}</span>
                                 </div>

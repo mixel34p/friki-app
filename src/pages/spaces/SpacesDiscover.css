@@ -26,7 +26,6 @@
 .spaces-discover-page .space-card-title-row { flex-direction:column; align-items:flex-start; justify-content:flex-start; gap:.15rem; }
 .spaces-discover-page .search-space-title-line { width:100%; }
 .spaces-discover-page .search-space-title-line strong { display:-webkit-box; overflow:hidden; color:var(--text-primary); font-size:.9rem; line-height:1.3; white-space:normal; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
-.spaces-discover-page .search-space-verified,.spaces-discover-page .search-space-verified svg { width:15px; height:15px; flex-basis:15px; }
 .spaces-discover-page .space-members-pill { gap:.25rem; padding:0; border-radius:0; color:var(--text-secondary); background:transparent; font-size:.72rem; }
 .spaces-discover-page .space-members-pill svg,.spaces-discover-page .space-desc,.spaces-discover-page .space-card-footer { display:none; }
 .spaces-discover-page .space-card-skeleton { gap:.55rem; overflow:visible; border:0; background:transparent; box-shadow:none; }

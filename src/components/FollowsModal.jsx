@@ -4,7 +4,6 @@ import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import LoadingSpinner from './LoadingSpinner'
-import { BADGES_MAP } from '../lib/badges'
 import DefaultAvatar from './DefaultAvatar'
 import './FollowsModal.css'
 
@@ -65,7 +64,7 @@ export default function FollowsModal({ isOpen, onClose, type, userId, themeColor
 
             const { data: profiles } = await supabase
                 .from('profiles')
-                .select('id, username, display_name, avatar_url, bio, featured_badge, theme_color')
+                .select('id, username, display_name, avatar_url, bio, theme_color')
                 .in('id', ids)
 
             setUsers(profiles || [])
@@ -172,14 +171,7 @@ export default function FollowsModal({ isOpen, onClose, type, userId, themeColor
                                             <DefaultAvatar className="follows-user-placeholder" accent={u.theme_color} style={{ borderColor: u.theme_color || 'var(--brand-primary)' }} />
                                         )}
                                         <div className="follows-user-text">
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                <span className="follows-user-name">{u.display_name}</span>
-                                                {u.featured_badge && BADGES_MAP[u.featured_badge] && (
-                                                    <div style={{ color: BADGES_MAP[u.featured_badge].color, display: 'flex', alignItems: 'center' }} title={BADGES_MAP[u.featured_badge].title}>
-                                                        {BADGES_MAP[u.featured_badge].icon}
-                                                    </div>
-                                                )}
-                                            </div>
+                                            <span className="follows-user-name">{u.display_name}</span>
                                             <span className="follows-user-username">@{u.username}</span>
                                         </div>
                                     </div>

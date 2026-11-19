@@ -33,7 +33,7 @@ La presentación sigue el estilo de la referencia: tarjeta central oscura, tipog
 | 5 | Anfitrión |
 | 10 | Embajador |
 
-Son recompensas cosméticas integradas en el inventario existente de insignias. Se pueden destacar desde Ajustes de perfil y se conceden automáticamente al alcanzar cada hito; no ocupan un panel en la página de invitación.
+Al alcanzar cada hito, el servidor registra la recompensa en la base de datos.
 
 Se cuenta una invitación cuando coinciden correo confirmado y perfil completo; los clics y los registros incompletos no suman. Las insignias ya obtenidas se conservan aunque posteriormente se elimine una cuenta invitada; el contador refleja las cuentas que siguen existiendo. No se conceden dinero, monedas o ventajas competitivas. Confirmar un correo no demuestra que cada cuenta corresponda a una persona distinta: si se introducen premios con valor económico, hará falta una validación adicional de abuso y actividad real.
 

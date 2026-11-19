@@ -8,7 +8,7 @@ import { getUsersByCommonWorks } from './discoverUsersService'
 import { normalizeSearchText, rankSearchResults, searchMatchScore } from './searchRanking'
 
 const profileFields = 'id, username, display_name, avatar_url, bio, theme_color'
-const spaceFields = 'id, name, description, avatar_url, banner_url, theme_color, owner_id, is_verified'
+const spaceFields = 'id, name, description, avatar_url, banner_url, theme_color, owner_id'
 const listFields = 'id, title, list_type, media_type, content, user_id, created_at, visibility'
 
 const normalized = normalizeSearchText
@@ -61,7 +61,7 @@ export async function searchPlatform(query, limit = 8, signal, workFilter = 'all
     lists = results[3].value.data || []
     const userIds = [...new Set(lists.map(list => list.user_id).filter(Boolean))]
     if (userIds.length) {
-      const { data: profiles, error } = await supabase.from('profiles').select('id, username, display_name, avatar_url, featured_badge, theme_color').in('id', userIds).abortSignal(signal)
+      const { data: profiles, error } = await supabase.from('profiles').select('id, username, display_name, avatar_url, theme_color').in('id', userIds).abortSignal(signal)
       if (!error) {
         const profileMap = new Map((profiles || []).map(profile => [profile.id, profile]))
         lists = lists.map(list => ({ ...list, author: profileMap.get(list.user_id) || null, type: 'list' }))

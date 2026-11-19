@@ -132,7 +132,7 @@ export async function getWorkReviews(workId, workType, page = 1, limit = 3, rati
     const userIds = [...new Set(data.map(entry => entry.user_id))]
     const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, username, avatar_url, display_name, featured_badge, theme_color')
+        .select('id, username, avatar_url, display_name, theme_color')
         .in('id', userIds)
     const profilesById = Object.fromEntries((profiles || []).map(profile => [profile.id, profile]))
     if (profilesError && throwOnError) throw profilesError
@@ -172,7 +172,7 @@ export async function getWorkRatings(workId, workType, page = 1, limit = 10, rat
     const userIds = [...new Set(data.map(entry => entry.user_id))]
     const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, username, avatar_url, display_name, featured_badge, theme_color')
+        .select('id, username, avatar_url, display_name, theme_color')
         .in('id', userIds)
     if (profilesError && throwOnError) throw profilesError
     const profilesById = Object.fromEntries((profiles || []).map(profile => [profile.id, profile]))

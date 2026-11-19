@@ -7,7 +7,6 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { deleteTemplate, getMoreListsByUser, getTemplateById } from '../../lib/listService';
 import { getMorePostsByUser } from '../../lib/postService';
-import { BADGES_MAP } from '../../lib/badges';
 import DefaultAvatar from '../../components/DefaultAvatar';
 import { formatRelativeDate } from '../../lib/formatRelativeDate';
 import { navigateBackOrHome } from '../../lib/navigation';
@@ -182,7 +181,7 @@ export default function ViewTemplate() {
           <Link to={`/profile/${username}`} className="review-post-author">
             <Avatar profile={profile} />
             <span className="review-post-author-copy">
-              <strong>{displayName}{profile.featured_badge && BADGES_MAP[profile.featured_badge] && <span className="template-featured-badge" title={BADGES_MAP[profile.featured_badge].title} style={{ color: BADGES_MAP[profile.featured_badge].color }}>{BADGES_MAP[profile.featured_badge].icon}</span>}</strong>
+              <strong>{displayName}</strong>
               <span>@{username} · {formatRelativeDate(template.created_at)}</span>
             </span>
           </Link>

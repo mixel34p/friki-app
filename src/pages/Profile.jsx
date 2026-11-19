@@ -1,6 +1,5 @@
 
-import { useState, useEffect, useRef } from 'react'
-import { createPortal } from 'react-dom'
+import { useState, useEffect, useLayoutEffect, useRef } from 'react'
 import { useParams, Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import DefaultAvatar from '../components/DefaultAvatar'
@@ -81,7 +80,6 @@ const SOCIAL_ICONS_MAP = {
     website:   <SocialIcons.Website />
 }
 
-import { BADGES_MAP } from '../lib/badges'
 
 const getSocialLink = (platform, handle) => {
     if (!handle) return null
@@ -159,7 +157,6 @@ export default function Profile() {
     const [isFollowedBy, setIsFollowedBy] = useState(false)
     const [loading, setLoading] = useState(true)
     const [followsModal, setFollowsModal] = useState({ isOpen: false, type: 'followers' })
-    const [selectedBadge, setSelectedBadge] = useState(null)
     const [isPlaying, setIsPlaying] = useState(false)
     const audioRef = useRef(null)
     const [activeProfileTab, setActiveProfileTab] = useState('actividad')
@@ -171,6 +168,8 @@ export default function Profile() {
     const [profilePostsError, setProfilePostsError] = useState('')
     const [profilePostColumnCount, setProfilePostColumnCount] = useState(2)
     const profilePostsGridRef = useRef(null)
+    const profileHeaderRef = useRef(null)
+    const profileIdentityRef = useRef(null)
 
     const { toast } = useToast()
     const isOwnProfile = !username || username === myProfile?.username
@@ -181,6 +180,25 @@ export default function Profile() {
             ...(profile?.favorite_animes || []).map(item => ({ ...item, id: String(item.id), type: 'anime', title: item.title || item.name, cover_url: item.cover_url || item.image_url })),
             ...(profile?.favorite_manga || []).map(item => ({ ...item, id: String(item.id), type: 'manga', title: item.title || item.name, cover_url: item.cover_url || item.image_url })),
         ].slice(0, 4)
+
+    useLayoutEffect(() => {
+        const header = profileHeaderRef.current
+        const identity = profileIdentityRef.current
+        if (!header || !identity) return undefined
+
+        const updateBannerFade = () => {
+            const fadeEnd = identity.getBoundingClientRect().bottom - header.getBoundingClientRect().top
+            header.style.setProperty('--profile-banner-fade-end', `${fadeEnd}px`)
+        }
+
+        updateBannerFade()
+        if (typeof ResizeObserver === 'undefined') return undefined
+
+        const observer = new ResizeObserver(updateBannerFade)
+        observer.observe(header, { box: 'border-box' })
+        observer.observe(identity, { box: 'border-box' })
+        return () => observer.disconnect()
+    }, [loading, profile?.id])
 
     useEffect(() => {
         let active = true
@@ -291,22 +309,6 @@ export default function Profile() {
         document.body.classList.add('pwa-visited-profile-open')
         return () => document.body.classList.remove('pwa-visited-profile-open')
     }, [isStandalonePwa, isOtherProfile])
-
-    useEffect(() => {
-        if (!selectedBadge) return undefined
-
-        const previousOverflow = document.body.style.overflow
-        const handleKeyDown = event => {
-            if (event.key === 'Escape') setSelectedBadge(null)
-        }
-
-        document.body.style.overflow = 'hidden'
-        document.addEventListener('keydown', handleKeyDown)
-        return () => {
-            document.body.style.overflow = previousOverflow
-            document.removeEventListener('keydown', handleKeyDown)
-        }
-    }, [selectedBadge])
 
     useEffect(() => {
         document.body.classList.add('profile-no-main-header-on-mobile')
@@ -615,162 +617,147 @@ export default function Profile() {
                 </div>
             </div>
 
-            {/* ─── Banner ─── */}
-            <div className="profile-banner">
-                {profile.banner_url && (
-                    <>
-                        <img src={profile.banner_url} alt="" className="profile-banner-img" />
-                        <div className="profile-banner-overlay" />
-                    </>
-                )}
-            </div>
+            <div className="profile-header" ref={profileHeaderRef}>
+                <div className="profile-banner">
+                    {profile.banner_url && (
+                        <>
+                            <img src={profile.banner_url} alt="" className="profile-banner-img" />
+                            <div className="profile-banner-overlay" />
+                        </>
+                    )}
+                </div>
 
-            {/* ─── Header card ─── */}
-            <div className="profile-header-card">
-                <div className="profile-header-inner">
-                    {/* El avatar comparte el ancho centrado del contenido del perfil. */}
-                    <div className="profile-avatar-wrapper">
-                        {hasCustomAvatar(profile.avatar_url) ? (
-                            <img
-                                src={profile.avatar_url}
-                                alt={profile.display_name}
-                                className="profile-avatar"
-                            />
-                        ) : (
-                            <DefaultAvatar className="profile-avatar-placeholder" accent={profile.theme_color} />
-                        )}
-                    </div>
+                <div className="profile-header-card">
+                    <div className="profile-header-inner">
+                        <div className={`profile-header-columns ${profileFavorites.length ? 'has-favorites' : 'without-favorites'}`}>
+                            <div className={`profile-identity ${profile.location ? 'has-location' : 'no-location'}`} ref={profileIdentityRef}>
 
-                    {/* Fila 2: Identidad — nombre, @user, bio, stats, plataformas, socials */}
-                    
-                    
-                    <div className={`profile-header-columns ${profileFavorites.length ? 'has-favorites' : 'without-favorites'}`}>
-                        <div className={`profile-identity ${profile.location ? 'has-location' : 'no-location'}`}>
-                            
-                        <div className="profile-name-row" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                            <h1 className="profile-display-name" style={{ margin: 0, fontFamily: getProfileFontStack(profile.name_font) }}>{profile.display_name}</h1>
-                            {profile.featured_badge && BADGES_MAP[profile.featured_badge] && (
-                                <button
-                                    type="button"
-                                    className="profile-featured-badge"
-                                    title={`Insignia destacada: ${BADGES_MAP[profile.featured_badge].title}`}
-                                    aria-label={`Insignia destacada: ${BADGES_MAP[profile.featured_badge].title}`}
-                                    aria-haspopup="dialog"
-                                    onClick={() => setSelectedBadge(profile.featured_badge)}
-                                    style={{ color: BADGES_MAP[profile.featured_badge].color }}
-                                >
-                                    {BADGES_MAP[profile.featured_badge].icon}
-                                </button>
-                            )}
-                            {profile.pronouns && (
-                                <span className={`profile-pronouns ${profile.featured_badge && BADGES_MAP[profile.featured_badge] ? '' : 'profile-pronouns-no-badge'}`}>{profile.pronouns}</span>
-                            )}
-                            <div className="profile-actions">
-                                {isOwnProfile ? (
-                                    <button onClick={() => isStandalonePwa ? navigatePwaRoute(navigate, '/settings/profile') : navigate('/settings')} className="btn btn-secondary profile-edit-button">
-                                        <IconEdit /> Editar perfil
-                                    </button>
-                                ) : (
-                                    <button
-                                        className={`btn profile-follow-button ${isFollowing ? 'btn-secondary' : 'btn-primary'}${isFollowing && isFollowedBy ? ' profile-friends-button' : ''}`}
-                                        onClick={handleFollow}
-                                    >
-                                        {isFollowing
-                                            ? <><IconUserCheck /> {followLabel}</>
-                                            : <><IconUserPlus /> {followLabel}</>
-                                        }
-                                    </button>
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="profile-meta-row" style={{ display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--text-muted)' }}>
-                            <p className="profile-username" style={{ margin: 0 }}>@{profile.username}</p>
-                        </div>
-
-                        {profile.location && (
-                            <div className="profile-additional-info" style={{ display: 'flex', gap: '16px', color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '12px', marginBottom: '4px' }}>
-                                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    <IconMapPin /> {profile.location}
-                                </span>
-                            </div>
-                        )}
-
-                        {profile.bio && (
-                            <div className="profile-bio markdown-content" style={{ fontFamily: profile.bio_font === 'inherit' ? getProfileFontStack(profile.name_font) : getProfileFontStack(profile.bio_font, 'sans') }}>
-                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{profile.bio}</ReactMarkdown>
-                            </div>
-                        )}
-
-                        {hasSocials && (
-                            <div className="profile-socials">
-                                {Object.entries(profile.social_links).map(([platform, value]) => {
-                                    if (!value) return null
-                                    const href = getSocialLink(platform, value)
-                                    return platform === 'discord' ? (
-                                        <button
-                                            key={platform}
-                                            className="social-icon-btn"
-                                            onClick={() => {
-                                                navigator.clipboard.writeText(value)
-                                                toast({
-                                                    title: 'Discord copiado',
-                                                    message: `${value} se ha copiado al portapapeles.`,
-                                                    type: 'discord'
-                                                })
-                                            }}
-                                            title={`Discord: ${value}`}
-                                        >
-                                            {SOCIAL_ICONS_MAP[platform]}
-                                        </button>
+                            <div className="profile-identity-heading">
+                                <div className="profile-avatar-wrapper">
+                                    {hasCustomAvatar(profile.avatar_url) ? (
+                                        <img
+                                            src={profile.avatar_url}
+                                            alt={profile.display_name}
+                                            className="profile-avatar"
+                                        />
                                     ) : (
-                                        <a
-                                            key={platform}
-                                            href={href}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="social-icon-btn"
-                                            title={platform}
-                                        >
-                                            {SOCIAL_ICONS_MAP[platform]}
-                                        </a>
-                                    )
-                                })}
-                            </div>
-                        )}
-
-                        {renderSongPlayer('profile-song-pill')}
-
-                    </div>
-                        
-                                                <div className="profile-header-favorites">
-                            <div className="profile-favorites-section">
-                                {profileFavorites.length > 0 && <>
-                                    <div className="profile-favorites-header">
-                                        <h3 className="profile-favorites-title">
-                                            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
-                                                <path d="m12 2.8 2.86 5.8 6.4.93-4.63 4.51 1.09 6.37L12 17.4l-5.72 3.01 1.09-6.37-4.63-4.51 6.4-.93L12 2.8z" />
-                                            </svg>
-                                            FAVORITOS
-                                        </h3>
+                                        <DefaultAvatar className="profile-avatar-placeholder" accent={profile.theme_color} />
+                                    )}
+                                </div>
+                                <div className="profile-identity-copy">
+                                    <div className="profile-name-row">
+                                        <h1 className="profile-display-name" style={{ margin: 0, fontFamily: getProfileFontStack(profile.name_font) }}>{profile.display_name}</h1>
+                                        {profile.pronouns && (
+                                            <span className="profile-pronouns">{profile.pronouns}</span>
+                                        )}
                                     </div>
-                                    <div className="profile-favorites-block">
-                                        <div className={`profile-favorites-grid profile-favorites-grid--count-${profileFavorites.length}`}>
-                                            {profileFavorites.map((item, index) => <Link
-                                                key={`${item.type}:${item.id}:${index}`}
-                                                to={workHref(item.type, item.id)}
-                                                className="profile-favorite-poster"
-                                                aria-label={`Ver ${item.title}`}
-                                            >
-                                                {item.cover_url ? <img src={item.cover_url} alt={item.title} /> : <div className="no-cover">{item.title}</div>}
-                                                <div className="profile-favorite-overlay"><span>{item.title}</span></div>
-                                            </Link>)}
+                                    <div className="profile-identity-meta">
+                                        <p className="profile-username">@{profile.username}</p>
+                                        <div className="profile-actions">
+                                            {isOwnProfile ? (
+                                                <button onClick={() => isStandalonePwa ? navigatePwaRoute(navigate, '/settings/profile') : navigate('/settings')} className="btn btn-secondary profile-edit-button">
+                                                    <IconEdit /> Editar perfil
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    className={`btn profile-follow-button ${isFollowing ? 'btn-secondary' : 'btn-primary'}${isFollowing && isFollowedBy ? ' profile-friends-button' : ''}`}
+                                                    onClick={handleFollow}
+                                                >
+                                                    {isFollowing
+                                                        ? <><IconUserCheck /> {followLabel}</>
+                                                        : <><IconUserPlus /> {followLabel}</>
+                                                    }
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
-                                </>}
+                                </div>
                             </div>
+
+                            {profile.location && (
+                                <div className="profile-additional-info" style={{ display: 'flex', gap: '16px', color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '12px', marginBottom: '4px' }}>
+                                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <IconMapPin /> {profile.location}
+                                    </span>
+                                </div>
+                            )}
+
+                            {profile.bio && (
+                                <div className="profile-bio markdown-content" style={{ fontFamily: profile.bio_font === 'inherit' ? getProfileFontStack(profile.name_font) : getProfileFontStack(profile.bio_font, 'sans') }}>
+                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{profile.bio}</ReactMarkdown>
+                                </div>
+                            )}
+
+                            {hasSocials && (
+                                <div className="profile-socials">
+                                    {Object.entries(profile.social_links).map(([platform, value]) => {
+                                        if (!value) return null
+                                        const href = getSocialLink(platform, value)
+                                        return platform === 'discord' ? (
+                                            <button
+                                                key={platform}
+                                                className="social-icon-btn"
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(value)
+                                                    toast({
+                                                        title: 'Discord copiado',
+                                                        message: `${value} se ha copiado al portapapeles.`,
+                                                        type: 'discord'
+                                                    })
+                                                }}
+                                                title={`Discord: ${value}`}
+                                            >
+                                                {SOCIAL_ICONS_MAP[platform]}
+                                            </button>
+                                        ) : (
+                                            <a
+                                                key={platform}
+                                                href={href}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="social-icon-btn"
+                                                title={platform}
+                                            >
+                                                {SOCIAL_ICONS_MAP[platform]}
+                                            </a>
+                                        )
+                                    })}
+                                </div>
+                            )}
+
+                            {renderSongPlayer('profile-song-pill')}
+
                         </div>
 
+                                                    <div className="profile-header-favorites">
+                                <div className="profile-favorites-section">
+                                    {profileFavorites.length > 0 && <>
+                                        <div className="profile-favorites-header">
+                                            <h3 className="profile-favorites-title">
+                                                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
+                                                    <path d="m12 2.8 2.86 5.8 6.4.93-4.63 4.51 1.09 6.37L12 17.4l-5.72 3.01 1.09-6.37-4.63-4.51 6.4-.93L12 2.8z" />
+                                                </svg>
+                                                FAVORITOS
+                                            </h3>
+                                        </div>
+                                        <div className="profile-favorites-block">
+                                            <div className={`profile-favorites-grid profile-favorites-grid--count-${profileFavorites.length}`}>
+                                                {profileFavorites.map((item, index) => <Link
+                                                    key={`${item.type}:${item.id}:${index}`}
+                                                    to={workHref(item.type, item.id)}
+                                                    className="profile-favorite-poster"
+                                                    aria-label={`Ver ${item.title}`}
+                                                >
+                                                    {item.cover_url ? <img src={item.cover_url} alt={item.title} /> : <div className="no-cover">{item.title}</div>}
+                                                    <div className="profile-favorite-overlay"><span>{item.title}</span></div>
+                                                </Link>)}
+                                            </div>
+                                        </div>
+                                    </>}
+                                </div>
+                            </div>
+
+                        </div>
                     </div>
                 </div>
             </div>
@@ -965,43 +952,6 @@ export default function Profile() {
                 userId={profile.id}
                 themeColor={profile.theme_color}
             />
-
-            {selectedBadge && BADGES_MAP[selectedBadge] && createPortal(
-                <div
-                    className="profile-badge-modal-backdrop"
-                    onClick={event => { if (event.target === event.currentTarget) setSelectedBadge(null) }}
-                >
-                    <section
-                        className="profile-badge-modal"
-                        role="dialog"
-                        aria-modal="true"
-                        aria-labelledby="profile-badge-modal-title"
-                        style={{ '--badge-color': BADGES_MAP[selectedBadge].color }}
-                    >
-                        <button
-                            type="button"
-                            className="profile-badge-modal-close"
-                            onClick={() => setSelectedBadge(null)}
-                            aria-label="Cerrar información de insignia"
-                        >
-                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-                                <path d="m18 6-12 12M6 6l12 12" />
-                            </svg>
-                        </button>
-                        <div className="profile-badge-modal-icon" aria-hidden="true">
-                            {BADGES_MAP[selectedBadge].icon}
-                        </div>
-                        <span className="profile-badge-modal-kicker">Insignia de perfil</span>
-                        <h2 id="profile-badge-modal-title">{BADGES_MAP[selectedBadge].title}</h2>
-                        <p>{BADGES_MAP[selectedBadge].description}</p>
-                        <div className="profile-badge-modal-footer">
-                            <span className="profile-badge-modal-dot" />
-                            Insignia de la comunidad
-                        </div>
-                    </section>
-                </div>,
-                document.body
-            )}
 
             {searchParams.get('edit') === 'true' && (
                 <EditProfile onClose={() => setSearchParams({})} />

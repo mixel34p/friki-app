@@ -26,7 +26,7 @@ export async function getTemplates({ type = null, mediaType = null, query = '', 
     if (data && data.length > 0) {
         const userIds = [...new Set(data.map(t => t.user_id).filter(Boolean))];
         if (userIds.length > 0) {
-            const { data: profiles } = await supabase.from('profiles').select('id, username, avatar_url, display_name, featured_badge, theme_color').in('id', userIds);
+            const { data: profiles } = await supabase.from('profiles').select('id, username, avatar_url, display_name, theme_color').in('id', userIds);
             if (profiles) {
                 const profileMap = profiles.reduce((acc, p) => { acc[p.id] = p; return acc; }, {});
                 data.forEach(t => { t.profiles = profileMap[t.user_id] || null; });
@@ -85,7 +85,7 @@ export async function getDiscoverLists({ type = null, mediaType = null, query = 
     const userIds = [...new Set(pageLists.map(list => list.user_id).filter(Boolean))]
     let profiles = []
     if (userIds.length) {
-        let profileRequest = supabase.from('profiles').select('id, username, display_name, avatar_url, featured_badge, theme_color').in('id', userIds)
+        let profileRequest = supabase.from('profiles').select('id, username, display_name, avatar_url, theme_color').in('id', userIds)
         if (signal) profileRequest = profileRequest.abortSignal(signal)
         const { data: profileData, error: profileError } = await profileRequest
         if (profileError) throw profileError
@@ -117,7 +117,7 @@ export async function getDiscoverTemplates({ type = null, mediaType = null, quer
     const userIds = [...new Set((data || []).map(template => template.user_id).filter(Boolean))]
     let profiles = []
     if (userIds.length) {
-        let profileRequest = supabase.from('profiles').select('id, username, display_name, avatar_url, featured_badge, theme_color').in('id', userIds)
+        let profileRequest = supabase.from('profiles').select('id, username, display_name, avatar_url, theme_color').in('id', userIds)
         if (signal) profileRequest = profileRequest.abortSignal(signal)
         const { data: profileData, error: profileError } = await profileRequest
         if (profileError) throw profileError
@@ -168,7 +168,7 @@ export async function getTemplateById(id) {
     validateAlignmentRecord(data)
     
     if (data && data.user_id) {
-        const { data: profile } = await supabase.from('profiles').select('username, avatar_url, display_name, featured_badge, theme_color').eq('id', data.user_id).single();
+        const { data: profile } = await supabase.from('profiles').select('username, avatar_url, display_name, theme_color').eq('id', data.user_id).single();
         if (profile) data.profiles = profile;
     }
     return data
@@ -184,7 +184,7 @@ export async function getUserTemplates(userId) {
     if (error) throw error
     
     if (data && data.length > 0) {
-        const { data: profile } = await supabase.from('profiles').select('username, avatar_url, display_name, featured_badge').eq('id', userId).single();
+        const { data: profile } = await supabase.from('profiles').select('username, avatar_url, display_name').eq('id', userId).single();
         if (profile) {
             data.forEach(t => { t.profiles = profile; });
         }
@@ -265,7 +265,7 @@ export async function getListById(id) {
     validateAlignmentRecord(data)
     
     if (data && data.user_id) {
-        const { data: profile } = await supabase.from('profiles').select('username, avatar_url, display_name, featured_badge, theme_color').eq('id', data.user_id).single();
+        const { data: profile } = await supabase.from('profiles').select('username, avatar_url, display_name, theme_color').eq('id', data.user_id).single();
         if (profile) data.author = profile;
     }
     return data

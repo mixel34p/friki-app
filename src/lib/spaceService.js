@@ -5,7 +5,7 @@ export async function getSpaces() {
         .from('spaces')
         .select(`
             *,
-            owner:profiles!spaces_owner_id_fkey (username, display_name, avatar_url, featured_badge),
+            owner:profiles!spaces_owner_id_fkey (username, display_name, avatar_url),
             space_members (count)
         `)
         .order('created_at', { ascending: false });
@@ -18,7 +18,7 @@ export async function getSpaceById(id) {
         .from('spaces')
         .select(`
             *,
-            owner:profiles!spaces_owner_id_fkey (username, display_name, avatar_url, featured_badge)
+            owner:profiles!spaces_owner_id_fkey (username, display_name, avatar_url)
         `)
         .eq('id', id)
         .single();
@@ -148,7 +148,7 @@ export async function getSpaceMembers(spaceId) {
         .from('space_members')
         .select(`
             *,
-            user:profiles!space_members_user_id_fkey (username, display_name, avatar_url, featured_badge)
+            user:profiles!space_members_user_id_fkey (username, display_name, avatar_url)
         `)
         .eq('space_id', spaceId);
     if (error) throw error;
@@ -190,14 +190,14 @@ export async function getChannelMessages(channelId, limit = 50) {
         .from('space_messages')
         .select(`
             *,
-            user:profiles (username, display_name, avatar_url, featured_badge),
+            user:profiles (username, display_name, avatar_url),
             reactions:space_message_reactions (
                 id, emoji, user_id,
-                user:profiles (username, display_name, avatar_url, featured_badge)
+                user:profiles (username, display_name, avatar_url)
             ),
             reply_to:space_messages (
                 id, content,
-                user:profiles (username, display_name, avatar_url, featured_badge)
+                user:profiles (username, display_name, avatar_url)
             )
         `)
         .eq('channel_id', channelId)
@@ -218,14 +218,14 @@ export async function sendMessage(channelId, userId, content, replyToId = null) 
         .insert([payload])
         .select(`
             *,
-            user:profiles (username, display_name, avatar_url, featured_badge),
+            user:profiles (username, display_name, avatar_url),
             reactions:space_message_reactions (
                 id, emoji, user_id,
-                user:profiles (username, display_name, avatar_url, featured_badge)
+                user:profiles (username, display_name, avatar_url)
             ),
             reply_to:space_messages (
                 id, content,
-                user:profiles (username, display_name, avatar_url, featured_badge)
+                user:profiles (username, display_name, avatar_url)
             )
         `)
         .single();
@@ -273,7 +273,7 @@ export async function toggleReaction(messageId, userId, emoji) {
             .insert([{ message_id: messageId, user_id: userId, emoji }])
             .select(`
                 *,
-                user:profiles (username, display_name, avatar_url, featured_badge)
+                user:profiles (username, display_name, avatar_url)
             `)
             .single();
         if (error) throw error;
